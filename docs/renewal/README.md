@@ -17,6 +17,8 @@
 - 현재 동작: [현재 구현 기준](../product/implementation-status.md)
 - 계약: [API 명세](../product/api-spec.md), [데이터 명세](../product/data-spec.md), [외부 연동](../product/integrations.md)
 - 현행 UI: [UI 설계](../product/ui-design.md)와 PRD 화면 설계 절은 현행 기록이며 리뉴얼에서 새로 정의한다.
+- 리뉴얼 화면 기획: [화면 목록](화면기획/00_화면목록.md) (화면별 기획 문서 포함, 초안)
+- 현행 화면 캡처: [`현_UI`](현_UI)
 
 ## 로컬 테스트 환경
 
