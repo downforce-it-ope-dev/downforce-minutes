@@ -1,0 +1,1051 @@
+package com.meetingautomation.document.notion;
+
+import com.meetingautomation.document.DocumentProviderException;
+import com.meetingautomation.document.DocumentStructure;
+import com.meetingautomation.document.CreateParticipantCommand;
+import com.meetingautomation.document.ProviderHealth;
+import com.meetingautomation.document.Participant;
+import com.meetingautomation.document.ParticipantCreationProvider;
+import com.meetingautomation.document.ParticipantUpdateCommand;
+import com.meetingautomation.document.ParticipantUpdatingProvider;
+import com.meetingautomation.document.ParticipantDeletingProvider;
+import com.meetingautomation.document.ParticipantPageMapper;
+import com.meetingautomation.document.MeetingDocumentRef;
+import com.meetingautomation.document.MeetingSummary;
+import com.meetingautomation.document.transfer.*;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.util.StreamUtils;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/** Notion implementation for the root hierarchy and connection health slice. */
+public final class NotionPageHierarchyAdapter implements ParticipantCreationProvider, ParticipantUpdatingProvider, ParticipantDeletingProvider, DocumentTransferPort {
+    private static final Logger log = LoggerFactory.getLogger(NotionPageHierarchyAdapter.class);
+    public static final String API_VERSION = "2026-03-11";
+    private static final String API_BASE_URL = "https://api.notion.com";
+    private static final int MAX_RATE_LIMIT_RETRIES = 2;
+    private static final long MAX_RATE_LIMIT_WAIT_MILLIS = 10_000;
+    private static final String CHILDREN_PATH = "/v1/blocks/{block_id}/children";
+    private static final java.util.regex.Pattern BOOTSTRAP_SENTINEL = java.util.regex.Pattern.compile(
+            "meeting-automation/bootstrap/[A-Za-z0-9_.-]+/(MEETINGS|PARTICIPANTS|MEETING_DATA)");
+    private static final JsonMapper JSON_MAPPER = JsonMapper.builder().build();
+
+    private final RestClient restClient;
+    private final String token;
+    private final String configuredRootId;
+
+    private final ProviderTransferSupport transfer = new ProviderTransferSupport() {
+        @Override protected String fingerprint() { return codec.connectionFingerprint("notion", configuredRootId); }
+        @Override protected DocumentStructure structure() { return discoverStructure(configuredRootId); }
+        @Override protected String meetingDataPageId() { return findMeetingDataPageId(configuredRootId); }
+        @Override protected String ensureMeetingDataPageId() { return ensureMeetingDataPage(configuredRootId); }
+        @Override protected List<String> children(String root) { return transferChildren(root); }
+        @Override protected TransferRecord read(String id) { return readTransferPage(id, pages); }
+        @Override protected TransferRecord readMeeting(String id) { return readTransferPage(id, pages, true); }
+        @Override protected String create(String parent, TransferRecord record) { return createTransferPage(parent, record, pages); }
+        @Override public List<MeetingSummary> listMeetingSummaries() {
+            return listMeetingIndexEntries().stream().map(NotionMeetingIndex.Entry::summary).toList();
+        }
+        @Override protected TransferRecord findMeetingByExternalSessionId(String sessionId) {
+            List<NotionMeetingIndex.Entry> matches = listMeetingIndexEntries().stream()
+                    .filter(entry -> sessionId.equals(entry.sessionId())).toList();
+            if (matches.size() > 1) throw transferInvalid();
+            return matches.isEmpty() ? null : readTransferPage(matches.getFirst().summary().documentId(), pages, true);
+        }
+        @Override protected void afterMeetingPublished(TransferRecord meeting) { appendMeetingIndexRow(meeting); }
+    };
+
+    @Override public TransferManifest readManifest() { return transfer.readManifest(); }
+    @Override public List<TransferRecord> listMeetingRecords() {
+        try {
+            return transfer.listMeetingRecords();
+        } catch (RuntimeException failure) {
+            String cause = failure instanceof TransferCodec.ValidationException validation
+                    ? validation.code().name()
+                    : failure instanceof DocumentProviderException providerFailure
+                            ? providerFailure.code() : failure.getClass().getSimpleName();
+            log.error("Notion meeting history traversal failed: cause={}", cause);
+            throw failure;
+        }
+    }
+    @Override public List<MeetingSummary> listMeetingSummaries() {
+        try { return transfer.listMeetingSummaries(); }
+        catch (RuntimeException failure) {
+            String cause = failure instanceof TransferCodec.ValidationException validation
+                    ? validation.code().name()
+                    : failure instanceof DocumentProviderException providerFailure
+                            ? providerFailure.code() : failure.getClass().getSimpleName();
+            log.error("Notion meeting index read failed: cause={}", cause);
+            throw failure;
+        }
+    }
+    @Override public MeetingSummary findMeetingSummary(String documentId) {
+        List<MeetingSummary> matches = listMeetingSummaries().stream()
+                .filter(meeting -> documentId.equals(meeting.documentId())).toList();
+        if (matches.size() > 1) throw DocumentProviderException.documentFailed(false);
+        return matches.isEmpty() ? null : matches.getFirst();
+    }
+    @Override public TransferRecord exportMeeting(String id) {
+        try { return transfer.exportMeeting(id); }
+        catch (DocumentProviderException failure) { throw failure; }
+        catch (RuntimeException unsafeProviderFailure) { throw DocumentProviderException.documentFailed(false, unsafeProviderFailure); }
+    }
+    @Override public Participant importParticipant(TransferRecord r, String fingerprint) { return transfer.importParticipant(r, fingerprint); }
+    @Override public MeetingDocumentRef importMeeting(TransferRecord r, Map<String,String> map, String fingerprint) { return transfer.importMeeting(r, map, fingerprint); }
+    @Override public MeetingDocumentRef publishMeeting(TransferRecord meeting) { return transfer.publishMeeting(meeting); }
+
+    private JsonNode transferRequest(String path, Object body) {
+        return transferRequest(path, body, false);
+    }
+
+    private JsonNode transferRequest(String path, Object body, boolean meetingRead) {
+        return transferRequest(path, body, meetingRead, 0);
+    }
+
+    private JsonNode transferRequest(String path, Object body, boolean meetingRead, int retryCount) {
+        try {
+            java.net.URI uri = java.net.URI.create(API_BASE_URL + path);
+            var request = body == null ? restClient.get().uri(uri) : restClient.post().uri(uri).body(JSON_MAPPER.writeValueAsString(body));
+            String response = request.headers(headers -> {
+                headers.setBearerAuth(token); headers.set("Notion-Version", API_VERSION);
+                headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+            }).exchange((req, res) -> {
+                if (res.getStatusCode().isError()) {
+                    String errorBody = StreamUtils.copyToString(res.getBody(), StandardCharsets.UTF_8);
+                    String notionCode = "unknown";
+                    String rateLimitReason = null;
+                    JsonNode error = null;
+                    try {
+                        error = JSON_MAPPER.readTree(errorBody);
+                        if (error != null && error.path("code").isTextual()) notionCode = error.path("code").asString();
+                        if (error != null && error.path("additional_data").path("rate_limit_reason").isTextual()) {
+                            rateLimitReason = error.path("additional_data").path("rate_limit_reason").asString();
+                        }
+                    } catch (Exception ignored) { /* Keep provider response details out of logs. */ }
+                    if (res.getStatusCode().value() == 429 && !"public_api_request_blocked".equals(rateLimitReason)) {
+                        throw new NotionRateLimitFailure(retryAfterMillis(res.getHeaders().getFirst("Retry-After"), error), true);
+                    }
+                    log.error("Notion transfer API request failed: endpoint={}, status={}, notionCode={}",
+                            safeEndpoint(path), res.getStatusCode().value(), notionCode);
+                    if (meetingRead && res.getStatusCode().value() == 404) {
+                        throw DocumentProviderException.meetingNotFound();
+                    }
+                    throw DocumentProviderException.documentFailed(false);
+                }
+                return StreamUtils.copyToString(res.getBody(), StandardCharsets.UTF_8);
+            });
+            JsonNode parsed = JSON_MAPPER.readTree(response);
+            if (parsed == null || !parsed.isObject()) throw transferInvalid();
+            return parsed;
+        } catch (NotionRateLimitFailure rateLimited) {
+            if (rateLimited.retryable() && retryCount < MAX_RATE_LIMIT_RETRIES
+                    && rateLimited.retryAfterMillis() <= MAX_RATE_LIMIT_WAIT_MILLIS) {
+                long jitterMillis = java.util.concurrent.ThreadLocalRandom.current().nextLong(250);
+                log.warn("Notion transfer API rate limited; retrying: endpoint={}, retry={}, retryAfterMs={}",
+                        safeEndpoint(path), retryCount + 1, rateLimited.retryAfterMillis());
+                try {
+                    Thread.sleep(rateLimited.retryAfterMillis() + jitterMillis);
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    throw DocumentProviderException.rateLimited();
+                }
+                return transferRequest(path, body, meetingRead, retryCount + 1);
+            }
+            log.error("Notion transfer API rate limit exhausted: endpoint={}, retries={}", safeEndpoint(path), retryCount);
+            throw DocumentProviderException.rateLimited();
+        } catch (TransferCodec.ValidationException | DocumentProviderException e) { throw e; }
+        catch (Exception e) {
+            log.error("Notion transfer API response could not be decoded: endpoint={}, cause={}",
+                    safeEndpoint(path), e.getClass().getSimpleName());
+            throw transferInvalid();
+        }
+    }
+
+    private static long retryAfterMillis(String retryAfter, JsonNode error) {
+        if (retryAfter != null) {
+            try {
+                long seconds = Long.parseLong(retryAfter.trim());
+                if (seconds >= 0) return Math.multiplyExact(seconds, 1_000L);
+            } catch (NumberFormatException | ArithmeticException ignored) { /* Use the response body or backoff. */ }
+        }
+        JsonNode retryAfterValue = error == null ? null : error.path("additional_data").path("retry_after");
+        if (retryAfterValue != null && !retryAfterValue.isMissingNode() && !retryAfterValue.isNull()) {
+            try {
+                long seconds = retryAfterValue.isNumber()
+                        ? retryAfterValue.longValue() : Long.parseLong(retryAfterValue.asString());
+                if (seconds >= 0) return Math.multiplyExact(seconds, 1_000L);
+            } catch (NumberFormatException | ArithmeticException ignored) { /* Use exponential backoff. */ }
+        }
+        return 1_000L;
+    }
+
+    private static String safeEndpoint(String path) {
+        if (path.startsWith("/v1/blocks/")) return "block-children";
+        if (path.startsWith("/v1/pages/")) return "page";
+        return "other";
+    }
+
+    private static String safeIdentifier(String value) {
+        return value == null ? "missing" : value.replaceAll("[^A-Za-z0-9_-]", "?");
+    }
+
+    private List<JsonNode> transferBlocks(String root) {
+        List<JsonNode> blocks = new ArrayList<>(); Set<String> cursors = new HashSet<>(); String cursor = null;
+        while (true) {
+            String path = "/v1/blocks/" + encodeId(root) + "/children" + (cursor == null ? "" : "?start_cursor=" + encodeId(cursor));
+            JsonNode response = transferRequest(path, null); JsonNode results = response.get("results"); JsonNode more = response.get("has_more");
+            if (results == null || !results.isArray() || more == null || !more.isBoolean()) throw transferInvalid();
+            for (JsonNode block : results) { if (!block.isObject()) throw transferInvalid(); blocks.add(block); }
+            JsonNode next = response.get("next_cursor");
+            if (!more.booleanValue()) { if (next != null && !next.isNull()) throw transferInvalid(); break; }
+            cursor = transferText(next); if (!cursors.add(cursor)) throw transferInvalid();
+        }
+        return blocks;
+    }
+    private List<String> transferChildren(String root) {
+        List<String> children = new ArrayList<>(); boolean bootstrapSentinelSeen = false;
+        for (JsonNode b : transferBlocks(root)) {
+            String type = transferText(b.get("type"));
+            if ("child_page".equals(type) && b.path("child_page").isObject()) {
+                transferText(b.path("child_page").get("title")); children.add(transferText(b.get("id")));
+            } else if ("paragraph".equals(type)) {
+                if (isBootstrapSentinel(b)) {
+                    if (bootstrapSentinelSeen) throw transferInvalid();
+                    bootstrapSentinelSeen = true;
+                }
+            } else {
+                log.error("Notion container contains an unsupported child block: parentPageId={}, blockType={}",
+                        safeIdentifier(root), type);
+                throw transferInvalid();
+            }
+        }
+        return children;
+    }
+    private static boolean isBootstrapSentinel(JsonNode block) {
+        JsonNode richText = block.path("paragraph").get("rich_text");
+        if (richText == null || !richText.isArray()) throw transferInvalid();
+        String content = transferRichText(richText);
+        return BOOTSTRAP_SENTINEL.matcher(content).matches();
+    }
+    private TransferRecord readTransferPage(String id, TransferPageCodec mapper) {
+        return readTransferPage(id, mapper, false);
+    }
+
+    private TransferRecord readTransferPage(String id, TransferPageCodec mapper, boolean meetingRead) {
+        JsonNode page = transferRequest("/v1/pages/" + encodeId(id), null, meetingRead);
+        if (!id.equals(transferText(page.get("id")))) throw transferInvalid();
+        String revision = transferText(page.get("last_edited_time"));
+        List<JsonNode> rawBlocks = transferBlocks(id);
+        if (rawBlocks.stream().noneMatch(block -> "code".equals(text(block.get("type"))))) return null;
+        List<TransferPageCodec.Block> blocks = new ArrayList<>();
+        for (JsonNode b : rawBlocks) {
+            String type = transferText(b.get("type"));
+            if (!Set.of("heading_2", "paragraph", "bulleted_list_item", "code").contains(type) || b.path("has_children").asBoolean(false)) throw transferInvalid();
+            blocks.add(new TransferPageCodec.Block(type, transferRichText(b.path(type).get("rich_text"))));
+        }
+        JsonNode properties = page.path("properties"); String title = null;
+        for (var property : properties.properties()) if (property.getValue().has("title")) {
+            if (title != null) throw transferInvalid(); title = transferRichText(property.getValue().get("title"));
+        }
+        if (title == null || title.isBlank()) throw transferInvalid();
+        return mapper.decode(id, revision, transferText(page.get("url")), title, blocks);
+    }
+    private String createTransferPage(String parent, TransferRecord record, TransferPageCodec mapper) {
+        if (record.participant() == null && record.renderedMarkdown() != null && record.storageKey() == null) {
+            JsonNode human = createMarkdownMeetingPage(record);
+            record = record.withStorage(transferText(human.get("url")), record.marker().externalSessionId());
+        }
+        List<Object> children = new ArrayList<>();
+        for (var block : mapper.encode(record)) {
+            Map<String,Object> fields = new java.util.LinkedHashMap<>(); fields.put("rich_text", transferRuns(block.text()));
+            if (block.type().equals("code")) fields.put("language", "json");
+            children.add(Map.of("object", "block", "type", block.type(), block.type(), fields));
+        }
+        // Notion allows 100 initial children; larger pages append batches after creation.
+        String pageTitle = record.storageKey() == null ? record.title() : record.storageKey();
+        JsonNode created = transferRequest("/v1/pages", Map.of("parent", Map.of("page_id", parent), "properties", Map.of("title", Map.of("title", transferRuns(pageTitle))),
+                "children", children.subList(0, Math.min(100, children.size()))));
+        String id = transferText(created.get("id"));
+        for (int start = 100; start < children.size(); start += 100) {
+            restClient.patch().uri("/v1/blocks/" + encodeId(id) + "/children")
+                    .headers(headers -> { headers.setBearerAuth(token); headers.set("Notion-Version", API_VERSION); headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON); })
+                    .body(JSON_MAPPER.writeValueAsString(Map.of("children", children.subList(start, Math.min(start + 100, children.size())))))
+                    .exchange((request, response) -> { if (response.getStatusCode().isError()) throw transferInvalid(); return null; });
+        }
+        return id;
+    }
+
+    private JsonNode createMarkdownMeetingPage(TransferRecord record) {
+        MeetingMarkdownRenderer renderer = new MeetingMarkdownRenderer();
+        List<Object> children = renderer.blocks(record.renderedMarkdown()).stream().map(block -> {
+            Map<String, Object> richText = Map.of("rich_text", transferRuns(block.text()));
+            return (Object) Map.of("object", "block", "type", block.type(), block.type(), richText);
+        }).toList();
+        JsonNode created = transferRequest("/v1/pages", Map.of("parent", Map.of("page_id", discoverStructure(configuredRootId).meetingsPageId()),
+                "properties", Map.of("title", Map.of("title", transferRuns(record.title()))),
+                "children", children.subList(0, Math.min(100, children.size()))));
+        String id = transferText(created.get("id"));
+        for (int start = 100; start < children.size(); start += 100) {
+            restClient.patch().uri("/v1/blocks/" + encodeId(id) + "/children")
+                    .headers(headers -> { headers.setBearerAuth(token); headers.set("Notion-Version", API_VERSION); headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON); })
+                    .body(JSON_MAPPER.writeValueAsString(Map.of("children", children.subList(start, Math.min(start + 100, children.size())))))
+                    .exchange((request, response) -> { if (response.getStatusCode().isError()) throw transferInvalid(); return null; });
+        }
+        return created;
+    }
+
+    private String findMeetingDataPageId(String rootId) {
+        List<String> matches = childIdsNamed(readAllChildren(rootId), "Meeting Data");
+        if (matches.size() > 1) throw DocumentProviderException.structureNotFound();
+        return matches.isEmpty() ? null : matches.getFirst();
+    }
+
+    private List<NotionMeetingIndex.Entry> listMeetingIndexEntries() {
+        List<JsonNode> children = transferBlocks(meetingIndexPageId());
+        String tableId = null;
+        for (JsonNode block : children) {
+            if ("table".equals(text(block.get("type")))) {
+                if (tableId != null) throw transferInvalid();
+                tableId = transferText(block.get("id"));
+            }
+        }
+        if (tableId == null) throw DocumentProviderException.structureNotFound();
+        List<JsonNode> rows = transferBlocks(tableId);
+        List<NotionMeetingIndex.Entry> result = new ArrayList<>();
+        boolean headerSkipped = false;
+        for (JsonNode row : rows) {
+            if (!"table_row".equals(text(row.get("type")))) continue;
+            if (!headerSkipped) { headerSkipped = true; continue; }
+            result.add(NotionMeetingIndex.readRow(row));
+        }
+        if (!headerSkipped) throw transferInvalid();
+        return List.copyOf(result);
+    }
+
+    private String meetingIndexPageId() {
+        String dataPageId = findMeetingDataPageId(configuredRootId);
+        List<ChildPage> matches = readAllChildren(dataPageId).stream()
+                .filter(page -> "Meeting Index".equals(page.title())).toList();
+        if (matches.size() > 1) throw DocumentProviderException.structureNotFound();
+        if (matches.isEmpty()) {
+            String marker = "meeting-automation/bootstrap/meeting-index/1";
+            JsonNode created = transferRequest("/v1/pages", Map.of("parent", Map.of("page_id", dataPageId),
+                    "properties", Map.of("title", Map.of("title", transferRuns("Meeting Index"))),
+                    "children", List.of(Map.of("object", "block", "type", "paragraph",
+                            "paragraph", Map.of("rich_text", transferRuns(marker))))));
+            String id = transferText(created.get("id"));
+            appendBlockChildren(id, List.of(NotionMeetingIndex.tableBlock()));
+            return id;
+        }
+        return matches.getFirst().id();
+    }
+
+    private void appendMeetingIndexRow(TransferRecord meeting) {
+        String tableId = null;
+        for (JsonNode block : transferBlocks(meetingIndexPageId())) {
+            if ("table".equals(text(block.get("type")))) {
+                if (tableId != null) throw transferInvalid();
+                tableId = transferText(block.get("id"));
+            }
+        }
+        if (tableId == null) throw DocumentProviderException.structureNotFound();
+        appendBlockChildren(tableId, List.of(NotionMeetingIndex.rowBlock(meeting)));
+    }
+
+    private void appendBlockChildren(String blockId, List<Map<String, Object>> children) {
+        try {
+            restClient.patch().uri("/v1/blocks/" + encodeId(blockId) + "/children")
+                    .headers(headers -> {
+                        headers.setBearerAuth(token);
+                        headers.set("Notion-Version", API_VERSION);
+                        headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+                    })
+                    .body(JSON_MAPPER.writeValueAsString(Map.of("children", children)))
+                    .exchange((request, response) -> {
+                        if (response.getStatusCode().isError()) {
+                            throw DocumentProviderException.documentFailed(response.getStatusCode().value() == 429
+                                    || response.getStatusCode().is5xxServerError());
+                        }
+                        return null;
+                    });
+        } catch (DocumentProviderException failure) {
+            throw failure;
+        } catch (Exception failure) {
+            throw DocumentProviderException.documentFailed(true, failure);
+        }
+    }
+
+    private String ensureMeetingDataPage(String rootId) {
+        String existing = findMeetingDataPageId(rootId);
+        if (existing != null) return existing;
+        String marker = "meeting-automation/bootstrap/meeting-data/MEETING_DATA";
+        JsonNode created = transferRequest("/v1/pages", Map.of("parent", Map.of("page_id", rootId),
+                "properties", Map.of("title", Map.of("title", transferRuns("Meeting Data"))),
+                "children", List.of(Map.of("object", "block", "type", "paragraph",
+                        "paragraph", Map.of("rich_text", transferRuns(marker))))));
+        return transferText(created.get("id"));
+    }
+    private static List<Object> transferRuns(String value) {
+        List<Object> runs = new ArrayList<>();
+        for (int start = 0; start < value.length();) {
+            int end = Math.min(start + 2000, value.length());
+            if (end < value.length() && Character.isHighSurrogate(value.charAt(end - 1))
+                    && Character.isLowSurrogate(value.charAt(end))) end--;
+            runs.add(Map.of("type", "text", "text", Map.of("content", value.substring(start, end))));
+            start = end;
+        }
+        if (runs.isEmpty()) runs.add(Map.of("type", "text", "text", Map.of("content", "")));
+        return runs;
+    }
+    private static String transferRichText(JsonNode runs) {
+        if (runs == null || !runs.isArray()) throw transferInvalid(); StringBuilder value = new StringBuilder();
+        for (JsonNode run : runs) { String text = text(run.get("plain_text")); if (text == null) text = text(run.path("text").get("content")); if (text == null) throw transferInvalid(); value.append(text); }
+        return value.toString();
+    }
+    private static String transferText(JsonNode node) { String value = text(node); if (isBlank(value)) throw transferInvalid(); return value; }
+    private static String encodeId(String id) { return java.net.URLEncoder.encode(id, StandardCharsets.UTF_8).replace("+", "%20"); }
+    private static TransferCodec.ValidationException transferInvalid() { return new TransferCodec.ValidationException(TransferCodec.Code.INVALID_RECORD); }
+
+    public NotionPageHierarchyAdapter(
+            RestClient.Builder restClientBuilder,
+            String token, String configuredRootId) {
+        this.token = token;
+        this.configuredRootId = configuredRootId;
+        this.restClient = restClientBuilder.baseUrl(API_BASE_URL).build();
+    }
+
+    @Override
+    public ProviderHealth validateConnection() {
+        if (!isConfigured()) {
+            return new ProviderHealth(false, false, false);
+        }
+        try {
+            readAllChildren(configuredRootId);
+            return new ProviderHealth(true, true, true);
+        } catch (NotionApiFailure failure) {
+            boolean authenticated = failure.statusCode() != 401 && failure.statusCode() != 403;
+            return new ProviderHealth(true, failure.responseReceived() && authenticated, false);
+        }
+    }
+
+    @Override
+    public DocumentStructure discoverStructure(String rootId) {
+        return discoverStructure(rootId, false, false);
+    }
+
+    @Override
+    public DocumentStructure discoverParticipantStructure(String rootId) {
+        return discoverStructure(rootId, true, false);
+    }
+
+    @Override
+    public DocumentStructure discoverParticipantCreateStructure(String rootId) {
+        return discoverStructure(rootId, false, true);
+    }
+
+    private DocumentStructure discoverStructure(
+            String rootId, boolean participantListingOperation, boolean participantCreatePreflight) {
+        if (isBlank(token) || isBlank(rootId)) {
+            throw DocumentProviderException.documentFailed(false);
+        }
+
+        try {
+            List<ChildPage> children = readAllChildren(rootId);
+            List<String> meetings = childIdsNamed(children, "Meetings");
+            List<String> participants = childIdsNamed(children, "Participants");
+            if (meetings.size() != 1 || participants.size() != 1) {
+                throw DocumentProviderException.structureNotFound();
+            }
+            return new DocumentStructure(rootId, meetings.getFirst(), participants.getFirst());
+        } catch (NotionApiFailure failure) {
+            if (participantListingOperation) {
+                throw DocumentProviderException.participantListFailed(
+                        isParticipantRetryable(failure.statusCode()), failure);
+            }
+            if (participantCreatePreflight) {
+                throw DocumentProviderException.documentFailed(
+                        isParticipantRetryable(failure.statusCode()), failure);
+            }
+            throw DocumentProviderException.documentFailed(isRetryable(failure.statusCode()), failure);
+        }
+    }
+
+    @Override
+    public List<Participant> listParticipants(String participantsPageId) {
+        try {
+            List<Participant> result = new ArrayList<>();
+            for (ChildPage page : readAllChildren(participantsPageId, true)) {
+                result.add(ParticipantPageMapper.map(page.id(), page.title(), readPageText(page.id())));
+            }
+            return List.copyOf(result);
+        } catch (DocumentProviderException failure) {
+            throw failure;
+        } catch (NotionApiFailure failure) {
+            throw DocumentProviderException.participantListFailed(isParticipantRetryable(failure.statusCode()), failure);
+        }
+    }
+
+    @Override
+    public Participant createParticipant(String participantsPageId, CreateParticipantCommand command) {
+        if (isBlank(token) || isBlank(participantsPageId)) {
+            throw DocumentProviderException.documentFailed(false);
+        }
+        ResponseEnvelope response;
+        try {
+            String requestBody = JSON_MAPPER.writeValueAsString(java.util.Map.of(
+                    "parent", java.util.Map.of("page_id", participantsPageId),
+                    "properties", java.util.Map.of("title", java.util.Map.of("title", java.util.List.of(
+                            java.util.Map.of("text", java.util.Map.of("content", command.name()))))),
+                    "children", java.util.List.of(java.util.Map.of(
+                            "object", "block", "type", "paragraph",
+                            "paragraph", java.util.Map.of("rich_text", java.util.List.of(
+                                    java.util.Map.of("type", "text", "text",
+                                            java.util.Map.of("content", "Email: " + command.email()))))),
+                            Map.of("object", "block", "type", "code", "code", Map.of("language", "json", "rich_text", transferRuns(new TransferCodec().encodeMarker(
+                                    ParticipantTransferMarkers.refreshed(new Participant("pending", command.name(), command.email()), null))))))));
+            response = restClient.post()
+                    .uri("/v1/pages")
+                    .headers(headers -> {
+                        headers.setBearerAuth(token);
+                        headers.set("Notion-Version", API_VERSION);
+                        headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+                    })
+                    .body(requestBody)
+                    .exchange((request, httpResponse) -> {
+                        int status = httpResponse.getStatusCode().value();
+                        if (HttpStatusCode.valueOf(status).isError()) {
+                            throw new NotionApiFailure(true, status);
+                        }
+                        try {
+                            return new ResponseEnvelope(status,
+                                    StreamUtils.copyToString(httpResponse.getBody(), StandardCharsets.UTF_8));
+                        } catch (IOException readFailure) {
+                            throw new NotionApiFailure(true, status);
+                        }
+                    });
+        } catch (NotionApiFailure failure) {
+            throw DocumentProviderException.documentFailed(isCreateRetryable(failure.statusCode()), failure);
+        } catch (RestClientException transportFailure) {
+            throw DocumentProviderException.documentFailed(false, transportFailure);
+        } catch (Exception invalidRequestBody) {
+            throw DocumentProviderException.documentFailed(false, invalidRequestBody);
+        }
+
+        try {
+            JsonNode responseBody = JSON_MAPPER.readTree(response.body());
+            JsonNode id = responseBody == null ? null : responseBody.get("id");
+            if (id == null || !id.isTextual() || isBlank(id.textValue())) {
+                throw DocumentProviderException.documentFailed(false);
+            }
+            return new Participant(id.textValue(), command.name(), command.email());
+        } catch (DocumentProviderException failure) {
+            throw failure;
+        } catch (Exception malformedResponse) {
+            throw DocumentProviderException.documentFailed(false, malformedResponse);
+        }
+    }
+
+    @Override
+    public Participant updateParticipant(String participantId, ParticipantUpdateCommand command) {
+        if (isBlank(token) || isBlank(participantId)) {
+            throw DocumentProviderException.documentFailed(false);
+        }
+
+        List<PageBlock> blocks = readPageBlocks(participantId);
+        TransferCodec codec = new TransferCodec();
+        TransferMarker marker = codec.parseMarker(blocks.stream().filter(b -> "code".equals(b.type())).map(PageBlock::text).toList());
+        ParticipantTransferMarkers.validateCurrent(command.existing(), marker);
+        PageBlock markerBlock = blocks.stream().filter(b -> "code".equals(b.type()) && b.text().contains("meeting-automation")).findFirst().orElseThrow(NotionPageHierarchyAdapter::transferInvalid);
+        if (command.email() != null) {
+            PageBlock emailBlock = blocks.stream()
+                    .filter(block -> block.emailLine() != null)
+                    .findFirst()
+                    .orElseThrow(() -> DocumentProviderException.documentFailed(false));
+            List<Map<String, Object>> richText = replaceEmailRichText(emailBlock, command.updatedEmail());
+            patchBlock(emailBlock.id(), Map.of(emailBlock.type(), Map.of("rich_text", richText)), false);
+        }
+
+        if (command.name() != null) {
+            patchBlock(participantId, Map.of("properties", Map.of("title", Map.of("title", List.of(Map.of(
+                    "text", Map.of("content", command.updatedName())))))), true);
+        }
+        TransferMarker updatedMarker = ParticipantTransferMarkers.refreshed(new Participant(participantId, command.updatedName(), command.updatedEmail()), marker);
+        patchBlock(markerBlock.id(), Map.of("code", Map.of("language", "json", "rich_text", transferRuns(codec.encodeMarker(updatedMarker)))), false);
+        return new Participant(participantId, command.updatedName(), command.updatedEmail());
+    }
+
+    @Override
+    public void deleteParticipant(String participantsPageId, Participant participant) {
+        if (isBlank(token) || isBlank(participant.id())) throw DocumentProviderException.documentFailed(false);
+        JsonNode page = transferRequest("/v1/pages/" + encodeId(participant.id()), null);
+        String parentId = text(page.path("parent").get("page_id"));
+        if (!participantsPageId.equals(parentId)) throw DocumentProviderException.participantNotFound();
+        List<PageBlock> blocks = readPageBlocks(participant.id());
+        TransferCodec codec = new TransferCodec();
+        TransferMarker marker = codec.parseMarker(blocks.stream().filter(b -> "code".equals(b.type())).map(PageBlock::text).toList());
+        try {
+            ParticipantTransferMarkers.validateCurrent(participant, marker);
+        } catch (TransferCodec.ValidationException stalePageId) {
+            ParticipantTransferMarkers.validateCreatedPendingId(participant, marker);
+        }
+        patchBlock(participant.id(), Map.of("in_trash", true), true);
+    }
+
+    private List<PageBlock> readPageBlocks(String pageId) {
+        List<PageBlock> blocks = new ArrayList<>();
+        Set<String> seenCursors = new HashSet<>();
+        String cursor = null;
+        boolean hasMore;
+        do {
+            String startCursor = cursor;
+            ResponseEnvelope envelope;
+            try {
+                envelope = restClient.get()
+                        .uri(uriBuilder -> {
+                            var uri = uriBuilder.path(CHILDREN_PATH);
+                            if (startCursor != null) uri.queryParam("start_cursor", startCursor);
+                            return uri.build(pageId);
+                        })
+                        .headers(headers -> {
+                            headers.setBearerAuth(token);
+                            headers.set("Notion-Version", API_VERSION);
+                        })
+                        .exchange((request, response) -> {
+                            int status = response.getStatusCode().value();
+                            if (HttpStatusCode.valueOf(status).isError()) {
+                                throw new NotionApiFailure(true, status);
+                            }
+                            try {
+                                return new ResponseEnvelope(status,
+                                        StreamUtils.copyToString(response.getBody(), StandardCharsets.UTF_8));
+                            } catch (IOException readFailure) {
+                                throw new NotionApiFailure(true, status);
+                            }
+                        });
+            } catch (NotionApiFailure failure) {
+                if (failure.statusCode() == 404) {
+                    throw DocumentProviderException.participantNotFound();
+                }
+                throw DocumentProviderException.documentFailed(
+                        isParticipantRetryable(failure.statusCode()), failure);
+            } catch (RestClientException transportFailure) {
+                throw DocumentProviderException.documentFailed(true, transportFailure);
+            }
+
+            try {
+                JsonNode response = JSON_MAPPER.readTree(envelope.body());
+                JsonNode results = response == null ? null : response.get("results");
+                JsonNode more = response == null ? null : response.get("has_more");
+                if (results == null || !results.isArray() || more == null || !more.isBoolean()) {
+                    throw DocumentProviderException.documentFailed(false);
+                }
+                for (JsonNode block : results) {
+                    String id = text(block.get("id"));
+                    String type = text(block.get("type"));
+                    JsonNode content = type == null ? null : block.get(type);
+                    JsonNode richText = content == null ? null : content.get("rich_text");
+                    if (id == null || richText == null || !richText.isArray()) throw DocumentProviderException.documentFailed(false);
+                    StringBuilder text = new StringBuilder();
+                    for (JsonNode run : richText) {
+                        String plainText = text(run.get("plain_text"));
+                        if (plainText == null) {
+                            JsonNode runText = run.get("text");
+                            plainText = runText == null ? "" : text(runText.get("content"));
+                        }
+                        if (plainText != null) text.append(plainText);
+                    }
+                    blocks.add(new PageBlock(id, type, text.toString(), richText));
+                }
+                hasMore = more.booleanValue();
+                JsonNode next = response.get("next_cursor");
+                if (hasMore && (next == null || !next.isTextual() || isBlank(next.textValue()))) {
+                    throw DocumentProviderException.documentFailed(false);
+                }
+                cursor = hasMore ? next.textValue() : null;
+                if (cursor != null && !seenCursors.add(cursor)) {
+                    throw DocumentProviderException.documentFailed(false);
+                }
+            } catch (DocumentProviderException failure) {
+                throw failure;
+            } catch (Exception malformedResponse) {
+                throw DocumentProviderException.documentFailed(false, malformedResponse);
+            }
+        } while (hasMore);
+        return List.copyOf(blocks);
+    }
+
+    private void patchBlock(String blockId, Object body, boolean page) {
+        try {
+            String json = JSON_MAPPER.writeValueAsString(body);
+            restClient.patch()
+                    .uri(uriBuilder -> uriBuilder.path("/v1/" + (page ? "pages/{id}" : "blocks/{id}"))
+                            .build(blockId))
+                    .headers(headers -> {
+                        headers.setBearerAuth(token);
+                        headers.set("Notion-Version", API_VERSION);
+                        headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+                    })
+                    .body(json)
+                    .exchange((request, response) -> {
+                        if (HttpStatusCode.valueOf(response.getStatusCode().value()).isError()) {
+                            int status = response.getStatusCode().value();
+                            String errorCode = "unknown";
+                            try {
+                                JsonNode error = JSON_MAPPER.readTree(StreamUtils.copyToString(response.getBody(), StandardCharsets.UTF_8));
+                                if (error != null && error.path("code").isTextual()) errorCode = error.path("code").asString();
+                            } catch (Exception ignored) { /* Provider response details are not exposed. */ }
+                            log.error("Notion page mutation failed: operation={}, status={}, notionCode={}",
+                                    page ? "page" : "block", status, errorCode);
+                            if (page && response.getStatusCode().value() == 404) {
+                                throw DocumentProviderException.participantNotFound();
+                            }
+                            throw new NotionApiFailure(true, status);
+                        }
+                        return null;
+                    });
+        } catch (Exception mutationFailure) {
+            if (mutationFailure instanceof DocumentProviderException providerFailure
+                    && "PARTICIPANT_NOT_FOUND".equals(providerFailure.code())) {
+                throw providerFailure;
+            }
+            throw DocumentProviderException.documentFailed(false, mutationFailure);
+        }
+    }
+
+    private static List<Map<String, Object>> replaceEmailRichText(PageBlock block, String email) {
+        int emailLabel = block.text().indexOf("Email:");
+        if (emailLabel < 0) throw DocumentProviderException.documentFailed(false);
+        int start = emailLabel + "Email:".length();
+        while (start < block.text().length() && Character.isWhitespace(block.text().charAt(start))) start++;
+        int end = block.text().indexOf('\n', start);
+        if (end < 0) end = block.text().length();
+        while (end > start && Character.isWhitespace(block.text().charAt(end - 1))) end--;
+        if (start >= end) throw DocumentProviderException.documentFailed(false);
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        int offset = 0;
+        boolean inserted = false;
+        for (JsonNode run : block.richText()) {
+            String content = richTextContent(run);
+            int runEnd = offset + content.length();
+            if (runEnd <= start || offset >= end) {
+                result.add(copyRichTextRun(run, content));
+            } else {
+                int prefixEnd = Math.max(0, Math.min(content.length(), start - offset));
+                if (prefixEnd > 0) result.add(copyRichTextRun(run, content.substring(0, prefixEnd)));
+                if (!inserted) {
+                    result.add(copyRichTextRun(run, email));
+                    inserted = true;
+                }
+                int suffixStart = Math.max(0, Math.min(content.length(), end - offset));
+                if (suffixStart < content.length()) {
+                    result.add(copyRichTextRun(run, content.substring(suffixStart)));
+                }
+            }
+            offset = runEnd;
+        }
+        if (!inserted) throw DocumentProviderException.documentFailed(false);
+        return List.copyOf(result);
+    }
+
+    private static Map<String, Object> copyRichTextRun(JsonNode source, String content) {
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        String type = text(source.get("type"));
+        result.put("type", type == null ? "text" : type);
+        JsonNode annotations = source.get("annotations");
+        if (annotations != null) result.put("annotations", annotations);
+        if (type != null && !"text".equals(type)) {
+            if (source.get(type) != null) result.put(type, source.get(type));
+            return result;
+        }
+        Map<String, Object> text = new java.util.LinkedHashMap<>();
+        text.put("content", content);
+        JsonNode sourceText = source.get("text");
+        if (sourceText != null && sourceText.get("link") != null) {
+            text.put("link", sourceText.get("link"));
+        }
+        result.put("text", text);
+        return result;
+    }
+
+    private static String richTextContent(JsonNode run) {
+        JsonNode text = run.get("text");
+        String content = text == null ? null : text(text.get("content"));
+        return content == null ? java.util.Objects.toString(text(run.get("plain_text")), "") : content;
+    }
+
+    private static String text(JsonNode node) {
+        return node != null && node.isTextual() ? node.textValue() : null;
+    }
+
+    private record PageBlock(String id, String type, String text, JsonNode richText) {
+        private String emailLine() {
+            return text.lines().map(String::trim).filter(line -> line.startsWith("Email:")).findFirst().orElse(null);
+        }
+    }
+
+    private String readPageText(String pageId) {
+        List<String> lines = new ArrayList<>();
+        Set<String> seenCursors = new HashSet<>();
+        String cursor = null;
+        boolean hasMore;
+        do {
+            ResponseEnvelope envelope;
+            String startCursor = cursor;
+            try {
+                envelope = restClient.get()
+                        .uri(uriBuilder -> {
+                            var uri = uriBuilder.path(CHILDREN_PATH);
+                            if (startCursor != null) uri.queryParam("start_cursor", startCursor);
+                            return uri.build(pageId);
+                        })
+                        .headers(headers -> {
+                            headers.setBearerAuth(token);
+                            headers.set("Notion-Version", API_VERSION);
+                        })
+                        .exchange((request, response) -> {
+                            int status = response.getStatusCode().value();
+                            if (HttpStatusCode.valueOf(status).isError()) {
+                                throw new NotionApiFailure(true, status);
+                            }
+                            try {
+                                return new ResponseEnvelope(status,
+                                        StreamUtils.copyToString(response.getBody(), StandardCharsets.UTF_8));
+                            } catch (IOException readFailure) {
+                                throw new NotionApiFailure(true, status);
+                            }
+                        });
+            } catch (NotionApiFailure failure) {
+                throw failure;
+            } catch (RestClientException transportFailure) {
+                throw new NotionApiFailure(false, 0);
+            }
+
+            try {
+                JsonNode response = JSON_MAPPER.readTree(envelope.body());
+                JsonNode results = response == null ? null : response.get("results");
+                if (results == null || !results.isArray()) {
+                    throw new NotionApiFailure(true, envelope.statusCode());
+                }
+                for (JsonNode block : results) {
+                    JsonNode type = block.get("type");
+                    JsonNode content = type != null && type.isTextual() ? block.get(type.textValue()) : null;
+                    JsonNode richText = content == null ? null : content.get("rich_text");
+                    if (richText != null && richText.isArray()) {
+                        StringBuilder blockText = new StringBuilder();
+                        for (JsonNode text : richText) {
+                            JsonNode plainText = text.get("plain_text");
+                            if (plainText != null && plainText.isTextual()) {
+                                blockText.append(plainText.textValue());
+                            }
+                        }
+                        if (!blockText.isEmpty()) lines.add(blockText.toString());
+                    }
+                }
+                JsonNode hasMoreNode = response.get("has_more");
+                JsonNode nextCursor = response.get("next_cursor");
+                if (hasMoreNode == null || !hasMoreNode.isBoolean()) {
+                    throw new NotionApiFailure(true, envelope.statusCode());
+                }
+                hasMore = hasMoreNode.booleanValue();
+                if (hasMore && (nextCursor == null || !nextCursor.isTextual())) {
+                    throw new NotionApiFailure(true, envelope.statusCode());
+                }
+                cursor = hasMore ? nextCursor.textValue() : null;
+                if (cursor != null && !seenCursors.add(cursor)) {
+                    throw new NotionApiFailure(true, envelope.statusCode());
+                }
+            } catch (NotionApiFailure failure) {
+                throw failure;
+            } catch (Exception failure) {
+                throw new NotionApiFailure(true, envelope.statusCode());
+            }
+        } while (hasMore);
+        return String.join("\n", lines);
+    }
+
+    private List<ChildPage> readAllChildren(String rootId) {
+        return readAllChildren(rootId, false);
+    }
+
+    private List<ChildPage> readAllChildren(String rootId, boolean strictParticipantPages) {
+        List<ChildPage> pages = new ArrayList<>();
+        Set<String> seenCursors = new HashSet<>();
+        String cursor = null;
+        boolean hasMore;
+        do {
+            String startCursor = cursor;
+            ResponseEnvelope response;
+            try {
+                response = restClient.get()
+                        .uri(uriBuilder -> {
+                            var uri = uriBuilder.path(CHILDREN_PATH);
+                            if (startCursor != null) {
+                                uri.queryParam("start_cursor", startCursor);
+                            }
+                            return uri.build(rootId);
+                        })
+                        .headers(headers -> {
+                            headers.setBearerAuth(token);
+                            headers.set("Notion-Version", API_VERSION);
+                        })
+                        .exchange((request, httpResponse) -> {
+                            int statusCode = httpResponse.getStatusCode().value();
+                            if (HttpStatusCode.valueOf(statusCode).isError()) {
+                                throw new NotionApiFailure(true, statusCode);
+                            }
+                            try {
+                                return new ResponseEnvelope(statusCode,
+                                        StreamUtils.copyToString(httpResponse.getBody(), StandardCharsets.UTF_8));
+                            } catch (IOException responseReadFailure) {
+                                throw new NotionApiFailure(true, statusCode);
+                            }
+                        })
+                        ;
+            } catch (NotionApiFailure failure) {
+                throw failure;
+            } catch (RestClientException failure) {
+                throw new NotionApiFailure(false, 0);
+            }
+
+            JsonNode responseBody;
+            try {
+                responseBody = JSON_MAPPER.readTree(response.body());
+            } catch (Exception malformedBody) {
+                throw new NotionApiFailure(true, response.statusCode());
+            }
+
+            JsonNode resultsNode = responseBody == null ? null : responseBody.get("results");
+            JsonNode hasMoreNode = responseBody == null ? null : responseBody.get("has_more");
+            if (resultsNode == null || !resultsNode.isArray() || hasMoreNode == null || !hasMoreNode.isBoolean()) {
+                throw new NotionApiFailure(true, response.statusCode());
+            }
+            pages.addAll(strictParticipantPages
+                    ? participantChildPages(resultsNode, response.statusCode())
+                    : childPages(resultsNode));
+            boolean more = hasMoreNode.booleanValue();
+            hasMore = more;
+            JsonNode nextCursor = responseBody.get("next_cursor");
+            if (hasMore && (nextCursor == null || !nextCursor.isTextual())) {
+                throw new NotionApiFailure(true, response.statusCode());
+            }
+            cursor = hasMore ? nextCursor.textValue() : null;
+            if (cursor != null && !seenCursors.add(cursor)) {
+                throw new NotionApiFailure(true, response.statusCode());
+            }
+        } while (hasMore);
+        return List.copyOf(pages);
+    }
+
+    private static List<ChildPage> childPages(JsonNode results) {
+        List<ChildPage> pages = new ArrayList<>();
+        for (JsonNode block : results) {
+            JsonNode type = block.get("type");
+            if (!block.isObject() || type == null || !type.isTextual() || !"child_page".equals(type.textValue())) {
+                continue;
+            }
+            JsonNode id = block.get("id");
+            JsonNode page = block.get("child_page");
+            JsonNode title = page == null ? null : page.get("title");
+            if (id != null && id.isTextual() && page != null && page.isObject()
+                    && title != null && title.isTextual()) {
+                pages.add(new ChildPage(id.textValue(), title.textValue()));
+            }
+        }
+        return pages;
+    }
+
+    private static List<ChildPage> participantChildPages(JsonNode results, int statusCode) {
+        List<ChildPage> pages = new ArrayList<>();
+        for (JsonNode block : results) {
+            if (!block.isObject()) continue;
+            JsonNode type = block.get("type");
+            if (type == null || !type.isTextual() || !"child_page".equals(type.textValue())) continue;
+            JsonNode id = block.get("id");
+            JsonNode page = block.get("child_page");
+            JsonNode title = page == null ? null : page.get("title");
+            if (id == null || !id.isTextual() || isBlank(id.textValue())
+                    || page == null || !page.isObject() || title == null || !title.isTextual()
+                    || isBlank(title.textValue())) {
+                throw new NotionApiFailure(true, statusCode);
+            }
+            pages.add(new ChildPage(id.textValue(), title.textValue()));
+        }
+        return pages;
+    }
+
+    private static List<String> childIdsNamed(List<ChildPage> children, String title) {
+        return children.stream()
+                .filter(child -> title.equals(child.title()))
+                .map(ChildPage::id)
+                .toList();
+    }
+
+    public boolean isConfigured() {
+        return !isBlank(token) && !isBlank(configuredRootId);
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.isBlank();
+    }
+
+    private static boolean isRetryable(int statusCode) {
+        return statusCode == 429 || statusCode >= 500;
+    }
+
+    private static boolean isParticipantRetryable(int statusCode) {
+        return statusCode == 0 || isRetryable(statusCode);
+    }
+
+    private static boolean isCreateRetryable(int statusCode) {
+        return statusCode == 429;
+    }
+
+    private record ChildPage(String id, String title) {
+    }
+
+    private record ResponseEnvelope(int statusCode, String body) {
+    }
+
+    private static final class NotionApiFailure extends RuntimeException {
+        private final boolean responseReceived;
+        private final int statusCode;
+
+        private NotionApiFailure(boolean responseReceived, int statusCode) {
+            this.responseReceived = responseReceived;
+            this.statusCode = statusCode;
+        }
+
+        private boolean responseReceived() {
+            return responseReceived;
+        }
+
+        private int statusCode() {
+            return statusCode;
+        }
+    }
+
+    private static final class NotionRateLimitFailure extends RuntimeException {
+        private final long retryAfterMillis;
+        private final boolean retryable;
+
+        private NotionRateLimitFailure(long retryAfterMillis, boolean retryable) {
+            this.retryAfterMillis = retryAfterMillis;
+            this.retryable = retryable;
+        }
+
+        private long retryAfterMillis() { return retryAfterMillis; }
+        private boolean retryable() { return retryable; }
+    }
+}

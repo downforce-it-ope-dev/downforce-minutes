@@ -1,0 +1,22 @@
+# Frontend generated files
+**/node_modules/
+/frontend/dist/
+/frontend/.vite/
+/frontend/test-results/
+/frontend/playwright-report/
+
+# Backend generated files
+/backend/.gradle/
+/backend/build/
+/backend/application-local.yml
+
+# Local environment files
+**/.env
+**/.env.*
+
+# Safe environment examples remain trackable
+!**/.env.example
+!**/.env.*.example
+
+# Agent worktrees
+.worktrees/
