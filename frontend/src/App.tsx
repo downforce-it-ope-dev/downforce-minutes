@@ -8,7 +8,7 @@ import {
   type ParticipantField,
   updateParticipant,
 } from './participantsApi';
-import './app.css';
+import './styles/index.css';
 import { Link, NavLink, Route, Routes, useLocation, useNavigate, useParams } from 'react-router';
 import { NewMeetingPage, type NewMeetingPayload } from './NewMeetingPage';
 import { cancelMeetingSession, createMeetingSession, type MeetingDraft, type MeetingSession, type MeetingSessionAttempt } from './newMeetingApi';

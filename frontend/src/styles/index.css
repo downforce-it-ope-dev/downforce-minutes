@@ -1,0 +1,18 @@
+/*
+ * 스타일 진입점. 순서가 적용 우선순위이므로 바꾸지 않는다.
+ * base → layout → components → 화면별(pages) 순서다.
+ */
+@import './base.css';
+@import './layout.css';
+@import './components.css';
+@import './pages/home.css';
+@import './pages/meetings.css';
+@import './pages/processing.css';
+@import './pages/setup.css';
+@import './pages/new-meeting.css';
+@import './pages/share.css';
+@import './pages/participants.css';
+@import './pages/review.css';
+@import './pages/recording.css';
+@import './pages/settings.css';
+@import './pages/recovery.css';
