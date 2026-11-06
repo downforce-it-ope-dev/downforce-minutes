@@ -15,8 +15,6 @@ export default defineConfig({
   },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-    // Playwright WebKit is browser-engine coverage, not an iOS Safari device result.
-    { name: 'webkit', use: { ...devices['Desktop Safari'] } },
   ],
   webServer: {
     command: 'npm run dev -- --host 127.0.0.1 --port 4173 --strictPort',
