@@ -3,7 +3,7 @@ import { finalizeProcessingFailure, getProcessingStatus, ProcessingApiError, ret
 
 describe('getProcessingStatus', () => {
   it('bypasses browser caches when reading live processing status', async () => {
-    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(JSON.stringify({ data: {
+    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async () => new Response(JSON.stringify({ data: {
       sessionId: 'live', version: 1, status: 'PROCESSING', processing: { stage: 'TRANSCRIPTION' }, allowedActions: [],
     } }), { status: 200 }));
 
