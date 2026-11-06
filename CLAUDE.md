@@ -57,6 +57,34 @@
   - 리뉴얼은 화면 묶음 단위로 작업 브랜치에서 진행한다.
   - 묶음이 완성되면 `main`에 합친다.
 
+### 구현 기준 (0단계 기반 작업 결과)
+
+- **진입 파일**
+  - Tailwind 진입 CSS는 `frontend/src/tailwind.css` 하나다. `App.tsx`는 이 파일만 불러온다.
+  - layer 순서: `theme → base → legacy → components → utilities`.
+- **리뉴얼 화면 루트**
+  - 리뉴얼 화면(또는 새 레이아웃)의 가장 바깥 요소에 `data-ui="renewal"`을 붙인다.
+  - 이 영역 안에서만 Tailwind 초기화(Preflight)가 적용된다. 밖의 기존 화면은 `src/styles/legacy-reset.css`가 브라우저 기본값을 유지한다.
+  - 루트 요소에는 `font-sans text-body text-text bg-bg`를 지정한다. `html`·`body`의 글꼴과 색은 기존 CSS가 정한다.
+- **색 클래스:** 용도별 토큰 이름을 우선 쓴다.
+  - 배경: `bg-bg`·`bg-bg-subtle`·`bg-primary`·`bg-primary-soft`·`bg-brand`·`bg-selected`·`bg-danger`·`bg-danger-soft`·`bg-success-soft`·`bg-warning-soft`
+  - 글자: `text-text`·`text-text-muted`·`text-primary-hover`(링크)·`text-primary-soft-text`·`text-brand-text`·`text-selected-text`·`text-danger-text`·`text-success-text`·`text-warning-text`
+  - 테두리: `border-border`·`border-border-input`
+  - 포커스: `outline-focus`
+  - 단계 색(`blue-600` 등)은 용도별 토큰으로 표현할 수 없을 때만 쓴다.
+- **글자 클래스:** `text-display`·`text-headline`·`text-title`·`text-body-lg`·`text-body`·`text-label`·`text-caption`·`text-nav`.
+  - 크기·줄 높이·굵기·자간이 함께 정해지고, `tablet` 이상에서 자동으로 커진다.
+  - Tailwind 기본 글자 크기(`text-sm` 등)는 지워져 있다.
+- **그 밖의 토큰**
+  - 모서리: `rounded-sm`(8)·`rounded-md`(12)·`rounded-lg`(16)·`rounded-xl`(20)·`rounded-full`
+  - 그림자: `shadow-overlay`
+  - 최대 폭: `max-w-auth`(480)·`max-w-dialog`(560)·`max-w-form`(640)·`max-w-reading`(720)·`max-w-content`(1040)
+  - 화면 조건: `tablet:`·`tablet-lg:`·`short:`
+  - 간격·크기: Tailwind 기본 단위(4px)를 쓴다 (예: `h-12` = 48px, `w-22` = 88px)
+- **검사:** `npm run lint`가 스타일 규칙(`frontend/scripts/check-styles.mjs`)을 함께 검사한다.
+  - 새 CSS 파일, 임의값 클래스, 한 파일에 두 방식을 섞으면 오류로 처리한다.
+  - 기존 CSS를 지우면 이 스크립트의 파일 목록에서도 지운다.
+
 ### 기존 CSS(`frontend/src/styles/`) 규칙
 
 - **동결**
