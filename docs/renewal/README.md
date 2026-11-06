@@ -10,6 +10,7 @@
 | 배포 | Render는 사용하지 않는다. Backend는 Google Cloud(Artifact Registry + Compute Engine VM)에 올라간 인스턴스를 기준으로 하고, Vercel Frontend와의 연결(`/api/backend` 리라이트)은 그대로 유지한다. |
 | 리뉴얼 범위 | 화면 UI/UX 수정과 신규 기능 추가가 예정되어 있다. 신규 기능이 Backend 변경을 요구하면 별도 판단 항목으로 분리한다. |
 | 개발·테스트 | 로컬에서 Backend에 연결해 테스트할 수 있어야 한다. |
+| 스타일 방식 | 신규 화면과 리뉴얼 화면은 Tailwind CSS로만 작성한다. 화면 전체를 한 번에 바꾸지 않고 리뉴얼하는 화면부터 전환하며, 한 화면 안에 두 방식을 섞지 않는다. 리뉴얼한 화면의 기존 CSS는 같은 작업에서 삭제한다. 근거: [스타일 방식 검토](스타일_전환_검토.md), 지침: [`CLAUDE.md`](../../CLAUDE.md) |
 
 ## 기준 문서
 
@@ -18,6 +19,7 @@
 - 계약: [API 명세](../product/api-spec.md), [데이터 명세](../product/data-spec.md), [외부 연동](../product/integrations.md)
 - 현행 UI: [UI 설계](../product/ui-design.md)와 PRD 화면 설계 절은 현행 기록이며 리뉴얼에서 새로 정의한다.
 - 리뉴얼 화면 기획: [화면 목록](화면기획/00_화면목록.md) (화면별 기획 문서 포함, 초안)
+- 스타일 방식: [스타일 방식 검토](스타일_전환_검토.md) (Tailwind CSS 전환 확정)
 - 현행 화면 캡처: [`현_UI`](현_UI)
 
 ## 로컬 테스트 환경
