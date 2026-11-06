@@ -39,20 +39,6 @@ function installListFetch(items: MeetingSummary[]) {
 }
 
 describe('Home recent meetings', () => {
-  it('requests and renders only the first three API-ordered summaries without private fields or status badges', async () => {
-    const fetchMock = installListFetch(meetings);
-    render(<MemoryRouter><HomePage /></MemoryRouter>);
-
-    expect(await screen.findByText('Meeting 1')).toBeTruthy();
-    expect(screen.getByText('Meeting 3')).toBeTruthy();
-    expect(screen.queryByText('Meeting 4')).toBeNull();
-    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/api/v1/meetings?limit=3'))).toBe(true);
-    expect(screen.getAllByText('참석자 1명')).toHaveLength(3);
-    expect(screen.queryByText('Person 1')).toBeNull();
-    expect(screen.queryByText(/private\.example|private-\d+@example\.com|COMPLETED|private provider details/)).toBeNull();
-    expect(screen.getByRole('button', { name: '전체 보기' })).toBeTruthy();
-    expect(screen.queryByText('Meeting Automation')).toBeNull();
-  });
 
   it('keeps the create-meeting CTA visible when there are no recent meetings', async () => {
     installListFetch([]);

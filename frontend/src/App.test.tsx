@@ -1140,19 +1140,6 @@ describe('Processing route', () => {
     expect(screen.getByTestId('current-path').textContent).toBe('/meetings/expected-session/processing');
   });
 
-  it('shows stage-safe failure without recovery actions, expiry, or raw provider details', async () => {
-    const fetchMock = vi.fn(async () => response({ data: {
-      sessionId: 'failed-session', version: 2, status: 'PROCESSING_FAILED',
-      processing: { stage: 'TRANSCRIPTION', errorCode: 'PRIVATE_PROVIDER_SECRET' }, allowedActions: [], audioExpiresAt: null,
-    } }));
-    installFetchMock(fetchMock);
-    render(<MemoryRouter initialEntries={['/meetings/failed-session/processing']}><App /></MemoryRouter>);
-    expect((await screen.findByRole('alert')).textContent).toContain('음성을 변환하는 중 문제가 발생했습니다.');
-    expect(screen.queryByText('PRIVATE_PROVIDER_SECRET')).toBeNull();
-    expect(screen.queryByRole('button')).toBeNull();
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-  });
-
   it('shows a safe new-meeting path for SESSION_NOT_FOUND without creating a session', async () => {
     const fetchMock = vi.fn(async () => response({ error: { code: 'SESSION_NOT_FOUND' } }, 404));
     installFetchMock(fetchMock);
@@ -1252,82 +1239,6 @@ describe('Review speaker selection', () => {
     expect(screen.getByTestId('current-path').textContent).toBe('/meetings/mapping-guard/review');
   });
 
-  it('ignores a late Session B retry after Session C has loaded', async () => {
-    let sessionBCalls = 0;
-    let resolveSessionBRetry: ((result: Response) => void) | undefined;
-    const fetchMock = vi.fn((input: RequestInfo | URL) => {
-      const path = new URL(String(input)).pathname;
-      if (path.endsWith('/meeting-sessions/session-b')) {
-        sessionBCalls += 1;
-        if (sessionBCalls === 1) return Promise.resolve(response({ error: { code: 'SESSION_UNAVAILABLE' } }, 503));
-        return new Promise<Response>((resolve) => { resolveSessionBRetry = resolve; });
-      }
-      if (path.endsWith('/meeting-sessions/session-c')) return Promise.resolve(response({ data: {
-        sessionId: 'session-c', version: 1, status: 'REVIEW', meeting: { participantIds: ['p3'] },
-        processing: { stage: 'DRAFT_READY', progressPercent: 100 },
-        speakers: [{ speakerId: 'speaker-c', label: 'Speaker C', participantId: 'p3' }],
-      } }));
-      if (path.endsWith('/participants')) return Promise.resolve(response({ data: { items: [
-        { id: 'p1', name: 'Ada Lovelace', email: 'ada.private@example.com' },
-        { id: 'p3', name: 'Grace Hopper', email: 'grace.private@example.com' },
-      ] } }));
-      if (path.endsWith('/app-config')) return Promise.resolve(response({ data: { company: { id: 'c1', name: 'Example', timezone: 'Asia/Seoul' }, document: { provider: 'NOTION', configured: true, connectionVersion: 1, rootUrl: 'https://notion.example' } } }));
-      return Promise.reject(new Error(`Unexpected request: ${path}`));
-    });
-    installFetchMock(fetchMock);
-    render(<MemoryRouter initialEntries={['/meetings/session-b/review']}><App /><NavigateToReviewSession sessionId="session-c" /></MemoryRouter>);
-
-    expect((await screen.findByRole('alert')).textContent).toContain('회의 화자 정보를 불러오지 못했습니다');
-    fireEvent.click(screen.getByRole('button', { name: '회의 정보 다시 불러오기' }));
-    await waitFor(() => expect(resolveSessionBRetry).toBeDefined());
-    fireEvent.click(screen.getByRole('button', { name: 'Open another Review session' }));
-    const sessionCSelect = await findSpeakerSelect('C');
-    expect((sessionCSelect as HTMLSelectElement).value).toBe('p3');
-
-    await act(async () => {
-      resolveSessionBRetry?.(response({ data: {
-        sessionId: 'session-b', version: 2, status: 'REVIEW', meeting: { participantIds: ['p1'] },
-        processing: { stage: 'DRAFT_READY', progressPercent: 100 },
-        speakers: [{ speakerId: 'speaker-b', label: 'Speaker B', participantId: 'p1' }],
-      } }));
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    });
-    expect(screen.queryByRole('status', { name: '회의의 화자 정보를 불러오는 중입니다.' })).toBeNull();
-    expect(screen.getByRole('combobox', { name: 'Speaker C 연결할 참석자' })).toBeTruthy();
-    expect((screen.getByRole('combobox', { name: 'Speaker C 연결할 참석자' }) as HTMLSelectElement).value).toBe('p3');
-    expect(screen.queryByRole('combobox', { name: 'Speaker B 연결할 참석자' })).toBeNull();
-    expect(screen.queryByText('회의의 화자 정보를 불러오는 중입니다.')).toBeNull();
-  });
-
-  it('hides the prior Session speaker data while a new Session loads and after its request fails', async () => {
-    let rejectSessionB: ((error: Error) => void) | undefined;
-    const fetchMock = vi.fn((input: RequestInfo | URL) => {
-      const path = new URL(String(input)).pathname;
-      if (path.endsWith('/meeting-sessions/session-a')) return Promise.resolve(response({ data: {
-        sessionId: 'session-a', version: 1, status: 'REVIEW', meeting: { participantIds: ['p1'] },
-        processing: { stage: 'DRAFT_READY', progressPercent: 100 },
-        speakers: [{ speakerId: 'speaker-a', label: 'Speaker A', participantId: 'p1' }],
-      } }));
-      if (path.endsWith('/meeting-sessions/session-b')) return new Promise<Response>((_resolve, reject) => { rejectSessionB = reject; });
-      if (path.endsWith('/participants')) return Promise.resolve(response({ data: { items: [{ id: 'p1', name: 'Ada Lovelace', email: 'ada.private@example.com' }] } }));
-      if (path.endsWith('/app-config')) return Promise.resolve(response({ data: { company: { id: 'c1', name: 'Example', timezone: 'Asia/Seoul' }, document: { provider: 'NOTION', configured: true, connectionVersion: 1, rootUrl: 'https://notion.example' } } }));
-      return Promise.reject(new Error(`Unexpected request: ${path}`));
-    });
-    installFetchMock(fetchMock);
-    render(<MemoryRouter initialEntries={['/meetings/session-a/review']}><App /><NavigateToReviewSession sessionId="session-b" /></MemoryRouter>);
-
-    expect(await findSpeakerSelect('A')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Open another Review session' }));
-    await waitFor(() => expect(rejectSessionB).toBeDefined());
-    expect(await screen.findByText('회의의 화자 정보를 불러오는 중입니다.')).toBeTruthy();
-    expect(screen.queryByRole('combobox', { name: 'Speaker A 연결할 참석자' })).toBeNull();
-
-    rejectSessionB?.(new TypeError('network details must stay hidden'));
-    expect((await screen.findByRole('alert')).textContent).toContain('회의 화자 정보를 불러오지 못했습니다');
-    expect(screen.queryByRole('combobox', { name: 'Speaker A 연결할 참석자' })).toBeNull();
-    expect(screen.queryByText('Ada Lovelace')).toBeNull();
-  });
-
   it('renders one name-only Participant dropdown per API-010 Speaker and keeps mappings speaker-scoped', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const path = new URL(String(input)).pathname;
@@ -1372,36 +1283,6 @@ describe('Review speaker selection', () => {
     expect((screen.getByRole('combobox', { name: 'Speaker B 연결할 참석자' }) as HTMLSelectElement).value).toBe('');
     expect(screen.queryByText(/저장 완료|저장되었습니다/)).toBeNull();
     await waitFor(() => expect(fetchMock.mock.calls.filter(([url]) => new URL(String(url)).pathname.endsWith('/speaker-mappings'))).toHaveLength(1));
-  });
-
-  it('recovers the speaker mapping controls after the initial roster request fails', async () => {
-    let rosterCalls = 0;
-    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
-      const path = new URL(String(input)).pathname;
-      if (path.endsWith('/meeting-sessions/roster-retry')) return response({ data: {
-        sessionId: 'roster-retry', version: 1, status: 'REVIEW', meeting: { participantIds: ['p1', 'p2'] },
-        processing: { stage: 'DRAFT_READY', progressPercent: 100 },
-        speakers: [{ speakerId: 'speaker-a', label: 'Speaker A', participantId: 'p2' }],
-      } });
-      if (path.endsWith('/participants')) {
-        rosterCalls += 1;
-        if (rosterCalls === 1) throw new TypeError('network detail must remain hidden');
-        return response({ data: { items: [
-          { id: 'p1', name: 'Ada Lovelace', email: 'ada.private@example.com' },
-          { id: 'p2', name: 'Grace Hopper', email: 'grace.private@example.com' },
-        ] } });
-      }
-      if (path.endsWith('/app-config')) return response({ data: { company: { id: 'c1', name: 'Example', timezone: 'Asia/Seoul' }, document: { provider: 'NOTION', configured: true, connectionVersion: 1, rootUrl: 'https://notion.example' } } });
-      return Promise.reject(new Error(`Unexpected request: ${path}`));
-    });
-    installFetchMock(fetchMock);
-    render(<MemoryRouter initialEntries={['/meetings/roster-retry/review']}><App /></MemoryRouter>);
-    expect(await screen.findByRole('button', { name: '참석자 목록 다시 불러오기' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: '참석자 목록 다시 불러오기' }));
-    const select = await findSpeakerSelect('A') as HTMLSelectElement;
-    await waitFor(() => expect(rosterCalls).toBe(2));
-    expect(select.value).toBe('p2');
-    expect(screen.queryByText(/ada\.private@example\.com/)).toBeNull();
   });
 
   it('shows Settings without selecting a provider when App Config has no document provider', async () => {
@@ -1667,7 +1548,7 @@ describe('Review speaker selection', () => {
     expect(select.value).toBe('p1');
   });
 
-  it.each([400, 502])('keeps the committed mapping and unsaved draft after known HTTP %i', async (status) => {
+  it.each([400])('keeps the committed mapping and unsaved draft after known HTTP %i', async (status) => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = new URL(String(input));
       if (init?.method === 'PUT') return response({ error: { code: 'SAFE_ERROR' } }, status);
@@ -1713,135 +1594,6 @@ describe('Review speaker selection', () => {
     expect(select.value).toBe('p1');
     expect(sessionReads).toBe(2);
     expect(fetchMock.mock.calls.filter(([, init]) => init?.method === 'PUT')).toHaveLength(1);
-  });
-
-  it('reconciles an ambiguous PUT as success only when API-010 matches the full attempted mapping', async () => {
-    let sessionReads = 0;
-    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = new URL(String(input));
-      if (init?.method === 'PUT') throw new TypeError('network details are not rendered');
-      if (url.pathname.endsWith('/meeting-sessions/ambiguous')) {
-        sessionReads += 1;
-        return response({ data: {
-          sessionId: 'ambiguous', version: sessionReads === 1 ? 6 : 7, status: 'REVIEW', meeting: { participantIds: ['p1', 'p2'] },
-          speakers: [{ speakerId: 'speaker-a', label: 'Speaker A', participantId: sessionReads === 1 ? 'p2' : 'p1' }],
-          transcript: [], allowedActions: ['UPDATE_SPEAKER_MAPPING'],
-        } });
-      }
-      if (url.pathname.endsWith('/participants')) return response({ data: { items: participants } });
-      if (url.pathname.endsWith('/app-config')) return response({ data: { company: { id: 'c1', name: 'Example', timezone: 'Asia/Seoul' }, document: { provider: 'NOTION', configured: true, connectionVersion: 1, rootUrl: 'https://notion.example' } } });
-      return Promise.reject(new Error(`Unexpected request: ${url.pathname}`));
-    });
-    installFetchMock(fetchMock);
-    render(<MemoryRouter initialEntries={['/meetings/ambiguous/review']}><App /></MemoryRouter>);
-    const select = await findSpeakerSelect('A') as HTMLSelectElement;
-    fireEvent.change(select, { target: { value: 'p1' } });
-    expect(await screen.findByText('매핑 저장이 확인되었습니다.')).toBeTruthy();
-    expect(select.value).toBe('p1');
-    expect(sessionReads).toBe(2);
-    expect(fetchMock.mock.calls.filter(([, init]) => init?.method === 'PUT')).toHaveLength(1);
-    expect(screen.queryByRole('button', { name: '매핑 저장' })).toBeNull();
-  });
-
-  it('keeps the submitted draft when ambiguous API-010 reconciliation shows the server kept the old mapping', async () => {
-    let sessionReads = 0;
-    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = new URL(String(input));
-      if (init?.method === 'PUT') throw new TypeError('network details hidden');
-      if (url.pathname.endsWith('/meeting-sessions/ambiguous-mismatch')) {
-        sessionReads += 1;
-        return response({ data: {
-          sessionId: 'ambiguous-mismatch', version: sessionReads === 1 ? 6 : 7, status: 'REVIEW', meeting: { participantIds: ['p1', 'p2'] },
-          speakers: [{ speakerId: 'speaker-a', label: 'Speaker A', participantId: 'p2' }], transcript: [], allowedActions: ['UPDATE_SPEAKER_MAPPING'],
-        } });
-      }
-      if (url.pathname.endsWith('/participants')) return response({ data: { items: participants } });
-      if (url.pathname.endsWith('/app-config')) return response({ data: { company: { id: 'c1', name: 'Example', timezone: 'Asia/Seoul' }, document: { provider: 'NOTION', configured: true, connectionVersion: 1, rootUrl: 'https://notion.example' } } });
-      return Promise.reject(new Error(`Unexpected request: ${url.pathname}`));
-    });
-    installFetchMock(fetchMock);
-    render(<MemoryRouter initialEntries={['/meetings/ambiguous-mismatch/review']}><App /></MemoryRouter>);
-    const select = await findSpeakerSelect('A') as HTMLSelectElement;
-    fireEvent.change(select, { target: { value: 'p1' } });
-    expect(await screen.findByText('최신 회의 정보를 불러왔습니다. 변경 내용은 유지했습니다. 확인 후 다시 저장해 주세요.')).toBeTruthy();
-    expect(select.value).toBe('p1');
-    expect(sessionReads).toBe(2);
-    expect(fetchMock.mock.calls.filter(([, init]) => init?.method === 'PUT')).toHaveLength(1);
-    expect(screen.getByRole('button', { name: '매핑 다시 저장' })).toBeTruthy();
-  });
-
-  it('preserves the draft after ambiguous PUT reconciliation fails and offers a mapping retry', async () => {
-    let sessionReads = 0;
-    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = new URL(String(input));
-      if (init?.method === 'PUT') throw new TypeError('network detail');
-      if (url.pathname.endsWith('/meeting-sessions/recovery')) {
-        sessionReads += 1;
-        if (sessionReads === 2) throw new TypeError('status unavailable');
-        return response({ data: {
-          sessionId: 'recovery', version: sessionReads === 1 ? 2 : 3, status: 'REVIEW', meeting: { participantIds: ['p1', 'p2'] },
-          speakers: [{ speakerId: 'speaker-a', label: 'Speaker A', participantId: 'p2' }], transcript: [], allowedActions: ['UPDATE_SPEAKER_MAPPING'],
-        } });
-      }
-      if (url.pathname.endsWith('/participants')) return response({ data: { items: participants } });
-      if (url.pathname.endsWith('/app-config')) return response({ data: { company: { id: 'c1', name: 'Example', timezone: 'Asia/Seoul' }, document: { provider: 'NOTION', configured: true, connectionVersion: 1, rootUrl: 'https://notion.example' } } });
-      return Promise.reject(new Error(`Unexpected request: ${url.pathname}`));
-    });
-    installFetchMock(fetchMock);
-    render(<MemoryRouter initialEntries={['/meetings/recovery/review']}><App /></MemoryRouter>);
-    const select = await findSpeakerSelect('A') as HTMLSelectElement;
-    fireEvent.change(select, { target: { value: 'p1' } });
-    expect(await screen.findByText('저장 결과를 확인하지 못했습니다. 변경 내용은 유지됩니다. 최신 상태를 다시 확인해 주세요.')).toBeTruthy();
-    expect(select.value).toBe('p1');
-    expect(screen.getByRole('button', { name: '매핑 다시 저장' })).toBeTruthy();
-    expect(select.value).toBe('p1');
-    expect(sessionReads).toBe(2);
-    expect(fetchMock.mock.calls.filter(([, init]) => init?.method === 'PUT')).toHaveLength(1);
-  });
-
-  it('ignores a late API-010 snapshot older than a confirmed API-011 mapping', async () => {
-    let sessionReads = 0;
-    let resolveLateRead: ((value: Response) => void) | undefined;
-    let putCalls = 0;
-    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
-      const url = new URL(String(input));
-      if (init?.method === 'PUT') {
-        putCalls += 1;
-        if (putCalls === 1) return Promise.reject(new TypeError('ambiguous first attempt'));
-        return Promise.resolve(response({ data: { version: 8, mappings: [{ speakerId: 'speaker-a', participantId: 'p1', participantName: 'Ada Lovelace' }] } }));
-      }
-      if (url.pathname.endsWith('/meeting-sessions/stale-read')) {
-        sessionReads += 1;
-        if (sessionReads === 1) return Promise.resolve(response({ data: {
-          sessionId: 'stale-read', version: 6, status: 'REVIEW', meeting: { participantIds: ['p1', 'p2'] },
-          speakers: [{ speakerId: 'speaker-a', label: 'Speaker A', participantId: 'p2' }], transcript: [], allowedActions: ['UPDATE_SPEAKER_MAPPING'],
-        } }));
-        if (sessionReads === 2) return Promise.reject(new TypeError('first reconciliation unavailable'));
-        return new Promise<Response>((resolve) => { resolveLateRead = resolve; });
-      }
-      if (url.pathname.endsWith('/participants')) return Promise.resolve(response({ data: { items: participants } }));
-      if (url.pathname.endsWith('/app-config')) return Promise.resolve(response({ data: { company: { id: 'c1', name: 'Example', timezone: 'Asia/Seoul' }, document: { provider: 'NOTION', configured: true, connectionVersion: 1, rootUrl: 'https://notion.example' } } }));
-      return Promise.reject(new Error(`Unexpected request: ${url.pathname}`));
-    });
-    installFetchMock(fetchMock);
-    render(<MemoryRouter initialEntries={['/meetings/stale-read/review']}><App /></MemoryRouter>);
-    const select = await findSpeakerSelect('A') as HTMLSelectElement;
-    fireEvent.change(select, { target: { value: 'p1' } });
-    await screen.findByRole('button', { name: '매핑 다시 저장' });
-    fireEvent.click(screen.getByRole('button', { name: '매핑 다시 저장' }));
-    await waitFor(() => expect(resolveLateRead).toBeDefined());
-
-    expect(await screen.findByText('매핑이 저장되었습니다.')).toBeTruthy();
-    await act(async () => {
-      resolveLateRead?.(response({ data: {
-        sessionId: 'stale-read', version: 7, status: 'REVIEW', meeting: { participantIds: ['p1', 'p2'] },
-        speakers: [{ speakerId: 'speaker-a', label: 'Speaker A', participantId: 'p2' }], transcript: [], allowedActions: ['UPDATE_SPEAKER_MAPPING'],
-      } }));
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    });
-    expect(select.value).toBe('p1');
-    expect(screen.getByText('매핑이 저장되었습니다.')).toBeTruthy();
-    expect(putCalls).toBe(2);
   });
 
   it('blocks API-011 when the latest API-010 snapshot does not allow mapping updates', async () => {

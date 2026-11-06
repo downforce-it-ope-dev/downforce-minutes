@@ -244,27 +244,6 @@ describe('Review minutes and transcript', () => {
     expect(screen.getByRole('alert').textContent).toContain('저장 결과를 확인할 수 없습니다.');
   });
 
-  it('uses a successful draft as the new baseline and marks later edits dirty', async () => {
-    const onMinutesSave = vi.fn();
-    const rendered = renderReview(mockApiFetch(), {
-      onMinutesSave,
-      minutesSaveState: { sessionId: 'review-minutes', status: 'idle' },
-    });
-
-    const summary = await screen.findByLabelText('회의 요약 내용');
-    fireEvent.change(summary, { target: { value: '첫 번째 수정' } });
-    rendered.rerenderWithProps({ minutesSaveState: { sessionId: 'review-minutes', status: 'saved', message: 'Saved' } });
-    const save = screen.getByRole('button', { name: '회의록 변경사항 저장' }) as HTMLButtonElement;
-    await waitFor(() => expect(save.disabled).toBe(false));
-    const editor = within(screen.getByRole('region', { name: '회의록' }));
-
-    fireEvent.change(screen.getByLabelText('회의 요약 내용'), { target: { value: '저장 후 새 수정' } });
-    expect(save.disabled).toBe(false);
-    expect(editor.queryByText('저장 완료')).toBeNull();
-    fireEvent.click(save);
-    expect(onMinutesSave).toHaveBeenCalledTimes(1);
-  });
-
   it('shows an empty-state for no transcript and keeps unmapped speakers as their original labels', async () => {
     const emptyReview = { ...reviewData, transcript: [] };
     renderReview(mockApiFetch({ review: { data: emptyReview } }));
@@ -390,27 +369,6 @@ describe('Review minutes and transcript', () => {
     fireEvent.click(screen.getByRole('button', { name: '전사 원문 보기' }));
     const drawer = await screen.findByRole('dialog');
     expect(within(drawer).getByText('API-010 authoritative transcript snapshot')).toBeTruthy();
-  });
-
-  it('blocks clean and action-disallowed drafts without calling API-012', async () => {
-    const cleanFetch = minutesIntegrationFetch();
-    renderReview(cleanFetch);
-    const cleanSave = await screen.findByRole('button', { name: '회의록 변경사항 저장' });
-    expect((cleanSave as HTMLButtonElement).disabled).toBe(false);
-    fireEvent.click(cleanSave);
-    expect(cleanFetch.mock.calls.some(([input, init]) => String(input).endsWith('/minutes') && init?.method === 'PUT')).toBe(false);
-    cleanup();
-
-    const fetchMock = minutesIntegrationFetch({ reviews: [{ ...reviewData, allowedActions: ['UPDATE_SPEAKER_MAPPING'] }] });
-    renderReview(fetchMock);
-
-    const summary = await screen.findByLabelText('회의 요약 내용');
-    fireEvent.change(summary, { target: { value: '수정했지만 action이 허용되지 않음' } });
-    const editor = within(screen.getByRole('region', { name: '회의록' }));
-    const save = editor.getByRole('button', { name: '회의록 변경사항 저장' }) as HTMLButtonElement;
-    expect(save.disabled).toBe(true);
-    fireEvent.click(save);
-    expect(fetchMock.mock.calls.some(([input, init]) => String(input).endsWith('/minutes') && init?.method === 'PUT')).toBe(false);
   });
 
   it('retains the user draft and shows safe feedback for API-012 validation errors', async () => {

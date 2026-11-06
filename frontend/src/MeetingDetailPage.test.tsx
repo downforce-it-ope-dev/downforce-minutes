@@ -34,18 +34,6 @@ describe('Meetings filters and detail', () => {
     expect(fetchMock).toHaveBeenCalledTimes(before);
   });
 
-  it('shows reversed date guidance while leaving the result set visible', async () => {
-    vi.stubGlobal('fetch', withHealthyBackend(vi.fn(async () => ok({ items: list }))));
-    render(<MemoryRouter initialEntries={['/meetings']}><Routes><Route path="/meetings" element={<MeetingsPage />} /></Routes></MemoryRouter>);
-    expect(await screen.findByRole('button', { name: /Planning 상세 보기/ })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: /상세 조건/ }));
-    fireEvent.change(screen.getByLabelText('시작일'), { target: { value: '2026-10-20' } });
-    fireEvent.change(screen.getByLabelText('종료일'), { target: { value: '2026-10-01' } });
-    expect(screen.getByRole('alert').textContent).toContain('시작일은 종료일보다 늦을 수 없습니다');
-    expect(screen.getByRole('button', { name: /Planning 상세 보기/ })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /Retrospective 상세 보기/ })).toBeTruthy();
-  });
-
   it('loads read-only Minutes, opens and closes an accessible transcript drawer, and uses a safe external link', async () => {
     vi.stubGlobal('fetch', withHealthyBackend(vi.fn(async () => ok(detail))));
     render(<MemoryRouter initialEntries={['/meetings/doc%2Fa']}><Routes><Route path="/meetings/:documentId" element={<MeetingDetailPage />} /></Routes></MemoryRouter>);

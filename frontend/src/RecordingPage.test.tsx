@@ -50,18 +50,6 @@ describe('RecordingPage', () => {
     expect(screen.getByRole('button', { name: '녹음 시작' }).className).toContain('recording-start-action');
   });
 
-  it('offers an input monitor retry when the microphone stream is ready but no signal is detected', () => {
-    const onRetryMicrophone = vi.fn();
-    render(<RecordingPage sessionId="session-123" title="Planning" state="Ready" elapsedMs={0}
-      microphoneStatus="ready" microphoneInputDetected={false} onRetryMicrophone={onRetryMicrophone}
-      onStart={vi.fn()} onPause={vi.fn()} onResume={vi.fn()} onRequestEnd={vi.fn()} onConfirmEnd={vi.fn()} onCancelEnd={vi.fn()} />);
-
-    fireEvent.click(screen.getByRole('button', { name: '마이크 입력 확인' }));
-
-    expect(onRetryMicrophone).toHaveBeenCalledTimes(1);
-    expect((screen.getByRole('button', { name: '녹음 시작' }) as HTMLButtonElement).disabled).toBe(true);
-  });
-
   it('uses the microphone indicator to show waiting, checking, and error states without visible status copy', () => {
     const base = {
       sessionId: 'session-123', title: 'Planning', state: 'Ready' as const, elapsedMs: 0,

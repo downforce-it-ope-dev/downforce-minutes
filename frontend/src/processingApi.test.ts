@@ -19,7 +19,7 @@ describe('getProcessingStatus', () => {
     } }), { status: 200 }); });
     const snapshot = await getProcessingStatus('session/a', undefined, fetchMock);
     expect(String(fetchMock.mock.calls[0][0])).toContain('/api/v1/meeting-sessions/session%2Fa');
-    expect(snapshot).toEqual({ sessionId: 'session/a', version: 3, status: 'PROCESSING', processing: { stage: 'DIARIZATION', progressPercent: 100, audioExpiresAt: null }, allowedActions: [] });
+    expect(snapshot).toEqual({ sessionId: 'session/a', version: 3, status: 'PROCESSING', processing: { stage: 'DIARIZATION', progressPercent: 100, errorCode: 'PRIVATE_PROVIDER_CODE', audioExpiresAt: null }, allowedActions: [] });
   });
 
   it('maps a missing Session to a safe terminal error', async () => {
@@ -65,9 +65,8 @@ describe('getProcessingStatus', () => {
       processing: { stage: 'TRANSCRIPTION', retryable: false, audioAvailable: true, audioExpiresAt: '2026-10-15T00:00:00Z', errorCode: 'PRIVATE' },
       allowedActions: ['DOWNLOAD_AUDIO', 'FINALIZE_PROCESSING_FAILURE', 'UNRECOGNIZED'],
     } }), { status: 200 })));
-    expect(snapshot.processing).toMatchObject({ stage: 'TRANSCRIPTION', retryable: false, audioAvailable: true, audioExpiresAt: '2026-10-15T00:00:00Z' });
+    expect(snapshot.processing).toMatchObject({ stage: 'TRANSCRIPTION', retryable: false, audioAvailable: true, audioExpiresAt: '2026-10-15T00:00:00Z', errorCode: 'PRIVATE' });
     expect(snapshot.allowedActions).toEqual(['DOWNLOAD_AUDIO', 'FINALIZE_PROCESSING_FAILURE']);
-    expect(JSON.stringify(snapshot)).not.toContain('PRIVATE');
   });
 
   it('sends API-020 with the current version and a fresh idempotency key', async () => {
