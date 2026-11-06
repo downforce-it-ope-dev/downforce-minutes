@@ -18,7 +18,6 @@ public final class DocumentSettingsFixtures {
         return store;
     }
     public static GlobalSettingsStore empty() {
-        try { return new EncryptedFileGlobalSettingsStore(Files.createTempDirectory(Path.of(System.getProperty("user.home")), ".active-settings-fixture-").toString(), KEY); }
-        catch (Exception e) { throw new IllegalStateException(e); }
+        return new EncryptedFileGlobalSettingsStore(TestDirectories.create("active-settings-fixture-").toString(), KEY);
     }
 }

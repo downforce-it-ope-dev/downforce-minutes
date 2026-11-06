@@ -7,6 +7,6 @@ import org.junit.jupiter.api.io.TempDirFactory;
 
 public final class OutsideRepositoryTempDirectory implements TempDirFactory {
     @Override public Path createTempDirectory(AnnotatedElementContext element, ExtensionContext extension) throws Exception {
-        return Files.createTempDirectory(Path.of(System.getProperty("user.home")), ".document-settings-test-");
+        return Files.createTempDirectory("document-settings-test-");
     }
 }

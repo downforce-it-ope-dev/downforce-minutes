@@ -18,7 +18,7 @@ import org.springframework.http.MediaType;
 @org.springframework.context.annotation.Import(ConstraintViolationProbeService.class)
 class DocumentSetupApiTests {
     static final Path DIRECTORY = directory();
-    static Path directory() { try { return Files.createTempDirectory(Path.of(System.getProperty("user.home")), ".document-settings-test-"); } catch (Exception e) { throw new IllegalStateException(e); } }
+    static Path directory() { return TestDirectories.create("document-settings-test-"); }
     @DynamicPropertySource static void properties(DynamicPropertyRegistry registry) {
         registry.add("DOCUMENT_SETTINGS_DIR", DIRECTORY::toString);
         registry.add("DOCUMENT_SETTINGS_ENCRYPTION_KEY", () -> "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
