@@ -66,9 +66,11 @@
   - 리뉴얼 화면(또는 새 레이아웃)의 가장 바깥 요소에 `data-ui="renewal"`을 붙인다.
   - 이 영역 안에서만 Tailwind 초기화(Preflight)가 적용된다. 밖의 기존 화면은 `src/styles/legacy-reset.css`가 브라우저 기본값을 유지한다.
   - 루트 요소에는 `font-sans text-body text-text bg-bg`를 지정한다. `html`·`body`의 글꼴과 색은 기존 CSS가 정한다.
+  - **Portal:** 대화상자·토스트·메뉴처럼 `body` 바로 아래에 그려지는 요소는 리뉴얼 루트 밖에 놓인다. Portal로 그리는 가장 바깥 요소(Radix `Dialog.Overlay`·`Dialog.Content` 등)에도 `data-ui="renewal"`과 루트 클래스를 붙인다. 빠뜨리면 그 요소는 기존 화면으로 취급된다.
+  - 기존 `base.css`의 요소 전체 규칙(스크롤바 숨김, 버튼 커서·비활성 투명도, 포커스 외곽선)은 리뉴얼 영역에 적용되지 않는다. 포커스 표시(`focus-visible:outline-focus` 등)와 비활성 표시는 컴포넌트에서 직접 지정한다.
 - **색 클래스:** 용도별 토큰 이름을 우선 쓴다.
-  - 배경: `bg-bg`·`bg-bg-subtle`·`bg-primary`·`bg-primary-soft`·`bg-brand`·`bg-selected`·`bg-danger`·`bg-danger-soft`·`bg-success-soft`·`bg-warning-soft`
-  - 글자: `text-text`·`text-text-muted`·`text-primary-hover`(링크)·`text-primary-soft-text`·`text-brand-text`·`text-selected-text`·`text-danger-text`·`text-success-text`·`text-warning-text`
+  - 배경: `bg-bg`·`bg-bg-subtle`·`bg-primary`·`bg-primary-soft`·`bg-brand`·`bg-brand-soft`·`bg-selected`·`bg-accent`·`bg-danger`·`bg-danger-soft`·`bg-success-soft`·`bg-warning-soft`
+  - 글자: `text-text`·`text-text-muted`·`text-primary-hover`(링크)·`text-primary-soft-text`·`text-brand-text`·`text-brand-soft-text`·`text-selected-text`·`text-danger-text`·`text-success-text`·`text-warning-text`
   - 테두리: `border-border`·`border-border-input`
   - 포커스: `outline-focus`
   - 단계 색(`blue-600` 등)은 용도별 토큰으로 표현할 수 없을 때만 쓴다.
@@ -82,8 +84,15 @@
   - 화면 조건: `tablet:`·`tablet-lg:`·`short:`
   - 간격·크기: Tailwind 기본 단위(4px)를 쓴다 (예: `h-12` = 48px, `w-22` = 88px)
 - **검사:** `npm run lint`가 스타일 규칙(`frontend/scripts/check-styles.mjs`)을 함께 검사한다.
-  - 새 CSS 파일, 임의값 클래스, 한 파일에 두 방식을 섞으면 오류로 처리한다.
+  - 다음은 오류로 처리한다.
+    - 새 CSS 파일, 임의값 클래스
+    - 한 파일에 두 방식을 섞음 (`className` 식과 `cn`·`clsx`·`cva`·`twMerge`·`tv` 인자 안의 문자열을 모두 본다)
+    - `data-ui="renewal"` 파일의 기존 클래스 사용
+    - Tailwind 파일이 기존 CSS를 쓰는 컴포넌트를 불러옴
+  - `src/styles` 변경(커밋하지 않은 변경과 `main` 이후 커밋)은 경고한다.
   - 기존 CSS를 지우면 이 스크립트의 파일 목록에서도 지운다.
+- **격리 검사:** `npm run test:styles`(`frontend/e2e/style-isolation.spec.ts`)가 리뉴얼 영역과 기존 화면의 격리를 검사한다.
+- **기존 화면 비교:** `legacy-reset.css`·`tailwind.css`·기존 CSS를 고칠 때는 고치기 전후 계산 스타일을 비교해 기존 화면에 차이가 없음을 확인한다. 방법은 `frontend/scripts/compare-legacy-styles.mjs` 머리말을 따른다.
 
 ### 기존 CSS(`frontend/src/styles/`) 규칙
 

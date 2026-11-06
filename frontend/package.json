@@ -13,7 +13,8 @@
     "lint:styles": "node scripts/check-styles.mjs",
     "test": "vitest run",
     "test:viewport": "playwright test --config playwright.viewport.config.ts",
-    "test:a11y": "playwright test --config playwright.a11y.config.ts"
+    "test:a11y": "playwright test --config playwright.a11y.config.ts",
+    "test:styles": "playwright test e2e/style-isolation.spec.ts"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.3.1",
