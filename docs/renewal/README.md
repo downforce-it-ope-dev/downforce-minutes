@@ -1,12 +1,12 @@
 # 리뉴얼 준비
 
-> **상태:** 계획 수립 전. 리뉴얼 범위와 Phase는 아직 확정되지 않았으며, 이 문서는 확정된 제약과 준비 상태만 기록한다.
+> **상태:** 스타일 기반 작업(0단계)은 완료했고 1단계 전 보완까지 마쳤다([스타일 방식 검토](스타일_전환_검토.md) 5.1~5.3). Phase 결정 항목(P-1~P-6)과 화면 묶음 순서는 정했고(아래 4절), Phase 표는 아직 작성하지 않았다. 이 문서는 확정된 제약, 준비 상태, Phase 작성 준비 자료를 기록한다.
 
 ## 고정 제약
 
 | 항목 | 내용 |
 |---|---|
-| Backend·저장 구조 | 변경하기 어렵다. 현재 Backend와 [API 명세](../product/api-spec.md)를 고정 계약으로 보고 Frontend를 개편한다. DB는 없으며 문서 Provider(Notion·Confluence)가 정본이다. |
+| Backend·저장 구조 | 변경하기 어렵다. 현재 Backend와 [API 명세](../product/api-spec.md)를 고정 계약으로 보고 Frontend를 개편한다. DB는 없으며 문서 Provider(Notion·Confluence)가 정본이다. 예외: 로그인을 첫 묶음으로 정해(P-1) 인증 API(OTP 발송·검증·세션 확인·로그아웃)를 Backend에 새로 만든다. 기존 API는 바꾸지 않는다(D-01 결정). Slack 알림은 폐기하지만 Backend의 Slack API는 남겨 두고 쓰지 않는다(D-11). |
 | 배포 | Render는 사용하지 않는다. Backend는 Google Cloud(Artifact Registry + Compute Engine VM)에 올라간 인스턴스를 기준으로 하고, Vercel Frontend와의 연결(`/api/backend` 리라이트)은 그대로 유지한다. |
 | 리뉴얼 범위 | 화면 UI/UX 수정과 신규 기능 추가가 예정되어 있다. 신규 기능이 Backend 변경을 요구하면 별도 판단 항목으로 분리한다. |
 | 개발·테스트 | 로컬에서 Backend에 연결해 테스트할 수 있어야 한다. |
@@ -21,6 +21,7 @@
 - 리뉴얼 화면 기획: [화면 목록](화면기획/00_화면목록.md) (화면별 기획 문서 포함, 초안)
 - 스타일 방식: [스타일 방식 검토](스타일_전환_검토.md) (Tailwind CSS 전환 확정)
 - 현행 화면 캡처: [`현_UI`](현_UI)
+- 새 화면 시안: [`뉴_UI`](뉴_UI) (메인 대시보드, 로그인, 인증 코드 입력 3장)
 
 ## 로컬 테스트 환경
 
@@ -34,12 +35,97 @@ cd backend && ALLOWED_ORIGINS=http://localhost:5173 ./gradlew bootRun
 cd frontend && npm ci && npm run dev
 ```
 
-자세한 설정과 환경변수는 [Backend Setup](../setup/backend-setup.md), [Frontend Setup](../setup/frontend-setup.md)을 따른다. Google Cloud Backend에 직접 연결해 시험하면 실제 Notion·Confluence 문서, 이메일, Slack에 영향이 갈 수 있으므로 기본값은 로컬 Backend다.
+자세한 설정과 환경변수는 [Backend Setup](../setup/backend-setup.md), [Frontend Setup](../setup/frontend-setup.md)을 따른다. Google Cloud Backend에 직접 연결해 시험하면 실제 Notion·Confluence 문서와 이메일에 영향이 갈 수 있으므로 기본값은 로컬 Backend다.
 
 ## Phase 계획
 
-아직 정의하지 않았다. 아래 표를 기준으로 리뉴얼 계획 확정 후 채운다.
+아직 작성하지 않았다. 아래 "작성 준비" 4절의 결정을 기준으로 채운다.
 
 | Phase | 목표 | 범위 | 완료 기준 |
 |---|---|---|---|
 | (미정) | | | |
+
+## Phase 작성 준비
+
+### 1. 이미 정해진 것
+
+| 항목 | 내용 | 근거 |
+|---|---|---|
+| 큰 순서 | 0 기반(완료) → 1 공통 → 2 화면 묶음별 리뉴얼 → 3 기존 CSS 정리 | [스타일 방식 검토](스타일_전환_검토.md) 5장 |
+| 1단계 범위 | 공통 컴포넌트, 새 레이아웃(CMN-01), 라우트별 레이아웃 선택, 서버 연결 복구(CMN-02), 0단계에서 옮겨 온 결정 항목 | 같은 문서 5장, 5.3 |
+| 반영 단위 | 화면 묶음 단위로 작업 브랜치에서 개발하고, 묶음이 완성되면 `main`에 합친다(S-05) | 같은 문서 6장, `CLAUDE.md` |
+| 묶음 순서 | AUTH → 문서 연결(CMN-04·SET-02~06) → HOME → MTG → MIN → PTC → SET-01 | 아래 4절 P-1·P-2 (결정, 2026-11-06) |
+| 기기 기준 | 태블릿 기준, 휴대폰 지원, PC 제외(D-06) | [화면 목록](화면기획/00_화면목록.md) 6장 |
+
+### 2. 화면 묶음 (결정한 순서)
+
+[화면 목록](화면기획/00_화면목록.md)의 21개 화면을 현재 구현 파일과 의존 관계로 묶었다. 순서는 4절 P-1·P-2 결정을 따른다.
+
+| 순서 | 묶음 | 화면 | 현재 구현 | 착수 전에 정할 것 | 메모 |
+|---|---|---|---|---|---|
+| 1단계 | 공통 | CMN-01, CMN-02, CMN-03 | `App.tsx`, `BackendRecoveryOverlay.tsx` | 스타일 검토 문서 5.3 항목(아이콘 방식, 기본 포커스 표시 등) | 관리자 메뉴는 나누지 않는다(P-4). CMN-01의 로그아웃·인증 만료(F09)와 로그아웃 확인(CMN-01-P02)은 AUTH 묶음에서 만든다 |
+| 1 | AUTH | AUTH-01, AUTH-02 (+ CMN-01-F09, CMN-01-P02) | 없음 (신규) | 없음 (D-01~D-04, D-09 결정됨, 아래 5절) | Backend에 인증 API만 새로 만들고 기존 API에는 인증을 적용하지 않는다(화면 진입만 막음). 메일이 설정되지 않았으면 로그인 화면에서 설정한다(AUTH-01-F07). 메뉴 없는 인증 전용 배치라 새 공통 레이아웃은 이 묶음에서 사용자에게 보이지 않는다. 시안(`뉴_UI`) 있음 |
+| 2 | 문서 연결 | CMN-04, SET-02 ~ SET-06 | `App.tsx` `SetupGate`, `DocumentSetupWizard.tsx` | 없음 | 로그인 직후 첫 연결 흐름(CMN-04 → SET-03 → SET-04 → SET-05)과 설정의 변경 흐름(SET-02 → SET-03 → SET-04 → SET-06 → SET-05)이 같은 화면을 쓰므로 함께 리뉴얼한다. SET-03~06은 메뉴를 숨기는 집중 모드다. SET-02는 기획 제안상 레일·탭 바를 보이는 일반 화면이라, 이 제안이 확정되면 새 공통 레이아웃이 이 묶음에서 처음 보인다(SET-02 문서 "확인 필요"). CMN-04 점검 중 공통 레이아웃 표시 여부도 확인 필요다. 설정 메인(SET-01)에서 SET-02로 갈 때는 기존 화면에서 새 화면으로 바뀐다 |
+| 3 | HOME | HOME-01 (+ HOME-01-P01) | `MeetingHistory.tsx` `HomePage` | 없음 (화면 내 확인 필요 항목만) | `MeetingHistory.tsx` 한 파일에 MIN-01이 같이 있다. 시안(`뉴_UI`) 있음 |
+| 4 | MTG | MTG-01 ~ MTG-05 | `NewMeetingPage`, `RecordingPage`, `ProcessingPage`, `ReviewSpeakerPage`, `CompletePage` 외 | S-03(참석자 선택 부품) | 회의록 재생성·발송 대상 선택은 넣지 않는다(P-3). 화면 수가 가장 많다 |
+| 5 | MIN | MIN-01, MIN-02 | `MeetingHistory.tsx` `MeetingsPage`, `MeetingDetailPage.tsx`, `ProcessingFailureList.tsx` | 없음 | MIN-01 실패 회의 재처리는 MTG-03으로 이어진다 |
+| 6 | PTC | PTC-01 | `App.tsx` `ParticipantsPage` | 없음 (D-02 결과 반영) | 기존 CSS 일부가 `base.css`에 잘못 분류돼 있어 함께 지운다(검토 문서 4.8) |
+| 7 | SET-01 | SET-01 | `SettingsPage.tsx` | 없음 | 마지막 묶음. 끝나면 3단계(기존 CSS 정리)로 넘어간다 |
+
+### 3. Phase를 짤 때 감안할 점 (코드 확인 결과)
+
+- **화면별 CSS 파일이 화면 하나에만 쓰이지 않는다.** 클래스 이름이 다른 파일에 나타나는 횟수를 세어 확인했고, 횟수 3 이상만 적었다(문자열 일치 기준이라 일부는 오탐일 수 있음).
+  - `pages/setup.css`: `DocumentSetupWizard` 외에 `App.tsx`·`MeetingDetailPage`·`ProcessingPage`·`ReviewSpeakerPage`
+  - `pages/home.css`: `MeetingHistory` 외에 `ProcessingFailureList`·`AsyncState`·`ProcessingPage`
+  - `pages/meetings.css`: `MeetingHistory` 외에 `MeetingDetailPage`·`ProcessingFailureList`
+  - `pages/new-meeting.css`: `NewMeetingPage` 외에 `MeetingParticipantSelector`·`ReviewSpeakerPage`
+  - `pages/share.css`: `CompletePage` 외에 `SharePage`·`ProcessingPage`·`DocumentSetupWizard`
+  - `pages/review.css`: `ReviewSpeakerPage`·`ReviewMinutesEditor` 외에 `MinutesRegenerationControl`
+  - 따라서 "화면 리뉴얼 시 `pages/*.css` 삭제" 완료 기준은 묶음마다 "그 묶음만 쓰는 규칙 삭제, 다른 화면이 쓰는 규칙은 남김"으로 풀어 써야 한다.
+- **한 파일에 여러 화면이 있다.** `App.tsx`(레이아웃·PTC-01·CMN-03·CMN-04), `MeetingHistory.tsx`(HOME-01·MIN-01), `DocumentSetupWizard.tsx`(SET-02~06). 리뉴얼 화면을 새 파일로 만들고 라우트만 바꾸면 기존 파일을 나누지 않아도 된다.
+- **레이아웃 공존.** 1단계에서 새 레이아웃(CMN-01)을 만들어도 리뉴얼 화면이 없으면 사용자에게 보이지 않는다. 1단계는 따로 `main`에 합친다(P-5).
+- **테스트.** 클래스 이름에 의존하는 테스트(브라우저 11곳, 단위 13곳)는 해당 화면을 리뉴얼할 때 role·레이블·`data-testid` 기준으로 고친다.
+
+### 4. Phase 결정 항목 (결정, 2026-11-06)
+
+사용자가 항목별로 직접 결정했다. 바뀌면 이 표와 2절 묶음 표를 함께 고친다.
+
+| 번호 | 항목 | 검토한 선택지 | 결정 | 이유·영향 | 남은 확인 |
+|---|---|---|---|---|---|
+| P-1 | 로그인(AUTH) 포함 시점 | 첫 묶음 / 다른 묶음 뒤 / 이번 범위에서 제외 | **첫 묶음** | 로그인을 먼저 만든다. Backend 인증 API를 새로 만들어야 하므로 고정 제약("Backend 변경 어려움")의 예외가 된다 | D-01~D-04, D-09는 정했다(5절) |
+| P-2 | 묶음 순서 | (첫 묶음 다음) HOME / MTG / AUTH와 HOME을 한 묶음으로 | **AUTH → 문서 연결 → HOME → MTG → MIN → PTC → SET-01** | 로그인 직후 문서 연결 확인(CMN-04)과 첫 연결 흐름이 나오므로 문서 연결을 두 번째로 한다. 문서 연결 묶음은 첫 연결 흐름과 설정의 변경 흐름이 같은 화면을 쓰므로 CMN-04와 SET-02~06을 함께 묶는다(검토한 선택지: CMN-04 + SET-03~05만 / CMN-04 + SET-02~06 / SET-01~06 전체). 그 뒤는 사용 흐름 순서다 | - |
+| P-3 | 미연결 구현 포함(D-07) | 둘 다 넣음 / 둘 다 뺌 / 재생성만 / 발송 대상 선택만 | **둘 다 뺌** | 회의록 재생성(API-013)과 발송 대상 선택(SharePage, API-014·015)은 지금 화면에 연결되지 않은 기능이라 현행 개편 범위가 아니다. MTG 묶음을 작게 유지한다 | 필요하면 신규 기능으로 따로 판단한다 |
+| P-4 | 관리자 구분(D-05) | 구분함 / 구분 안 함 | **구분 안 함** | 로그인한 사용자는 모두 같은 메뉴를 쓴다. Backend 변경을 로그인에만 한정한다 | 필요해지면 나중에 추가한다 |
+| P-5 | 1단계 반영 방식 | 1단계만 먼저 `main`에 합침 / 첫 묶음과 함께 합침 | **1단계만 먼저 `main`에 합침** | 1단계만으로는 사용자에게 보이는 변화가 없다. 로그인 묶음 개발이 길어져도 작업 브랜치가 오래 남지 않는다 | 합칠 때 새 레이아웃이 어떤 화면 경로에도 연결되지 않았는지 확인한다 |
+| P-6 | Phase 완료 기준 공통 항목 | 초안 채택 / 초안 + 실기기 확인 추가 | **초안 그대로 채택** | `CLAUDE.md` 규칙과 0단계에서 만든 검사 도구를 그대로 쓴다 | - |
+
+**완료 기준 공통 (P-6):**
+- `npm run lint`(스타일 규칙 포함), 단위 테스트, `npm run build` 통과
+- `npm run test:styles` 통과. `legacy-reset.css`·`tailwind.css`·기존 CSS를 고쳤다면 기존 화면 계산 스타일 비교에서 차이 없음
+- 리뉴얼 화면 axe 검사에서 심각(serious·critical) 위반 0건
+- 리뉴얼 화면에 기존 CSS 클래스 0건, 그 묶음만 쓰던 기존 CSS 삭제
+- 휴대폰(390)·태블릿 세로(820)·태블릿 가로(1180) 화면에서 가로 넘침 없음
+- 바뀐 화면에 맞춰 클래스 이름 기반 테스트를 role·레이블 기준으로 수정
+
+### 5. 로그인·연동 관련 결정 (결정, 2026-11-06)
+
+사용자가 항목별로 직접 결정했다. 상세는 [화면 목록](화면기획/00_화면목록.md) 6장과 AUTH-01·AUTH-02·CMN-01·SET-01·MTG-05 문서에 반영했다.
+
+| 번호 | 항목 | 결정 |
+|---|---|---|
+| 목적 | 로그인의 용도 | 서비스 사용을 회사 직원으로 제한하는 용도로만 쓴다. 데이터 보호는 이번 범위에서 다루지 않는다. 회의록 문서와 발송 메일이 전부이며 보호가 필요한 중요 데이터가 없다고 판단했다(사용자 판단) |
+| D-01 | 인증 적용 범위 | 인증 API(OTP 발송·검증·세션 확인·로그아웃)만 새로 만든다. 기존 API에는 인증을 적용하지 않고 화면 진입만 막는다 |
+| D-02 | 로그인 허용 대상 | `@miinit.com` 도메인만 허용(서버 설정값). 도메인 검증 + 인증 코드 수신으로 직원 확인을 끝낸다. 별도 사용자 목록 없음 |
+| D-03 | OTP 메일 발송 수단 | SET-01과 같은 Gmail 설정으로 보낸다. 설정이 없거나 연결 확인이 안 되면 로그인 화면에 "메일 설정" 버튼을 활성화해 보이고(누르면 팝업), 3가지 키(클라이언트 ID·보안 키·연결 토큰)와 발신 주소를 넣어 저장·연결 시험이 성공하면 로그인을 진행한다. 설정된 뒤에는 버튼을 보이지 않는다(AUTH-01-F07) |
+| D-04 | OTP·세션 정책 | 코드 유효 5분, 재발송 50초, 틀린 코드 5회까지. 로그인 유지는 마지막 활동(조작·페이지 이동·녹음 중) 후 2시간이며 활동이 있으면 갱신한다. 로그아웃하면 세션을 바로 지우고 다시 로그인할 때 새로 만든다. 로그인 유지 체크박스 없음 |
+| D-09 | 브라우저에 저장하는 자격 증명 | Gmail·문서 서비스 값은 현행 방식(localStorage 저장, 서버 설정이 비면 복구)을 유지하고 SET-04 안내 문구만 바로잡는다. 연결하는 Gmail은 회의록 발송 전용 계정이다 |
+| D-11 | Slack 알림 | 완전히 폐기한다. 설정 카드, 브라우저 보관·복구, 회의 결과의 Slack 단계를 없앤다. Backend Slack API는 남겨 두고 쓰지 않으며, Slack 설정을 두지 않아 Backend도 Slack으로 보내지 않는다 |
+
+### 6. 세부 결정 (2026-11-06)
+
+| 항목 | 결정 |
+|---|---|
+| 메일 설정 입력값 | 3가지 키(클라이언트 ID·보안 키·연결 토큰)와 발신 이메일 주소, 모두 4개. 저장 API(API-035)가 4개를 모두 필수로 받는다 |
+| 운영 서버의 Slack 설정 | Slack 설정을 두지 않는다. Backend는 Slack 설정이 없으면 Slack 전달을 만들지 않는다 |
+| 녹음 중 활동 판단 | 녹음 중도 활동으로 본다. 녹음하는 동안 로그인 유지 시간을 계속 갱신한다 |
+| 메일 설정 입력 위치 | 로그인 화면에서는 팝업(대화상자, 휴대폰은 하단 시트)으로 연다. 로그인 후에는 설정 화면(SET-01)으로 페이지를 이동해 문서 연결과 함께 보여 준다 |
