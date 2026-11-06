@@ -1,5 +1,6 @@
 import { loadEnv, defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 import { assertAllowedPublicViteEnvironment, publicBundleEntries, scanPublicBundle } from './publicBuildSecurity';
 
 function publicBuildSecurityPlugin(): Plugin {
@@ -27,7 +28,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     envPrefix: publicEnvironmentPrefix,
-    plugins: [react(), publicBuildSecurityPlugin()],
+    plugins: [react(), tailwindcss(), publicBuildSecurityPlugin()],
     server: {
       proxy: {
         '/api': {
