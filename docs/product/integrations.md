@@ -1,0 +1,262 @@
+# Meeting Automation Integration Specification
+
+> **문서 역할:** 외부 시스템 연동 Port, 표준 DTO, Adapter 책임, 오류/보안 규칙을 현재 코드 기준으로 정의한다.
+> **기준일:** 2026-11-05 (Backend 소스 기준)
+> **관련 문서:** [현재 구현 기준](./implementation-status.md) · [PRD](./PRD.md) · [Architecture](./architecture.md) · [API 명세](./api-spec.md) · [문서 연결 설계](./document-setup.md)
+> Backend와 저장 구조는 고정 계약이며, 리뉴얼은 이 계약을 바꾸지 않는 범위에서 진행한다.
+
+## 공통 연동 규칙
+
+- Domain과 Application은 Notion, Confluence, OpenAI, Slack 또는 Email Vendor SDK 모델을 참조하지 않는다.
+- 각 외부 Adapter는 provider-specific Request/Response를 내부 표준 DTO로 변환한다.
+- OpenAI 키는 Backend 환경 설정에서 읽는다. Document 연결 정보는 화면 위저드 요청으로 받아 암호화한 전역 설정에서 읽는다. Email(Gmail OAuth)과 Slack Webhook 설정은 설정 API로 저장한 암호화 값을 우선 사용하고, 저장값이 없으면 Backend 환경변수를 사용한다. 저장된 값은 Frontend 조회 응답에 원문으로 보내지 않는다.
+- 외부 오류 본문을 그대로 사용자 응답, 일반 로그, Admin Slack에 넣지 않는다.
+- timeout, 재시도 횟수, rate limit backoff는 외부 API의 현행 공식 제한 및 배포 설정에 맞춘다. 안전한 멱등성을 확보한 호출만 재시도한다.
+- Provider 변경은 Port 구현 교체로 제한한다. Domain 공통 모델은 provider의 특수 기능을 흡수하지 않는다.
+
+## Port/Adapter 구조
+
+```text
+Application Use Case
+  ├─ TranscriptionProvider
+  ├─ MinutesGenerationProvider / MinutesDocumentWriter
+  ├─ DocumentProvider (DocumentStructureProvider 포함)
+  ├─ EmailProvider
+  ├─ NotificationProvider (optional)
+  └─ AdminIncidentNotifier (optional)
+       └─ Adapter-specific client and DTO
+```
+
+각 Port는 업무 목적의 명령/응답을 노출하고 HTTP, SDK 타입, 외부 ID 형식을 감춘다. Adapter가 credential 조회, HTTP 호출, 제한 처리, 결과 정규화, 오류 분류를 담당한다.
+
+## EXT-001 Transcription / Speaker Diarization
+
+### Port 계약
+
+```text
+transcribeWithDiarization(TranscriptionCommand) -> TranscriptResult
+```
+
+입력:
+
+```text
+TranscriptionCommand = {
+  audio: protected temporary file reference or stream (+ audioBytes),
+  mimeType: string,
+  languageHint?: string,   // 처리 파이프라인은 "ko"를 지정한다
+  meetingDurationMs: integer,
+  traceId: string
+}
+```
+
+출력:
+
+```text
+TranscriptResult = {
+  speakers: [{providerLabel, speakerId, label}],
+  segments: [{segmentId, speakerId, startMs, endMs, text}]
+}
+```
+
+### 변환/검증 규칙
+
+- 기본 모델은 `gpt-4o-transcribe-diarize`, 응답 형식은 `diarized_json`이다. 모델은 `TRANSCRIPTION_MODEL` 설정으로 바꿀 수 있으며 모델명은 영구 도메인 계약이 아니다.
+- Provider의 화자 ID가 없거나 불안정하면 단일 transcription 실행 내에서 결정적인 internal `speakerId`로 정규화한다.
+- 모든 segment의 speaker 참조, timestamp 범위, 결과 정렬을 검증한다.
+- Provider 결과에서 자동 실명 인식/voiceprint를 시도하지 않는다.
+- 외부 최대 파일 크기(`TRANSCRIPTION_MAX_AUDIO_BYTES`)나 duration 제한에 걸리면 처리 실패를 사용자에게 안전한 코드로 표시한다. Audio 장기 보관이나 새 Object Storage는 사용하지 않는다.
+- Transcript 원문 및 Audio를 요청/응답 로그에 남기지 않는다.
+
+## EXT-002 Minutes Generation
+
+### Port 계약
+
+```text
+generateMinutes(MinutesCommand) -> GroundedMinutesResult -> StructuredMinutes
+MinutesDocumentWriter.render(MinutesDocumentCommand) -> Markdown
+```
+
+회의록 초안 생성 입력에는 `templateId`, `templateVersion`, Template prompt/content, 최소 Participant 참조 목록, Speaker mapping, 표준 Transcript가 들어간다. Provider 내부 결과는 `StructuredMinutes`의 텍스트 claim과 claim별 Transcript `segmentId` 근거 목록을 함께 반환한다. Application은 ID가 입력 Transcript에 존재하는지 검증하고, 근거가 없거나 참조할 수 없는 텍스트 claim만 제거한 뒤 `data-spec.md`의 canonical `StructuredMinutes`로 변환한다. Evidence ID는 저장 schema에 추가하지 않는다.
+
+문서 저장 단계에서는 `MinutesDocumentWriter`가 선택한 Template과 사용자가 검토한 회의록만 입력받아 Template의 제목·섹션 순서에 맞춘 Markdown 본문을 생성한다. 초안 생성과 문서 본문 작성은 같은 `MINUTES_MODEL` 설정을 공유한다.
+
+### 생성 원칙
+
+- 기본 모델은 `gpt-6-luna`이며 `MINUTES_MODEL` 설정으로 바꾼다. 초안 생성은 Chat Completions의 JSON Schema 구조화 출력을 사용한다.
+- 회의록 Template은 Backend classpath 정적 리소스 `default.md`(기본 회의록)와 `project.md`(프로젝트 회의) 두 가지이며 버전은 모두 `1.0.0`이다. 회의 생성·재생성 때 이 번들 Template을 읽는다. 문서 연결 초기화는 `Templates` 페이지에 기본 Template을 기록하지만 현재 처리 흐름은 Provider의 `Templates` 페이지를 다시 읽지 않는다.
+- 재생성 요청에는 Transcript와 Speaker mapping만 사용하며 Audio/STT Port를 호출하지 않는다.
+- 각 summary/list/action claim의 transcript 근거를 제공하도록 prompt와 schema에서 요구한다. 구현은 citation segment ID의 입력 존재를 검증하지만 의미적 함의까지 독립 입증하지는 않는다. 미지원 텍스트 claim은 개별 제거하고, date는 인용된 segment에 canonical ISO literal이 있을 때만 유지하며, 지원되는 task의 나머지 미지원 owner/date는 각각 null로 둔다. 참조 구조·필수 필드·roster/date 자체의 schema 오류는 전체 처리 실패다.
+- 모델 출력 parsing 실패, 필수 필드 누락, schema 위반은 `PROCESSING_FAILURE`로 분류한다.
+
+## EXT-003 Document Provider
+
+### 공통 Port
+
+```text
+// DocumentStructureProvider
+validateConnection() -> ProviderHealth
+discoverStructure(rootId) -> DocumentStructure   // root, Meetings, Participants 식별자
+
+// DocumentProvider
+listMeetings(max=100) -> MeetingSummary[]
+getMeeting(documentId) -> MeetingDocument
+findMeetingBySessionId(sessionId) -> Optional<MeetingDocumentRef>
+createMeeting(command) -> MeetingDocumentRef
+listParticipants() -> Participant[]
+createParticipant(command) -> Participant
+updateParticipant(participantId, command) -> Participant
+```
+
+Provider capability는 root 검증, child page 탐색/생성/읽기, 최소 metadata 갱신, URL 반환이다. 공통 계약은 Page hierarchy/basic CRUD만 사용한다. Database/Data Source, provider 내 검색 서비스, 임의 custom schema 기능은 요구하지 않는다. Participant 삭제 API(`DELETE /api/v1/participants/{participantId}`)는 별도 `ParticipantDeletingProvider` 인터페이스로 지원한다.
+
+### 초기 구조
+
+1. 설정된 root 식별자 접근 가능 여부를 확인한다.
+2. 루트 `Meeting Automation` 아래 child page `Meetings`, `Participants`, `Meeting Data`, `Templates` 네 개를 준비한다. Notion은 `Meeting Data` 아래 `Meeting Index` 페이지를 추가로 만든다. `Home`과 `Speaker Memory` 페이지는 만들지 않는다.
+3. 일반 Health/업무 조회(`discoverStructure`)는 누락 구조를 만들지 않는다. 최초 위저드 Bootstrap만 누락된 page를 생성하고 기존 page를 검증·재사용한다. 필수 page가 read-back 검증된 뒤에만 연결을 READY로 활성화한다.
+4. Participant/Meeting 데이터는 각 지정 page 아래에서만 읽고 쓴다.
+
+화자와 참석자 연결은 현재 회의 Session에서만 관리하며 별도 매핑 기록을 Provider에 저장하지 않는다. Database/Data Source를 요구하지 않으며 voiceprint나 audio feature를 저장하지 않는다.
+
+### Publish 멱등성
+
+- `externalSessionId`를 Provider metadata에 기록한다.
+- Create 전 `findMeetingBySessionId`를 수행한다.
+- 동일 Session의 기존 문서가 있으면 생성 대신 해당 문서 참조를 재사용한다.
+- 검색/metadata 접근은 Adapter에서 숨긴다.
+- 부분 실패 뒤 재시도에서도 중복 Meeting page를 만들지 않도록 create와 metadata 기록 순서를 검증한다.
+
+### Notion Adapter
+
+- Page hierarchy에서 child page를 나열/읽기/생성/갱신한다.
+- Notion Database/Data Source 의존 기능을 사용하지 않는다.
+- 내부 `documentId`와 URL로 변환하며 Page 원본 JSON은 밖으로 내보내지 않는다.
+
+### Confluence Adapter
+
+- 대상은 Confluence Cloud이며 REST API v2를 사용한다. 저장된 connection의 `baseUrl`은 `https://<site>.atlassian.net` 형식의 사이트 origin이다.
+- 저장된 connection의 `accountEmail`과 `apiToken`으로 Basic 인증을 구성한다. Authorization 값은 UTF-8 `email:API token`을 Base64 인코딩한 뒤 `Basic` scheme으로 전송한다. Password 기반 인증은 사용하지 않는다.
+- root/parent 식별자의 직속 자식은 `GET /wiki/api/v2/pages/{id}/direct-children`으로 페이지네이션해 조회한다. 응답 중 `type=page`인 항목만 사용하며 Database, Folder, Whiteboard, Embed 등은 무시한다.
+- 일반 구조 탐색에서 정확한 제목 `Meetings`, `Participants`의 직속 Page가 각각 하나씩 있어야 한다. 누락이면 `DOCUMENT_STRUCTURE_NOT_FOUND`, 중복이면 `DOCUMENT_STRUCTURE_CONFLICT`를 반환하며 조회는 생성/복구하지 않는다. 명시적 초기화의 생성·재사용은 Bootstrap이 담당한다.
+- Basic 자격 증명은 위저드 입력으로 등록한 암호화 전역 connection에서 읽는다. Authorization header, email, token, 원본 오류 본문을 응답이나 로그에 남기지 않는다.
+- 내부 `documentId`와 URL로 변환하며 vendor response는 Adapter에 격리한다.
+- Provider 요청은 redirect를 따르지 않고 loopback·link-local·사설 IP 대상 요청을 거절한다.
+
+## EXT-004 Email Provider
+
+### Port 계약
+
+```text
+boolean validateConnection()
+boolean sendTestMessage()                         // 기본 구현은 false, 설정 API가 명시 호출할 때만 사용
+sendMeetingEmail(command) -> RecipientDeliveryResult[]
+```
+
+Command는 회의 작성자가 선택한 Participant roster record의 이메일 주소, 제목, 요약/본문, 성공적으로 저장된 Document URL을 포함한다. Provider 호출 직전에 이메일 주소 형식을 검증한다. 수신자마다 독립 성공/실패를 반환하고 성공 수신자에게 재전송하지 않는다.
+
+Email Adapter는 `EMAIL_PROVIDER=GMAIL_API`일 때 Gmail API를 사용한다. Gmail OAuth 2.0 클라이언트 ID·secret, refresh token, 발신 주소는 앱 설정 화면(`/api/v1/integrations/email`)으로 저장한 암호화 값을 우선 사용하고, 저장값이 없으면 `EMAIL_OAUTH_CLIENT_ID`, `EMAIL_OAUTH_CLIENT_SECRET`, `EMAIL_OAUTH_REFRESH_TOKEN`, `EMAIL_SENDER_ADDRESS` 환경변수를 사용한다. Gmail `https://www.googleapis.com/auth/gmail.send` scope로 offline OAuth 2.0 access token을 갱신한다. Refresh token은 Google 계정의 최초 사용자 동의로 별도 발급하며 제품이 OAuth 동의/계정 연결 화면을 제공하지 않는다. Service account/domain-wide delegation은 범위에 포함하지 않는다.
+
+Adapter는 Gmail `users.messages.send`와 RFC 2822 MIME/base64url 메시지 형식을 사용한다. 선택된 수신자마다 별도 메시지 한 건을 보내 다른 수신자 주소가 서로에게 노출되지 않도록 한다. Gmail API 성공 응답은 Gmail의 전송 접수를 뜻하며 수신함 도착/열람까지 보장하지 않는다. Empty recipient list는 발송하지 않고 빈 결과를 반환한다.
+
+Email은 Minutes 생성과 Document 저장에 성공한 뒤 Publish 요청의 `emailRecipientParticipantIds`로 선택된 Participant 주소에 발송한다. 전체 주소는 운영 로그에 노출하지 않는다. client secret/refresh token/access token과 Authorization 값은 응답·로그에 쓰지 않는다. `validateConnection()`은 설정과 OAuth token refresh를 검증하며 테스트 메일을 발송하지 않는다. 시험 메일은 사용자가 명시적으로 호출하는 `POST /api/v1/integrations/email/test-message`에서만 발송한다. Gmail `gmail.send` 범위 외 mailbox read/modify scope는 요청하지 않는다.
+
+## EXT-005 Notification Provider
+
+### Port 계약
+
+```text
+IntegrationHealthStatus validateConnection()
+sendMeetingPublished(command) -> DeliveryResult
+```
+
+Admin incident는 별도 Port `AdminIncidentNotifier.notifyIncident(FailureContext)`가 담당한다. 회의 알림 입력은 title, meeting date, document URL이다. Admin incident 입력은 오류 분류, sessionId, stage, traceId, 안전한 오류 요약이다.
+
+Slack Notification은 핵심 회의 흐름의 필수 조건이 아니다. 활성화하면 `NOTIFICATION_PROVIDER=SLACK`과 Incoming Webhook을 사용하며, 앱 설정 화면(`/api/v1/integrations/slack`)으로 저장한 암호화 값을 우선 사용하고 저장값이 없으면 `SLACK_MEETING_WEBHOOK_URL` 환경변수를 사용한다. webhook에 고정된 Channel로만 메시지를 보내고 payload에서 channel/username/icon을 변경하지 않는다. Meeting message는 title, meeting date, Document URL만 포함한다. Slack HTTP 200 body `ok`를 받으면 요청 수락으로 기록하며 실제 구성원 열람/보관을 보장하지 않는다.
+
+Incoming Webhook URL은 secret이다. `validateConnection()`은 health 조회만으로 test message를 게시하지 않는다. 시험 메시지는 사용자가 명시적으로 호출하는 `POST /api/v1/integrations/slack/test`에서만 게시한다. Slack을 설정하지 않아도 회의록 생성·저장·Gmail 발송은 정상 완료된다. Slack 알림이 활성화된 배포에서만 Document 저장 뒤 추가 실행하며 실패해도 Email delivery를 되돌리지 않는다.
+
+## Admin Incident 안전 규칙
+
+Admin incident는 `SLACK_ADMIN_WEBHOOK_URL`의 별도 Incoming Webhook으로 전송한다(선택 설정). Meeting 알림 Webhook과 분리하며 API-019의 Notification health나 사용자 Delivery 결과에 합치지 않는다. 업무 실패 하나당 webhook POST 한 번을 시도하고, Slack 전송 실패가 원래 사용자 요청/처리 실패를 변경하거나 재호출하지 않는다. 응답이 불명확한 전송은 blind retry하지 않는다.
+
+Payload는 Slack Incoming Webhook의 JSON `text`로 허용된 incident 필드만 렌더링한다. Slack Webhook URL은 secret이므로 URL/Authorization 및 원 요청/응답은 로그에 쓰지 않는다.
+
+허용 payload:
+
+```json
+{
+  "incidentType": "PROCESSING_FAILURE",
+  "sessionId": "ms_xxx",
+  "stage": "TRANSCRIPTION",
+  "traceId": "tr_xxx",
+  "message": "Transcription failed",
+  "retryable": true,
+  "occurredAt": "2026-10-04T02:16:00Z"
+}
+```
+
+포함 금지: Audio, Transcript, Minutes 본문, Token/Secret, 전체 Email 주소, Provider의 원본 error body. 오류 분류는 `PROCESSING_FAILURE`, `DOCUMENT_FAILURE`, `EMAIL_FAILURE`, `NOTIFICATION_FAILURE` 네 종류만 사용한다.
+
+## Health 확인 의미
+
+- `configured`: 필수 설정값이 존재하고 형식이 유효함.
+- `reachable`: 안전한 확인 요청이 Provider에 도달하고 인증됨.
+- `rootAccessible`: Document root와 필수 child 구조 접근 가능함.
+- 활성 전역 connection이 없으면 provider:null/configured:false와 setup.required:true다. Provider와 credential은 화면 입력으로 등록하고 env 자동 선택/fallback은 없다. unsupported Provider 입력은 400이다.
+- Integration Health는 `document`, `email`, `notification`, `ai` 영역을 포함한다.
+- Document Health의 `rootAccessible`은 Root와 필수 직속 `Meetings`/`Participants` 구조를 모두 탐색할 수 있을 때만 true다. 구조 누락/중복은 Health 조회를 실패시키지 않고 false 상태로 표현한다.
+- Health endpoint는 key 자체, 외부 상세 오류 본문, 개인정보를 반환하지 않는다.
+- Health 확인 요청은 불필요한 문서/메시지/메일을 생성하지 않는다.
+- `GET /api/v1/system/health`는 프로세스 상태(`UP`)만 반환하며 외부 서비스 연결 상태를 의미하지 않는다.
+
+## 환경 설정과 Secret
+
+Backend는 아래 환경변수를 읽는다(괄호는 기본값). 문서 Provider와 credential, 위치는 환경변수가 아니라 위저드 전역 설정에 암호화 저장한다.
+
+| 분류 | 변수 |
+|---|---|
+| 서비스 | `APP_COMPANY_ID`(sfood), `APP_COMPANY_NAME`(SFOOD), `APP_TIMEZONE`(Asia/Seoul), `ALLOWED_ORIGINS` |
+| 설정 저장 | `DOCUMENT_SETTINGS_DIR`, `DOCUMENT_SETTINGS_ENCRYPTION_KEY`(Base64 32바이트) |
+| OpenAI | `OPENAI_API_KEY`, `TRANSCRIPTION_MODEL`(gpt-4o-transcribe-diarize), `MINUTES_MODEL`(gpt-6-luna), `TRANSCRIPTION_TIMEOUT_SECONDS`(1800), `TRANSCRIPTION_CONNECT_TIMEOUT_SECONDS`(10), `TRANSCRIPTION_MAX_AUDIO_BYTES`(26214400), `MINUTES_TIMEOUT_SECONDS`(600), `MINUTES_CONNECT_TIMEOUT_SECONDS`(10) |
+| Email | `EMAIL_PROVIDER`, `EMAIL_OAUTH_CLIENT_ID`, `EMAIL_OAUTH_CLIENT_SECRET`, `EMAIL_OAUTH_REFRESH_TOKEN`, `EMAIL_SENDER_ADDRESS` (설정 API 저장값이 없을 때의 폴백) |
+| Slack | `NOTIFICATION_PROVIDER`, `SLACK_MEETING_WEBHOOK_URL`(설정 API 저장값이 없을 때의 폴백), `SLACK_ADMIN_WEBHOOK_URL` |
+| 녹음·오디오 | `TEMP_AUDIO_DIR`, `TEMP_AUDIO_CLEANUP_INTERVAL_MS`(3600000), `TEMP_AUDIO_CLEANUP_INITIAL_DELAY_MS`(60000), `MAX_MEETING_DURATION_MINUTES`(60), `RECORDING_CHUNK_DURATION_SECONDS`(15), `MAX_CHUNK_BYTES`(5242880), `ACCEPTED_AUDIO_MIME_TYPES`(audio/webm,audio/mp4) |
+
+AI 키와 설정 암호화 키는 Backend 환경 설정에 저장한다. 오디오 조각은 Backend API가 받아 `TEMP_AUDIO_DIR`의 임시 파일로 처리하며, Frontend에는 Backend 접근 경로만 둔다. 운영 Backend(GCE VM)는 `DOCUMENT_SETTINGS_DIR`와 `TEMP_AUDIO_DIR`을 VM의 영속 볼륨에 마운트해 암호화 설정 파일을 유지한다. 배포 절차와 필수 설정은 [gcloud 백엔드 배포 안내](../setup/gcloud-backend-deployment.md)를 따른다. 예시 파일은 변수 이름만 담고 실제 값과 secret을 담지 않는다.
+
+## 실패 분류와 재시도
+
+| 연동 | 운영 분류 | 안전한 재시도 조건 |
+|---|---|---|
+| Audio assembly/STT/Minutes | `PROCESSING_FAILURE` | 같은 Session/job에 중복 side effect가 없거나 작업 상태로 보호됨 |
+| Notion/Confluence | `DOCUMENT_FAILURE` | `externalSessionId`로 기존 문서 탐색 가능 |
+| Email | `EMAIL_FAILURE` | API-016을 사용자가 명시 호출하고 해당 Delivery가 `retryable=true`일 때만 재시도 |
+| Slack/Notification | `NOTIFICATION_FAILURE` | API-016을 사용자가 명시 호출하고 해당 Delivery가 `retryable=true`일 때만 재시도 |
+
+외부 timeout 시 처리 결과가 불명확할 수 있다. Document는 Session ID 조회로 판별한다. Email/Slack의 중복 허용 여부는 Provider의 idempotency capability가 없는 경우 보장할 수 없으므로 응답 불명 timeout은 `retryable=false`로 기록하고 다시 전송하지 않는다. 명시적인 Provider 거절로 부작용이 없다고 확인되는 설정/권한 오류는 원인 수정 뒤 API-016으로 수동 재시도할 수 있다. 어떤 실패도 Adapter 내부 자동 반복을 하지 않는다.
+
+## 추적성
+
+PRD 외부 계약 `EXT-001~005`, API-019, FR-007~009, FR-016~019, FR-024~026, FR-029~030과 연결된다.
+
+## 구조 생성과 자료 전송
+
+초기 구조 생성은 `DocumentStructureInitializer.initializeStructure(parent, reuseRoot, operationId, journal)`가 담당하며 연결 테스트/구조 조회(`discoverStructure`)와 분리한다. Provider별 페이지 조작은 `BootstrapPages` 구현(Notion, Confluence)이 맡고, 결과는 `DocumentStructure`로 반환한다.
+
+자료 전송은 `DocumentTransferPort`가 제공한다.
+
+```text
+readManifest() -> TransferManifest
+listMeetingRecords() -> TransferRecord[]       // 기본 구현은 미지원 예외, Provider가 구현
+listMeetingSummaries() / findMeetingSummary(documentId)
+exportMeeting(sourceDocumentId) -> TransferRecord
+importParticipant(record, sourceConnectionFingerprint) -> Participant
+importMeeting(record, participantIdMap, sourceConnectionFingerprint) -> MeetingDocumentRef
+publishMeeting(meetingRecord) -> MeetingDocumentRef   // 같은 externalSessionId의 검증된 기록은 재사용
+```
+
+모든 메서드는 표준 DTO(`TransferRecord`, `TransferMarker`)를 사용하며 SDK payload는 Adapter 내부에 격리한다.
+
+Notion은 지정 부모 아래 Page를 생성한다. Confluence Cloud는 spaceId가 필수이고 parentId는 선택이다. 초기 루트는 `Meeting Automation`이며 child는 `Meetings`, `Participants`, `Meeting Data`, `Templates`다. 이미 완전한 기존 루트는 사용자 명시 선택 후 재사용한다. 누락/중복/응답 유실의 복구는 [문서 연결 설계](./document-setup.md)의 journal 규칙을 따른다.
+
+양 Adapter는 표준 회의 내용·최소 metadata와 실패 문서 형식을 round-trip한다. 기록 marker는 `format`(`meeting-automation`)과 `schemaVersion`(`1.0`)을 가지며, import 생성 payload에는 `transferKey`(source connection fingerprint와 source document ID 기반)를 포함하고 participant ID map으로 새 provider 참조를 적용한다. 이 과정은 AI/Email/Slack Provider를 호출하지 않는다. Public Health는 활성 연결만 검사하며 draft 테스트 실패가 기존 active 상태를 덮어쓰지 않는다. 표시 본문이 지원 형식을 벗어나면 명시적 export 오류로 처리한다.

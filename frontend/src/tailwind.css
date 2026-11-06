@@ -1,0 +1,246 @@
+/*
+ * 스타일 진입점 (Tailwind CSS v4).
+ * 근거: docs/renewal/스타일_전환_검토.md 7.4(색), 8(크기·글자·컴포넌트)
+ *
+ * layer 순서: theme → base(Tailwind 초기화) → legacy(기존 CSS) → components → utilities
+ * - 기존 CSS는 legacy layer에 가두어 Tailwind 유틸리티보다 항상 낮은 우선순위를 갖는다.
+ * - 이 파일에는 디자인 토큰(@theme), 토큰 수준 유틸리티(@utility), 사용자 조건(@custom-variant)만 둔다.
+ *   화면·컴포넌트 전용 스타일은 만들지 않는다(CLAUDE.md).
+ */
+@layer theme, base, legacy, components, utilities;
+
+@import 'tailwindcss';
+@import 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css';
+@import './styles/index.css' layer(legacy);
+
+/* 높이가 낮은 화면(휴대폰 가로, 화면 키보드 열림) */
+@custom-variant short (@media (max-height: 560px));
+
+@theme {
+  /* ---------- 화면 폭 기준: 휴대폰이 기본, tablet 600px, tablet-lg 960px ---------- */
+  --breakpoint-*: initial;
+  --breakpoint-tablet: 37.5rem;
+  --breakpoint-tablet-lg: 60rem;
+
+  /* ---------- 글꼴 ---------- */
+  --font-*: initial;
+  --font-sans: 'Pretendard Variable', Pretendard, -apple-system, system-ui, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-weight-*: initial;
+  --font-weight-regular: 400;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  /* 글자 크기는 아래 @utility text-* 토큰만 쓴다 */
+  --text-*: initial;
+  --tracking-*: initial;
+  --leading-*: initial;
+
+  /* ---------- 색: 다운포스 CI 기반 단계 색 (검토 문서 7.4) ---------- */
+  --color-*: initial;
+  --color-white: #ffffff;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+
+  --color-pink-50: #fef4f7;
+  --color-pink-100: #fee8ee;
+  --color-pink-200: #fed2e0;
+  --color-pink-300: #fdb0ca; /* CI Main */
+  --color-pink-400: #fa92b8;
+  --color-pink-500: #e46799;
+  --color-pink-600: #c4457b;
+  --color-pink-700: #9b3661;
+  --color-pink-800: #742848;
+  --color-pink-900: #4f1b31;
+
+  --color-blue-50: #f3f7ff;
+  --color-blue-100: #e7effe;
+  --color-blue-200: #d0e0fe;
+  --color-blue-300: #b4cfff;
+  --color-blue-400: #8bb0f4; /* CI Sub */
+  --color-blue-500: #5990fa;
+  --color-blue-600: #3970de;
+  --color-blue-700: #2d59b0;
+  --color-blue-800: #224385;
+  --color-blue-900: #172e5b;
+
+  --color-lavender-50: #f7f5ff;
+  --color-lavender-100: #f0ebfe;
+  --color-lavender-200: #e2d9fe;
+  --color-lavender-300: #ccbdf6; /* CI Sub */
+  --color-lavender-400: #bea8f6;
+  --color-lavender-500: #a083e2;
+  --color-lavender-600: #8263c1;
+  --color-lavender-700: #674f9a;
+  --color-lavender-800: #4d3b74;
+  --color-lavender-900: #34284f;
+
+  --color-neutral-50: #fbf9ff;
+  --color-neutral-100: #f4f2fb;
+  --color-neutral-200: #e7e5ed;
+  --color-neutral-300: #d5d3db;
+  --color-neutral-400: #a5a3ab;
+  --color-neutral-500: #7b7981;
+  --color-neutral-600: #615f67;
+  --color-neutral-700: #48464e;
+  --color-neutral-800: #2e2d33;
+  --color-neutral-900: #1b1920;
+
+  --color-red-50: #fff4f2;
+  --color-red-100: #ffe9e6;
+  --color-red-200: #ffd4ce;
+  --color-red-300: #ffbab1;
+  --color-red-400: #ff968a;
+  --color-red-500: #f46157;
+  --color-red-600: #d33b36;
+  --color-red-700: #a72f2b;
+  --color-red-800: #7d241f;
+  --color-red-900: #561815;
+
+  --color-green-50: #e5ffe9;
+  --color-green-100: #c8ffd2;
+  --color-green-200: #aff3bc;
+  --color-green-300: #92e4a4;
+  --color-green-400: #6ad184;
+  --color-green-500: #05aa4e;
+  --color-green-600: #01873d;
+  --color-green-700: #006b2f;
+  --color-green-800: #005121;
+  --color-green-900: #013916;
+
+  --color-amber-50: #fff5ea;
+  --color-amber-100: #feebd6;
+  --color-amber-200: #ffd8ad;
+  --color-amber-300: #ffc075;
+  --color-amber-400: #f2a53d;
+  --color-amber-500: #ce8306;
+  --color-amber-600: #a46805;
+  --color-amber-700: #835204;
+  --color-amber-800: #633d02;
+  --color-amber-900: #452901;
+
+  /* ---------- 색: 용도별 토큰 (화면에서는 이 이름을 우선 쓴다) ---------- */
+  --color-bg: var(--color-white);
+  --color-bg-subtle: var(--color-neutral-50);
+  --color-text: var(--color-neutral-900);
+  --color-text-muted: var(--color-neutral-600);
+  --color-border: var(--color-neutral-200);
+  --color-border-input: var(--color-neutral-500);
+  --color-primary: var(--color-blue-600);
+  --color-primary-hover: var(--color-blue-700);
+  --color-primary-soft: var(--color-blue-50);
+  --color-primary-soft-text: var(--color-blue-800);
+  --color-focus: var(--color-blue-600);
+  --color-brand: var(--color-pink-300);
+  --color-brand-text: var(--color-pink-700);
+  --color-brand-soft: var(--color-pink-100);
+  --color-brand-soft-text: var(--color-pink-800);
+  --color-selected: var(--color-lavender-100);
+  --color-selected-text: var(--color-lavender-800);
+  --color-accent: var(--color-lavender-300);
+  --color-danger: var(--color-red-600);
+  --color-danger-soft: var(--color-red-50);
+  --color-danger-text: var(--color-red-700);
+  --color-success-soft: var(--color-green-50);
+  --color-success-text: var(--color-green-700);
+  --color-warning-soft: var(--color-amber-50);
+  --color-warning-text: var(--color-amber-800);
+
+  /* ---------- 모서리 ---------- */
+  --radius-*: initial;
+  --radius-sm: 0.5rem; /* 8: 배지, 작은 칩 */
+  --radius-md: 0.75rem; /* 12: 버튼, 입력란 */
+  --radius-lg: 1rem; /* 16: 카드 */
+  --radius-xl: 1.25rem; /* 20: 대화상자, 하단 시트 */
+
+  /* ---------- 그림자: 화면 위에 뜨는 요소 전용 ---------- */
+  --shadow-*: initial;
+  --shadow-overlay: 0 8px 24px rgb(27 25 32 / 0.16), 0 2px 6px rgb(27 25 32 / 0.08);
+  --inset-shadow-*: initial;
+  --drop-shadow-*: initial;
+  --text-shadow-*: initial;
+
+  /* ---------- 최대 폭 (검토 문서 8.2, 8.6) ---------- */
+  --container-*: initial;
+  --container-auth: 30rem; /* 480: 인증 카드 */
+  --container-dialog: 35rem; /* 560: 대화상자, 단독 카드 */
+  --container-form: 40rem; /* 640: 마법사·단독 폼 */
+  --container-reading: 45rem; /* 720: 읽기 본문 */
+  --container-content: 65rem; /* 1040: 본문 */
+}
+
+/*
+ * 글자 토큰 (검토 문서 8.3). 휴대폰 값이 기본이고 tablet(600px) 이상에서 커진다.
+ * 크기·줄 높이·굵기·자간을 한 번에 지정한다.
+ */
+@utility text-display {
+  font-size: 3rem;
+  line-height: 3.5rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  @variant tablet {
+    font-size: 4rem;
+    line-height: 4.5rem;
+  }
+}
+@utility text-headline {
+  font-size: 1.5rem;
+  line-height: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  @variant tablet {
+    font-size: 1.75rem;
+    line-height: 2.25rem;
+  }
+}
+@utility text-title {
+  font-size: 1.125rem;
+  line-height: 1.625rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  @variant tablet {
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+  }
+}
+@utility text-body-lg {
+  font-size: 1.0625rem;
+  line-height: 1.75rem;
+  font-weight: 400;
+  @variant tablet {
+    font-size: 1.125rem;
+    line-height: 1.875rem;
+  }
+}
+@utility text-body {
+  font-size: 1rem;
+  line-height: 1.5rem;
+  font-weight: 400;
+}
+@utility text-label {
+  font-size: 0.9375rem;
+  line-height: 1.375rem;
+  font-weight: 600;
+  @variant tablet {
+    font-size: 1rem;
+    line-height: 1.5rem;
+  }
+}
+@utility text-caption {
+  font-size: 0.8125rem;
+  line-height: 1.125rem;
+  font-weight: 400;
+  @variant tablet {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+}
+@utility text-nav {
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 600;
+  @variant tablet {
+    font-size: 0.8125rem;
+    line-height: 1.125rem;
+  }
+}
