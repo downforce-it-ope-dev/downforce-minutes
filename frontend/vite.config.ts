@@ -23,7 +23,7 @@ export default defineConfig(({ mode }) => {
 
   // 개발 서버 전용 프록시 대상입니다. VITE_ 접두사가 없어 브라우저 번들에 포함되지 않습니다.
   // 기본값은 로컬 백엔드이며, 다른 백엔드를 쓰려면 DEV_API_PROXY_TARGET으로 지정합니다.
-  const devApiProxyTarget = process.env.DEV_API_PROXY_TARGET || 'http://127.0.0.1:8080';
+  const devApiProxyTarget = loadEnv(mode, '.', 'DEV_API_PROXY_TARGET').DEV_API_PROXY_TARGET || 'http://127.0.0.1:8080';
 
   return {
     envPrefix: publicEnvironmentPrefix,
