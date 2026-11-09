@@ -11,11 +11,14 @@ export { Pill, type PillProps, type PillTone } from './Pill';
 export { ProgressBar, type ProgressBarProps } from './ProgressBar';
 export { Banner, type BannerProps, type BannerTone } from './Banner';
 export { Dialog, type DialogProps } from './Dialog';
+export { LeaveConfirmDialog, type LeaveConfirmDialogProps } from './LeaveConfirmDialog';
+export { DocumentStatusChip, type DocumentStatus, type DocumentStatusChipProps } from './DocumentStatusChip';
 export { ToastProvider, type ToastPlacement } from './Toast';
 export { useToast, type ToastOptions, type ToastTone } from './toastContext';
 export { RENEWAL_ROOT_CLASS } from './renewalRoot';
 // 그림 부품 (S-12, 단순화 SVG. 원본을 받으면 같은 자리에서 교체)
 export { Logo, type LogoProps } from './art/Logo';
+export { LogoSymbol, type LogoSymbolProps } from './art/LogoSymbol';
 export { CanvasWaves, type CanvasWavesProps } from './art/CanvasWaves';
 export { Waveform, type WaveformProps } from './art/Waveform';
 export { RecordToMinutesIllustration } from './art/RecordToMinutesIllustration';
@@ -23,3 +26,4 @@ export { MailCodeIllustration } from './art/MailCodeIllustration';
 // 레이아웃
 export { AppCanvas, type AppCanvasProps } from './layout/AppCanvas';
 export { AuthLayout, type AuthLayoutProps } from './layout/AuthLayout';
+export { AppShell, type AppShellProps } from './layout/AppShell';

@@ -16,6 +16,9 @@ import {
 } from 'lucide-react';
 import {
   AppCanvas,
+  AppShell,
+  DocumentStatusChip,
+  LeaveConfirmDialog,
   AuthLayout,
   Banner,
   Button,
@@ -45,7 +48,15 @@ export default function UiPreview() {
   const view = params.get('view');
   return (
     <ToastProvider>
-      {view === 'login' ? <LoginSample /> : view === 'verify' ? <VerifySample /> : <ComponentsView />}
+      {view === 'login' ? (
+        <LoginSample />
+      ) : view === 'verify' ? (
+        <VerifySample />
+      ) : view === 'shell' || view === 'focus' ? (
+        <ShellSample focus={view === 'focus'} />
+      ) : (
+        <ComponentsView />
+      )}
     </ToastProvider>
   );
 }
@@ -54,6 +65,8 @@ const VIEWS = [
   { key: 'components', label: '부품 전체' },
   { key: 'login', label: '로그인 틀 (AUTH-01)' },
   { key: 'verify', label: '인증 코드 틀 (AUTH-02)' },
+  { key: 'shell', label: '앱 틀 (CMN-01)' },
+  { key: 'focus', label: '집중 모드' },
 ] as const;
 
 function ViewNav({ current }: { current: (typeof VIEWS)[number]['key'] }) {
@@ -452,5 +465,51 @@ function VerifySample() {
         </Link>
       </div>
     </AuthLayout>
+  );
+}
+
+/** 앱 틀 샘플 (CMN-01, #17). 폭에 따라 탭 바 → 레일 → 사이드바로 바뀐다. 메뉴는 실제 경로로 이동한다 */
+function ShellSample({ focus }: { focus: boolean }) {
+  const [leaveOpen, setLeaveOpen] = useState(false);
+  return (
+    <AppShell
+      title={focus ? '문서 연결' : '앱 틀'}
+      back={focus ? { to: '/__ui?view=shell' } : undefined}
+      focus={focus}
+      actions={
+        <>
+          <DocumentStatusChip status="connected" compact onClick={() => undefined} />
+          {/* 휴대폰은 새 회의를 홈 하단 고정 버튼으로 둔다 (CMN-01-F04) */}
+          <span className="hidden tablet:flex">
+            <Button icon={Mic}>새 회의</Button>
+          </span>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-6">
+        <ViewNav current={focus ? 'focus' : 'shell'} />
+        <Card className="flex flex-col gap-4">
+          <h2 className="text-title text-text">문서 연결 상태 칩</h2>
+          <div className="flex flex-wrap gap-3">
+            <DocumentStatusChip status="connected" />
+            <DocumentStatusChip status="attention" />
+            <DocumentStatusChip status="disconnected" />
+          </div>
+        </Card>
+        <Card className="flex flex-col items-start gap-4">
+          <h2 className="text-title text-text">페이지 이탈 확인 (CMN-01-P01)</h2>
+          <Button variant="secondary" onClick={() => setLeaveOpen(true)}>
+            이탈 확인 열기
+          </Button>
+        </Card>
+        {Array.from({ length: 6 }, (_, index) => (
+          <Card key={index} className="flex flex-col gap-2">
+            <h2 className="text-title text-text">본문 카드 {index + 1}</h2>
+            <p className="text-body text-text-muted">본문만 스크롤되는지 확인하는 샘플입니다.</p>
+          </Card>
+        ))}
+      </div>
+      <LeaveConfirmDialog open={leaveOpen} onStay={() => setLeaveOpen(false)} onLeave={() => setLeaveOpen(false)} />
+    </AppShell>
   );
 }

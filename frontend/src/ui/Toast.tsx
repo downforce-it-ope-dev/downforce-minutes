@@ -26,7 +26,7 @@ const TONE_ICON: Record<ToastTone, { icon: LucideIcon; color: string }> = {
 
 const PLACEMENT: Record<ToastPlacement, string> = {
   base: 'bottom-4',
-  tabbar: 'bottom-20',
+  tabbar: 'bottom-20 tablet:bottom-4', // 탭 바는 휴대폰에만 있다
   action: 'bottom-24',
 };
 
