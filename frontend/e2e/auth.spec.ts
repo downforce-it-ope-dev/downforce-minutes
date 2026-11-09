@@ -8,6 +8,13 @@ import { expect, test, type Page } from '@playwright/test';
  */
 test.use({ storageState: { cookies: [], origins: [] } });
 
+// 목업은 메일 미설정으로 시작한다. 메일 설정 흐름 테스트를 뺀 나머지는 설정된 상태에서 시작한다
+const MOCK_MAIL_KEY = 'ma-auth-mock-mail-configured';
+test.beforeEach(async ({ page }, testInfo) => {
+  if (testInfo.title.includes('메일 설정')) return;
+  await page.addInitScript((key) => localStorage.setItem(key, '1'), MOCK_MAIL_KEY);
+});
+
 const SIZES = [
   { label: '휴대폰', width: 390, height: 844 },
   { label: '태블릿 세로', width: 820, height: 1180 },
@@ -88,3 +95,29 @@ test('다른 화면 주소로 들어오면 로그인 후 그 화면으로 돌아
   await page.keyboard.type('23456');
   await expect(page).toHaveURL(/\/meetings$/);
 });
+
+for (const size of [SIZES[0], SIZES[2]]) {
+  test(`메일 설정 · ${size.label}: 미설정이면 설정 아이콘으로 팝업을 열고, 저장하면 코드를 받을 수 있다`, async ({ page }) => {
+    await page.setViewportSize(size);
+    await page.goto('/login');
+    await page.getByLabel('회사 이메일').fill('meet@miinit.com');
+    await expect(page.getByText('인증 코드를 보낼 메일 설정이 필요합니다.', { exact: false })).toBeVisible();
+    await expect(page.getByRole('button', { name: '인증 코드 받기' })).toHaveAttribute('aria-disabled', 'true');
+    await expectAccessibleWithoutOverflow(page);
+
+    await page.getByRole('button', { name: '메일 설정' }).click();
+    const dialog = page.getByRole('dialog', { name: '메일 설정' });
+    await expect(dialog).toBeVisible();
+    await expectAccessibleWithoutOverflow(page);
+    await dialog.getByLabel('Google 클라이언트 ID').fill('id');
+    await dialog.getByLabel('클라이언트 보안 키').fill('secret');
+    await dialog.getByLabel('연결 토큰 (Refresh Token)').fill('token');
+    await dialog.getByLabel('발신 이메일 주소').fill('mail@miinit.com');
+    await dialog.getByRole('button', { name: '저장하고 연결 확인' }).click();
+    await expect(dialog).toHaveCount(0);
+
+    await expect(page.getByRole('button', { name: '메일 설정' })).toHaveCount(0);
+    await page.getByRole('button', { name: '인증 코드 받기' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: '인증 코드 입력' })).toBeVisible();
+  });
+}

@@ -1,11 +1,11 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router';
-import { ArrowRight, Mail } from 'lucide-react';
-import { getEmailSettings } from '../emailSettingsApi';
-import { AuthLayout, Banner, Button, IconButton, RecordToMinutesIllustration, TextField } from '../ui';
+import { ArrowRight, Mail, Settings } from 'lucide-react';
+import { AuthLayout, Banner, IconButton, RecordToMinutesIllustration, TextField } from '../ui';
 import { requestOtp } from './authApi';
 import { checkLoginEmail, EMAIL_CHECK_MESSAGE, normalizeEmail } from './email';
 import { MailSetupDialog } from './MailSetupDialog';
+import { isMailConfigured } from './mailSettings';
 import { MockNotice } from './MockNotice';
 import type { LoginLocationState, VerifyLocationState } from './routes';
 
@@ -26,16 +26,14 @@ export function LoginPage() {
     state.reason === 'expired' ? { tone: 'info', text: '로그인이 만료되었습니다. 다시 로그인해 주세요.' } : null,
   );
   const [sending, setSending] = useState(false);
-  // 목업은 메일을 보내지 않으므로 메일 설정을 확인하지 않는다
-  const [mailStatus, setMailStatus] = useState<MailStatus>(__AUTH_MOCK__ ? 'configured' : 'checking');
+  const [mailStatus, setMailStatus] = useState<MailStatus>('checking');
   const [mailDialog, setMailDialog] = useState(false);
 
   // 메일 설정 여부는 configured만 본다 (R-02)
   useEffect(() => {
-    if (__AUTH_MOCK__) return;
     let active = true;
-    getEmailSettings()
-      .then((settings) => active && setMailStatus(settings.configured ? 'configured' : 'missing'))
+    isMailConfigured()
+      .then((configured) => active && setMailStatus(configured ? 'configured' : 'missing'))
       .catch(() => active && setMailStatus('unknown'));
     return () => {
       active = false;
@@ -118,12 +116,12 @@ export function LoginPage() {
           />
         </form>
         {blockedByMail && (
-          <div className="flex flex-col items-start gap-3">
-            <Banner tone="warning">인증 코드를 보낼 메일 설정이 필요합니다.</Banner>
-            <Button variant="secondary" onClick={() => setMailDialog(true)}>
-              메일 설정
-            </Button>
-          </div>
+          <Banner
+            tone="warning"
+            action={<IconButton icon={Settings} label="메일 설정" variant="surface" onClick={() => setMailDialog(true)} />}
+          >
+            인증 코드를 보낼 메일 설정이 필요합니다. 설정 아이콘을 눌러 메일을 연결해 주세요.
+          </Banner>
         )}
         <p className="text-caption text-text-muted">로그인에 문제가 있으면 관리자에게 문의하세요.</p>
       </div>

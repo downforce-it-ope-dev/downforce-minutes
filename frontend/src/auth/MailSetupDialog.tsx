@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
-import { saveEmailSettings, verifyEmailConnection, EmailSettingsApiError } from '../emailSettingsApi';
+import { EmailSettingsApiError } from '../emailSettingsApi';
+import { saveAndVerifyMail } from './mailSettings';
 import { Banner, Button, Dialog, TextField } from '../ui';
 
 interface MailSetupDialogProps {
@@ -38,8 +39,7 @@ export function MailSetupDialog({ open, onOpenChange, onConfigured }: MailSetupD
     setBusy(true);
     setError(null);
     try {
-      await saveEmailSettings(trimmed);
-      const result = await verifyEmailConnection();
+      const result = await saveAndVerifyMail(trimmed);
       if (!result.connected) {
         setError(result.message || '메일 연결을 확인하지 못했습니다. 입력값을 확인해 주세요.');
         return;
