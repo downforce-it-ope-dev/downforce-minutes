@@ -16,6 +16,8 @@ export interface TextFieldProps extends Omit<InputHTMLAttributes<HTMLInputElemen
   shape?: 'default' | 'pill';
   /** 이름표를 화면에서 숨기고 화면 읽기 프로그램에만 남긴다. 화면에 다른 제목이 이름표 역할을 할 때만 쓴다 */
   hideLabel?: boolean;
+  /** 입력란 오른쪽에 붙일 요소(입력란과 세로 가운데 정렬). 예: 로그인 화살표 버튼 */
+  trailing?: ReactNode;
   ref?: Ref<HTMLInputElement>;
 }
 
@@ -30,6 +32,7 @@ export function TextField({
   icon,
   shape = 'default',
   hideLabel = false,
+  trailing,
   id,
   className,
   'aria-describedby': describedBy,
@@ -46,7 +49,8 @@ export function TextField({
       <label htmlFor={inputId} className={hideLabel ? 'sr-only' : 'text-label text-text'}>
         {label}
       </label>
-      <div className="relative">
+      <div className="flex items-center gap-4">
+      <div className="relative min-w-0 flex-1">
         {icon && (
           <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-text-muted">
             <Icon icon={icon} size="lg" />
@@ -65,6 +69,8 @@ export function TextField({
             error ? 'border-danger' : 'border-border-input',
           )}
         />
+      </div>
+      {trailing}
       </div>
       {help && (
         <p id={helpId} className="text-caption text-text-muted">

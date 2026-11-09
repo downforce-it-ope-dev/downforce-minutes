@@ -20,3 +20,6 @@ export { CanvasWaves, type CanvasWavesProps } from './art/CanvasWaves';
 export { Waveform, type WaveformProps } from './art/Waveform';
 export { RecordToMinutesIllustration } from './art/RecordToMinutesIllustration';
 export { MailCodeIllustration } from './art/MailCodeIllustration';
+// 레이아웃
+export { AppCanvas, type AppCanvasProps } from './layout/AppCanvas';
+export { AuthLayout, type AuthLayoutProps } from './layout/AuthLayout';

@@ -20,6 +20,8 @@ export interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement
    */
   disabled?: boolean;
   fullWidth?: boolean;
+  /** pill: 알약 모양(시안 AUTH-02 "이메일 변경"). hero는 항상 알약 */
+  shape?: 'default' | 'pill';
   ref?: Ref<HTMLButtonElement>;
   children: ReactNode;
 }
@@ -29,10 +31,10 @@ const BASE =
 
 // 글자 토큰은 크기·변형 중 한 곳에만 둔다(같은 요소에 text-* 토큰이 둘이면 우선순위가 CSS 출력 순서에 달림)
 const SIZE: Record<ButtonSize, string> = {
-  lg: 'h-14 px-6 rounded-md text-label',
-  md: 'h-12 px-5 rounded-md text-label',
+  lg: 'h-14 px-6 text-label',
+  md: 'h-12 px-5 text-label',
   // 보이는 높이 40, 위아래 4px씩 넓혀 누르는 영역 48
-  sm: 'h-10 px-4 rounded-md text-label before:absolute before:inset-x-0 before:-inset-y-1',
+  sm: 'h-10 px-4 text-label before:absolute before:inset-x-0 before:-inset-y-1',
 };
 
 const VARIANT: Record<ButtonVariant, string> = {
@@ -54,6 +56,7 @@ export function Button({
   loading = false,
   disabled = false,
   fullWidth = false,
+  shape = 'default',
   type = 'button',
   className,
   onClick,
@@ -78,7 +81,15 @@ export function Button({
       aria-disabled={inactive || undefined}
       aria-busy={loading || undefined}
       onClick={handleClick}
-      className={cn(BASE, variant !== 'hero' && SIZE[size], VARIANT[variant], fullWidth && 'w-full', className)}
+      className={cn(
+        BASE,
+        variant !== 'hero' && SIZE[size],
+        // 모서리는 한 곳에서만 정한다(같은 요소에 rounded-*가 둘이면 우선순위가 CSS 출력 순서에 달림)
+        variant !== 'hero' && (shape === 'pill' ? 'rounded-full' : 'rounded-md'),
+        VARIANT[variant],
+        fullWidth && 'w-full',
+        className,
+      )}
     >
       {loading ? (
         <Icon icon={LoaderCircle} size="md" className="animate-spin motion-reduce:animate-none" />

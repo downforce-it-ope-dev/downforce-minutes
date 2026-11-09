@@ -70,6 +70,10 @@
 - **진입 파일**
   - Tailwind 진입 CSS는 `frontend/src/tailwind.css` 하나다. `App.tsx`는 이 파일만 불러온다.
   - layer 순서: `theme → base → legacy → components → utilities`.
+- **공통 부품과 라우트 (R1 결과)**
+  - 공통 부품은 `frontend/src/ui/`에 있고 `../ui`(index)에서 불러온다. 같은 부품을 화면에 새로 만들지 않는다.
+  - 리뉴얼 화면 라우트는 `frontend/src/RootRoutes.tsx`에 추가한다. 여기 라우트는 기존 `App` 레이아웃(헤더·하단 탭 바·기존 CSS) 밖에서 그려진다.
+  - 부품 확인 화면 `/__ui`는 개발 서버와 Vercel Preview에서만 열린다(운영 빌드 제외). 새 부품을 만들면 여기에도 추가한다.
 - **리뉴얼 화면 루트**
   - 리뉴얼 화면(또는 새 레이아웃)의 가장 바깥 요소에 `data-ui="renewal"`을 붙인다.
   - 이 영역 안에서만 Tailwind 초기화(Preflight)가 적용된다. 밖의 기존 화면은 `src/styles/legacy-reset.css`가 브라우저 기본값을 유지한다.
