@@ -9,7 +9,8 @@
 // 3. 비교:
 //      node scripts/compare-legacy-styles.mjs node_modules/.cache/legacy-styles/before.json node_modules/.cache/legacy-styles/after.json
 //
-// 화면 11개 × 크기 3개(390·820·1280)의 모든 요소(::before·::after 포함) 계산 스타일을 비교한다.
+// 화면 11개 × 크기 3개(390×844·820×1180·1180×820)의 모든 요소(::before·::after 포함) 계산 스타일을 비교한다.
+// 크기는 리뉴얼 완료 기준 화면 크기와 같다(docs/renewal/README.md R-10).
 // 리뉴얼 영역(data-ui="renewal") 안의 요소는 수집하지 않는다.
 import { readFileSync } from 'node:fs';
 

@@ -19,6 +19,10 @@
 - **새 CSS 금지**
   - 화면이나 컴포넌트 전용 CSS 클래스·파일을 새로 만들지 않는다.
   - Tailwind 진입 CSS 파일에는 `@theme` 디자인 토큰, 토큰 수준 `@utility`(글자 토큰), `@custom-variant`(화면 조건), `@keyframes`, Tailwind로 표현할 수 없는 브라우저 전용 표기만 둔다.
+  - 예외(#5 결정): 리뉴얼 영역 기본 규칙 2개를 진입 파일 `@layer base`에 둔다. 키보드 포커스 표시(`focus` 색 2px 외곽선)와 스크롤바 숨김이다. 이 밖의 기본 규칙은 추가하지 않는다.
+- **아이콘**
+  - `lucide-react`를 쓰되 화면에서 직접 불러오지 않고 공통 `Icon` 컴포넌트로만 쓴다.
+  - 장식 아이콘은 `aria-hidden`, 의미가 있는 아이콘은 레이블을 둔다. 크기는 24 기준.
 - **토큰만 사용**
   - 색 토큰은 다운포스 CI를 기준으로 한다: Main `#FDB0CA`, Sub `#8BB0F4`, Sub `#CCBDF6`.
   - CI 원색은 흰 배경 대비가 낮다. 글자·흰 글자 버튼·테두리에는 파생 진한 색 토큰을 쓴다(검토 문서 7장).
@@ -70,7 +74,8 @@
   - 이 영역 안에서만 Tailwind 초기화(Preflight)가 적용된다. 밖의 기존 화면은 `src/styles/legacy-reset.css`가 브라우저 기본값을 유지한다.
   - 루트 요소에는 `font-sans text-body text-text bg-bg`를 지정한다(바탕 그라데이션을 쓰는 레이아웃 루트는 `bg-bg` 대신 바탕 그라데이션). `html`·`body`의 글꼴과 색은 기존 CSS가 정한다.
   - **Portal:** 대화상자·토스트·메뉴처럼 `body` 바로 아래에 그려지는 요소는 리뉴얼 루트 밖에 놓인다. Portal로 그리는 가장 바깥 요소(Radix `Dialog.Overlay`·`Dialog.Content` 등)에도 `data-ui="renewal"`과 루트 클래스를 붙인다. 빠뜨리면 그 요소는 기존 화면으로 취급된다.
-  - 기존 `base.css`의 요소 전체 규칙(스크롤바 숨김, 버튼 커서·비활성 투명도, 포커스 외곽선)은 리뉴얼 영역에 적용되지 않는다. 포커스 표시(`focus-visible:outline-focus` 등)와 비활성 표시는 컴포넌트에서 직접 지정한다.
+  - 기존 `base.css`의 요소 전체 규칙(스크롤바 숨김, 버튼 커서·비활성 투명도, 포커스 외곽선)은 리뉴얼 영역에 적용되지 않는다.
+  - 리뉴얼 영역의 포커스 표시와 스크롤바 숨김은 진입 파일 기본 규칙이 맡는다. 다른 포커스 모양이 필요할 때만 컴포넌트에서 유틸리티로 덮어쓴다. 비활성 표시(커서·색·`aria-disabled`)는 컴포넌트에서 직접 지정한다.
 - **색 클래스:** 용도별 토큰 이름을 우선 쓴다.
   - 배경: `bg-bg`·`bg-bg-subtle`·`bg-primary`·`bg-primary-hover`(눌림)·`bg-primary-soft`·`bg-brand`·`bg-brand-soft`·`bg-selected`·`bg-accent`·`bg-accent-soft`·`bg-danger`·`bg-danger-soft`·`bg-success-soft`·`bg-warning-soft`
   - 바탕 그라데이션(레이아웃 전용): `bg-linear-to-br from-canvas-start via-canvas-mid to-canvas-end`
