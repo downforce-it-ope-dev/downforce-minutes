@@ -358,6 +358,23 @@ Backend 프로세스 기동만 확인하며 외부 Provider 연결 상태를 뜻
 
 저장한 값은 암호화한 전역 설정에 함께 보관되며 Backend 환경 설정(`EMAIL_*`, `SLACK_MEETING_WEBHOOK_URL`)보다 우선한다. 이 API들은 `If-Match`·`Idempotency-Key`·`X-Document-Setup-Request`를 요구하지 않는다. 시험 API는 외부 서비스로 실제 요청을 보낸다.
 
+## 인증 API (화면 진입 게이트, 2026-11-09 기록)
+
+> 이 저장소의 `backend/`에는 없다. Backend 저장소 `donghyunlee-dev/meeting-automation` 커밋 `aecb5bd`에 구현되어 운영에 배포되어 있다(리뉴얼 README R-18·R-19). 기존 업무 API에는 인증 검사가 없다(D-01). Frontend 화면 기획: `docs/renewal/화면기획/AUTH-01`·`AUTH-02`.
+
+| 동작 | Endpoint | 성공 | 실패 |
+|---|---|---|---|
+| 코드 발송 | `POST /api/v1/auth/otp-requests` `{email}` | 202 `{data:{expiresInSeconds:60, resendAfterSeconds:60}}` | 400 형식 오류, 429 `{error:"RATE_LIMITED", retryAfterSeconds}` + `Retry-After`, 503 `{error:"AUTH_UNAVAILABLE"}`, 502 `{error:"EMAIL_DELIVERY_FAILED"}` |
+| 코드 검증 | `POST /api/v1/auth/otp-verifications` `{email, code}` | 200 `{data:{verified:true, sessionId}}` + `Set-Cookie: ma_session` | 400 `{data:{verified:false}}`, 410 `{data:{verified:false, reason:"EXPIRED"}}`, 429 잠금(5회 실패 시 5분) |
+| 세션 확인 | `GET /api/v1/auth/session` | 200 `{data:{authenticated:true, sessionId, remainingIdleSeconds}}` | 401 `{data:{authenticated:false}}` |
+| 활동 갱신 | `POST /api/v1/auth/session/activity` | 200 `{data:{authenticated:true, remainingIdleSeconds:7200}}` + 쿠키 연장 | 401 |
+| 로그아웃 | `POST /api/v1/auth/logout` | 200 `{data:{loggedOut:true}}` + 쿠키 삭제 | - |
+
+- 이메일은 trim·소문자로 정규화한다. 도메인 제한은 Backend에 없다(Frontend가 `@miinit.com`을 검사, R-19).
+- 코드는 6자리, 발송 성공 후 60초 유효, 한 번만 쓸 수 있다. 같은 이메일 재발송은 60초 간격. 재발송해도 실패 횟수는 유지된다.
+- 세션: 활동 후 2시간 sliding idle, 프로세스 메모리 저장(재시작 시 소멸, 단일 인스턴스). 쿠키 `ma_session`은 `HttpOnly`, `SameSite=Strict`, `Path`=`AUTH_COOKIE_PATH`(운영 `/api/backend/api/v1/auth`), `Secure`=`AUTH_COOKIE_SECURE`.
+- 세션 확인은 활동으로 세지 않는다. 활동 갱신만 만료 시각을 늘린다.
+
 ## 비동기 처리와 조회
 
 API-009, API-013, API-015, API-016은 작업 개시 응답에 `202 Accepted`를 사용한다. 처리 상태는 API-010으로 조회한다. polling 간격은 클라이언트에서 지수 backoff를 적용하고 서버 부하를 제한한다. 구체 기본 간격은 구현 설정이며 계약상 고정값은 아니다.

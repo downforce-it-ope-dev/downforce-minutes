@@ -60,6 +60,9 @@
 - **테스트 기준**
   - 테스트는 클래스 이름이 아니라 역할(role)·레이블·`data-testid`로 요소를 찾는다.
   - 리뉴얼 화면은 브라우저 접근성 검사(axe)에서 심각(serious·critical) 위반이 0건이어야 완료로 본다. 보통(moderate)·경미(minor)는 기록만 한다.
+- **Backend 범위 (R-18)**
+  - Backend는 `donghyunlee-dev/meeting-automation` 저장소에서 개발·배포한다. 이 저장소에서는 Frontend만 개발하고 `backend/`를 고치거나 배포하지 않는다.
+  - 화면에 필요한데 구현되지 않은 Backend 기능은 이슈 댓글로 정리해 사용자에게 요청한다.
 - **반영 단위**
   - 브랜치는 `main`(운영)과 `develop`(작업)만 둔다. 작업은 `develop`에서 하고, 커밋 메시지에 GitHub 이슈 번호(`Refs #n`)를 적는다.
   - 작업 순서와 완료 기준은 GitHub 로드맵 이슈 #3과 각 이슈 본문을 따른다.
