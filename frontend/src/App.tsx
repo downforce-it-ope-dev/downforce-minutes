@@ -37,6 +37,7 @@ import { MeetingDetailPage } from './MeetingDetailPage';
 import { SettingsPage } from './SettingsPage';
 import { BackendRecoveryOverlay } from './components/BackendRecoveryOverlay';
 import { NavigationLeaveGuard } from './components/NavigationLeaveGuard';
+import { useReportSessionWork } from './auth/sessionWork';
 import { Toast } from './components/Toast';
 import { useToast } from './components/useToast';
 
@@ -675,6 +676,8 @@ export function App({ onNewMeetingSubmit = () => undefined, onMinutesSave, minut
   const recordingGuard = /^\/meetings\/[^/]+\/recording$/.test(location.pathname) && (recordingState !== 'Ready' || recordingNavigationLocked);
   const isDocumentConnectionRoute = location.pathname === '/setup/document' || location.pathname === '/settings/document';
   const shouldWarnBeforeLeaving = recordingGuard || processingNavigationGuard || reviewNavigationGuard;
+  // 로그인 세션 관리(#15): 진행 중 작업이 있으면 만료돼도 끝날 때까지 로그인 화면으로 보내지 않고, 녹음·처리 중에는 세션을 계속 갱신한다
+  useReportSessionWork(shouldWarnBeforeLeaving, isActiveRecording);
 
   return (
     <div className="app-shell">

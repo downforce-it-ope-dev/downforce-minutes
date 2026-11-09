@@ -121,3 +121,28 @@ for (const size of [SIZES[0], SIZES[2]]) {
     await expect(page.getByRole('heading', { level: 1, name: '인증 코드 입력' })).toBeVisible();
   });
 }
+
+test('세션이 만료되면 로그인 화면으로 보내고 토스트로 알린다', async ({ page }) => {
+  await page.addInitScript(() => {
+    if (!sessionStorage.getItem('e2e-seeded')) {
+      sessionStorage.setItem('e2e-seeded', '1');
+      localStorage.setItem('ma-auth-mock-session', JSON.stringify({ email: 'e2e@miinit.com', lastActivityAt: Date.now() }));
+    }
+  });
+  await page.goto('/meetings');
+  await expect(page).toHaveURL(/\/meetings$/);
+
+  // 2시간 넘게 활동이 없던 것으로 만들고, 화면이 다시 보인 것처럼 알린다(태블릿 화면 켜짐)
+  await page.evaluate(() => {
+    localStorage.setItem('ma-auth-mock-session', JSON.stringify({ email: 'e2e@miinit.com', lastActivityAt: Date.now() - 7_201_000 }));
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(page.getByText('로그인이 만료되었습니다. 다시 로그인해 주세요.')).toBeVisible();
+
+  await page.getByLabel('회사 이메일').fill('meet@miinit.com');
+  await page.getByRole('button', { name: '인증 코드 받기' }).click();
+  await page.getByRole('textbox', { name: '1번째 자리' }).fill('1');
+  await page.keyboard.type('23456');
+  await expect(page).toHaveURL(/\/meetings$/);
+});

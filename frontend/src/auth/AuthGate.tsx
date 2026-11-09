@@ -4,6 +4,7 @@ import { RefreshCw } from 'lucide-react';
 import { AuthLayout, Button, RecordToMinutesIllustration } from '../ui';
 import { getSession, type SessionResult } from './authApi';
 import { safeReturnPath, type LoginLocationState } from './routes';
+import { SessionKeeper } from './SessionKeeper';
 
 type Status = SessionResult['status'] | 'checking';
 
@@ -28,7 +29,7 @@ function useSessionStatus(): [Status, () => void] {
 
 /**
  * 진입 보호 (AUTH-01-F06, GitHub #15). 로그인하지 않았으면 로그인 화면으로 보내고,
- * 로그인 후 원래 가려던 경로로 돌아오도록 경로를 넘긴다.
+ * 로그인 후 원래 가려던 경로로 돌아오도록 경로를 넘긴다. 들어간 뒤에는 SessionKeeper가 갱신·만료를 맡는다.
  * 확인하는 동안에는 아무것도 그리지 않는다(기존 화면이 잠깐 보였다 사라지지 않게).
  */
 export function RequireAuth({ children }: { children: ReactNode }) {
@@ -40,7 +41,12 @@ export function RequireAuth({ children }: { children: ReactNode }) {
     return <Navigate to="/login" replace state={state} />;
   }
   if (status === 'unavailable') return <SessionUnavailable onRetry={retry} />;
-  return children;
+  return (
+    <>
+      <SessionKeeper />
+      {children}
+    </>
+  );
 }
 
 /** 로그인 화면용. 이미 로그인했으면 원래 가려던 경로(없으면 홈)로 보낸다 */
