@@ -7,8 +7,6 @@ import { expect, test, type Page } from '@playwright/test';
  */
 const VIEWS = [
   { name: '부품 전체', path: '/__ui', heading: '부품 확인 화면' },
-  { name: '로그인 틀', path: '/__ui?view=login', heading: '회사 이메일로 로그인' },
-  { name: '인증 코드 틀', path: '/__ui?view=verify', heading: '인증 코드 입력' },
   { name: '앱 틀', path: '/__ui?view=shell', heading: '앱 틀' },
   { name: '집중 모드', path: '/__ui?view=focus', heading: '문서 연결' },
 ];
@@ -66,14 +64,6 @@ test('대화상자는 Portal에서도 리뉴얼 글꼴을 쓰고 Esc로 닫힌�
   expect(await dialog.evaluate((element) => getComputedStyle(element).fontFamily)).toContain('Pretendard');
   await page.keyboard.press('Escape');
   await expect(dialog).toBeHidden();
-});
-
-test('낮은 화면(short)에서는 인증 화면의 로고와 일러스트를 숨긴다', async ({ page }) => {
-  await page.setViewportSize({ width: 844, height: 390 });
-  await open(page, '/__ui?view=login', '회사 이메일로 로그인');
-  await expect(page.getByRole('img', { name: 'Downforce' })).toBeHidden();
-  await page.setViewportSize({ width: 1180, height: 820 });
-  await expect(page.getByRole('img', { name: 'Downforce' })).toBeVisible();
 });
 
 test('앱 틀 메뉴는 폭에 따라 탭 바 → 레일 → 사이드바로 바뀐다', async ({ page }) => {

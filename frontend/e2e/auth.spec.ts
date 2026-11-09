@@ -146,3 +146,12 @@ test('세션이 만료되면 로그인 화면으로 보내고 토스트로 알�
   await page.keyboard.type('23456');
   await expect(page).toHaveURL(/\/meetings$/);
 });
+
+test('낮은 화면(short)에서는 인증 화면의 로고와 일러스트를 숨긴다', async ({ page }) => {
+  await page.setViewportSize({ width: 844, height: 390 });
+  await page.goto('/login');
+  await expect(page.getByRole('heading', { level: 1, name: '회사 이메일로 로그인' })).toBeVisible();
+  await expect(page.getByRole('img', { name: 'Downforce' })).toBeHidden();
+  await page.setViewportSize({ width: 1180, height: 820 });
+  await expect(page.getByRole('img', { name: 'Downforce' })).toBeVisible();
+});

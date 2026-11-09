@@ -1,16 +1,12 @@
 import { useState, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import {
-  ArrowLeft,
   ArrowRight,
   Bell,
-  Clock,
-  Info,
   Mail,
   Mic,
   Pencil,
   RefreshCw,
-  ShieldCheck,
   Trash2,
   X,
 } from 'lucide-react';
@@ -19,13 +15,11 @@ import {
   AppShell,
   DocumentStatusChip,
   LeaveConfirmDialog,
-  AuthLayout,
   Banner,
   Button,
   Card,
   cn,
   Dialog,
-  Icon,
   IconButton,
   Logo,
   MailCodeIllustration,
@@ -48,11 +42,7 @@ export default function UiPreview() {
   const view = params.get('view');
   return (
     <ToastProvider>
-      {view === 'login' ? (
-        <LoginSample />
-      ) : view === 'verify' ? (
-        <VerifySample />
-      ) : view === 'shell' || view === 'focus' ? (
+      {view === 'shell' || view === 'focus' ? (
         <ShellSample focus={view === 'focus'} />
       ) : (
         <ComponentsView />
@@ -63,8 +53,6 @@ export default function UiPreview() {
 
 const VIEWS = [
   { key: 'components', label: '부품 전체' },
-  { key: 'login', label: '로그인 틀 (AUTH-01)' },
-  { key: 'verify', label: '인증 코드 틀 (AUTH-02)' },
   { key: 'shell', label: '앱 틀 (CMN-01)' },
   { key: 'focus', label: '집중 모드' },
 ] as const;
@@ -113,10 +101,7 @@ function ComponentsView() {
       <div className="mx-auto flex w-full max-w-content flex-col gap-6 px-4 pt-safe pb-16 tablet:px-6 tablet-lg:px-8">
         <header className="flex flex-col gap-4 pt-6">
           <Logo size="md" withProduct className="items-start" />
-          <div className="flex flex-col gap-1">
-            <h1 className="text-headline text-text">부품 확인 화면</h1>
-            <p className="text-body text-text-muted">개발 서버와 Vercel Preview에서만 열리는 화면입니다. 운영에는 포함되지 않습니다.</p>
-          </div>
+          <h1 className="text-headline text-text">부품 확인 화면</h1>
           <ViewNav current="components" />
         </header>
         <ButtonsSection />
@@ -187,8 +172,8 @@ function InputsSection() {
   return (
     <Section title="입력란">
       <div className="grid gap-6 tablet:grid-cols-2">
-        <TextField label="회의 제목" placeholder="예: 주간 회의" help="회의록 문서 제목으로 쓰입니다." />
-        <TextField label="회사 이메일" type="email" defaultValue="meet@gmail.com" error="회사 이메일 주소로만 로그인할 수 있습니다." />
+        <TextField label="회의 제목" placeholder="예: 주간 회의" />
+        <TextField label="회사 이메일 (오류)" type="email" defaultValue="meet@gmail.com" invalid />
         <TextField label="회사 이메일 (알약형)" type="email" shape="pill" icon={Mail} placeholder="name@miinit.com" />
         <TextField label="비활성" disabled defaultValue="수정할 수 없음" />
       </div>
@@ -198,15 +183,11 @@ function InputsSection() {
 
 function OtpSection() {
   const [code, setCode] = useState('');
-  const [completed, setCompleted] = useState('');
   return (
     <Section title="인증 코드 칸">
-      <Row label="6칸 (휴대폰 48 · 태블릿 52, 붙여넣기 가능)">
-        <OtpInput label="인증 코드 6자리" value={code} onChange={setCode} onComplete={setCompleted} />
+      <Row label="기본">
+        <OtpInput label="인증 코드 6자리" value={code} onChange={setCode} />
       </Row>
-      <p className="text-caption text-text-muted tabular-nums" aria-live="polite">
-        입력값: {code || '없음'} {completed && `· 완료: ${completed}`}
-      </p>
       <Row label="오류 상태">
         <OtpInput label="인증 코드 6자리 (오류 예시)" value="1234" onChange={() => {}} error />
       </Row>
@@ -219,14 +200,14 @@ function StatusSection() {
     <Section title="상태 표시">
       <Row label="알약">
         <Pill>
-          남은 시도 <Pill.Strong>5회</Pill.Strong>
+          참석자 <Pill.Strong>4명</Pill.Strong>
         </Pill>
         <Pill tone="brand">녹음 중</Pill>
         <Pill tone="neutral">팀 없음</Pill>
       </Row>
       <Row label="진행 막대">
         <div className="flex w-full max-w-md flex-col gap-3">
-          <ProgressBar label="남은 시간" value={272} max={300} valueText="4분 32초 남음" />
+          <ProgressBar label="남은 시간" value={45} max={60} valueText="45초 남음" />
           <ProgressBar label="처리 진행" value={30} />
         </div>
       </Row>
@@ -256,12 +237,10 @@ function SurfacesSection() {
     <Section title="면 (카드 · 패널)">
       <div className="grid gap-4 tablet:grid-cols-2">
         <Card className="flex flex-col gap-2 border border-border">
-          <p className="text-label text-text">카드 (모서리 20)</p>
-          <p className="text-caption text-text-muted">목록·입력 카드. 흰 면 + 부드러운 그림자</p>
+          <p className="text-label text-text">카드</p>
         </Card>
         <Card variant="panel" className="flex flex-col gap-2 border border-border">
-          <p className="text-label text-text">패널 (모서리 24)</p>
-          <p className="text-caption text-text-muted">홈 안내 패널처럼 화면 중심의 큰 면</p>
+          <p className="text-label text-text">패널</p>
         </Card>
       </div>
     </Section>
@@ -372,99 +351,13 @@ function ArtSection() {
       </Row>
       <div className="grid gap-6 tablet:grid-cols-2">
         <div className="flex flex-col gap-2">
-          <p className="text-caption text-text-muted">녹음 → AI 회의록 (AUTH-01, HOME)</p>
           <RecordToMinutesIllustration className="w-full max-w-sm" />
         </div>
         <div className="flex flex-col gap-2">
-          <p className="text-caption text-text-muted">인증 코드 메일 (AUTH-02)</p>
           <MailCodeIllustration className="w-full max-w-sm" />
         </div>
       </div>
     </Section>
-  );
-}
-
-/** 로그인 화면 틀 샘플 (시안 적용 기준 5.1). 실제 동작은 #13에서 만든다 */
-function LoginSample() {
-  return (
-    <AuthLayout illustration={<RecordToMinutesIllustration className="w-full" />}>
-      <div className="flex flex-col gap-6">
-        <ViewNav current="login" />
-        <div className="flex flex-col gap-2">
-          <h1 className="text-headline text-text">회사 이메일로 로그인</h1>
-          <p className="text-body text-text-muted">회사 이메일로 받은 6자리 코드로 로그인합니다. (샘플 화면, 동작 없음)</p>
-        </div>
-        <form className="flex flex-col gap-3" onSubmit={(event) => event.preventDefault()}>
-          <TextField
-            label="회사 이메일"
-            type="email"
-            inputMode="email"
-            autoComplete="email"
-            shape="pill"
-            icon={Mail}
-            placeholder="name@miinit.com"
-            help="@miinit.com 계정만 로그인할 수 있습니다."
-            trailing={<IconButton icon={ArrowRight} label="인증 코드 받기" variant="primary" type="submit" />}
-          />
-        </form>
-        <Button variant="secondary" className="self-start">
-          메일 설정
-        </Button>
-      </div>
-    </AuthLayout>
-  );
-}
-
-/** 인증 코드 화면 틀 샘플 (시안 적용 기준 5.2). 실제 동작은 #14에서 만든다 */
-function VerifySample() {
-  const [code, setCode] = useState('');
-  return (
-    <AuthLayout width="dialog" illustration={<MailCodeIllustration className="w-full" />}>
-      <div className="flex flex-col gap-6">
-        <ViewNav current="verify" />
-        <div className="flex items-center gap-4">
-          <span className="flex size-14 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand-text">
-            <Icon icon={ShieldCheck} size="xl" />
-          </span>
-          <h1 className="text-headline text-text">인증 코드 입력</h1>
-        </div>
-        <div className="flex flex-col gap-3 tablet:flex-row tablet:items-center tablet:justify-between">
-          <p className="text-body text-text-muted">
-            <strong className="font-semibold text-text">meet@miinit.com</strong> 으로 보낸 6자리 코드를 입력해 주세요.
-          </p>
-          <Button size="sm" variant="secondary" shape="pill" icon={Pencil} className="self-start tablet:self-auto">
-            이메일 변경
-          </Button>
-        </div>
-        <OtpInput label="인증 코드 6자리" value={code} onChange={setCode} />
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between gap-3">
-            <p className="flex items-center gap-2 text-body text-text">
-              <Icon icon={Clock} size="md" />
-              남은 시간 <strong className="font-bold text-brand-text tabular-nums">04:32</strong>
-            </p>
-            <Pill>
-              남은 시도 <Pill.Strong>5회</Pill.Strong>
-            </Pill>
-          </div>
-          <ProgressBar label="남은 시간" value={272} max={300} valueText="4분 32초 남음" className="max-w-sm" />
-        </div>
-        <Button size="lg" fullWidth disabled={code.length < 6}>
-          확인
-        </Button>
-        <Button size="lg" variant="secondary" fullWidth disabled icon={RefreshCw}>
-          코드 다시 받기 <span className="tabular-nums">(52초)</span>
-        </Button>
-        <p className="flex items-center justify-center gap-2 text-caption text-text-muted">
-          <Icon icon={Info} size="sm" />
-          코드를 받지 못하셨나요? 스팸함도 확인해 주세요.
-        </p>
-        <Link to="/__ui" className="inline-flex h-12 items-center gap-2 self-center text-label text-link">
-          <Icon icon={ArrowLeft} size="md" />
-          부품 전체로
-        </Link>
-      </div>
-    </AuthLayout>
   );
 }
 
@@ -505,7 +398,6 @@ function ShellSample({ focus }: { focus: boolean }) {
         {Array.from({ length: 6 }, (_, index) => (
           <Card key={index} className="flex flex-col gap-2">
             <h2 className="text-title text-text">본문 카드 {index + 1}</h2>
-            <p className="text-body text-text-muted">본문만 스크롤되는지 확인하는 샘플입니다.</p>
           </Card>
         ))}
       </div>
