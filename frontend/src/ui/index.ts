@@ -14,3 +14,9 @@ export { Dialog, type DialogProps } from './Dialog';
 export { ToastProvider, type ToastPlacement } from './Toast';
 export { useToast, type ToastOptions, type ToastTone } from './toastContext';
 export { RENEWAL_ROOT_CLASS } from './renewalRoot';
+// 그림 부품 (S-12, 단순화 SVG. 원본을 받으면 같은 자리에서 교체)
+export { Logo, type LogoProps } from './art/Logo';
+export { CanvasWaves, type CanvasWavesProps } from './art/CanvasWaves';
+export { Waveform, type WaveformProps } from './art/Waveform';
+export { RecordToMinutesIllustration } from './art/RecordToMinutesIllustration';
+export { MailCodeIllustration } from './art/MailCodeIllustration';
