@@ -22,10 +22,12 @@
 - **토큰만 사용**
   - 색 토큰은 다운포스 CI를 기준으로 한다: Main `#FDB0CA`, Sub `#8BB0F4`, Sub `#CCBDF6`.
   - CI 원색은 흰 배경 대비가 낮다. 글자·흰 글자 버튼·테두리에는 파생 진한 색 토큰을 쓴다(검토 문서 7장).
-  - 기본 배경은 흰색이다. 역할은 다음과 같다(검토 문서 7.4).
-    - 파랑: 주 동작 (버튼·링크·포커스)
-    - 분홍: 브랜드 강조
-    - 보라: 선택·보조
+  - 화면의 톤은 시안(`docs/renewal/뉴_UI`)을 따른다. 기준은 [시안 적용 기준](docs/renewal/시안_적용_기준.md)이며, 화면 기획 문서와 색·면·배치가 다르면 이 문서가 우선한다.
+  - 색 역할은 다음과 같다(시안 적용 기준 S-09).
+    - 분홍: 주 동작 (버튼·포커스), 선택된 메뉴, 브랜드 강조
+    - 보라: 링크·텍스트 버튼, 보조 정보 알약, AI 표시
+    - 파랑: 로고·일러스트 장식. 동작 색으로 쓰지 않는다
+  - 바탕은 파스텔 그라데이션이고 카드·패널은 흰 면 + `shadow-card`다(S-10). 그라데이션 바탕은 레이아웃(`AppCanvas`) 한 곳에만 두고, 화면 컴포넌트에 직접 넣지 않는다.
   - CI 원색 면 위의 글자는 neutral-900만, 흰 배경 위 색 글자는 700 이상 단계만 쓴다.
   - 색·글자 크기·간격·둥글기·그림자·화면 폭 기준은 `@theme` 토큰만 쓴다.
   - 임의값(`text-[13px]`, `bg-[#0b2d5b]`)은 쓰지 않고, 필요하면 토큰을 추가한다.
@@ -54,8 +56,9 @@
   - 테스트는 클래스 이름이 아니라 역할(role)·레이블·`data-testid`로 요소를 찾는다.
   - 리뉴얼 화면은 브라우저 접근성 검사(axe)에서 심각(serious·critical) 위반이 0건이어야 완료로 본다. 보통(moderate)·경미(minor)는 기록만 한다.
 - **반영 단위**
-  - 리뉴얼은 화면 묶음 단위로 작업 브랜치에서 진행한다.
-  - 묶음이 완성되면 `main`에 합친다.
+  - 브랜치는 `main`(운영)과 `develop`(작업)만 둔다. 작업은 `develop`에서 하고, 커밋 메시지에 GitHub 이슈 번호(`Refs #n`)를 적는다.
+  - 작업 순서와 완료 기준은 GitHub 로드맵 이슈 #3과 각 이슈 본문을 따른다.
+  - 화면 묶음이 완성되면 `develop` → `main` PR로 합친다.
 
 ### 구현 기준 (0단계 기반 작업 결과)
 
@@ -65,12 +68,13 @@
 - **리뉴얼 화면 루트**
   - 리뉴얼 화면(또는 새 레이아웃)의 가장 바깥 요소에 `data-ui="renewal"`을 붙인다.
   - 이 영역 안에서만 Tailwind 초기화(Preflight)가 적용된다. 밖의 기존 화면은 `src/styles/legacy-reset.css`가 브라우저 기본값을 유지한다.
-  - 루트 요소에는 `font-sans text-body text-text bg-bg`를 지정한다. `html`·`body`의 글꼴과 색은 기존 CSS가 정한다.
+  - 루트 요소에는 `font-sans text-body text-text bg-bg`를 지정한다(바탕 그라데이션을 쓰는 레이아웃 루트는 `bg-bg` 대신 바탕 그라데이션). `html`·`body`의 글꼴과 색은 기존 CSS가 정한다.
   - **Portal:** 대화상자·토스트·메뉴처럼 `body` 바로 아래에 그려지는 요소는 리뉴얼 루트 밖에 놓인다. Portal로 그리는 가장 바깥 요소(Radix `Dialog.Overlay`·`Dialog.Content` 등)에도 `data-ui="renewal"`과 루트 클래스를 붙인다. 빠뜨리면 그 요소는 기존 화면으로 취급된다.
   - 기존 `base.css`의 요소 전체 규칙(스크롤바 숨김, 버튼 커서·비활성 투명도, 포커스 외곽선)은 리뉴얼 영역에 적용되지 않는다. 포커스 표시(`focus-visible:outline-focus` 등)와 비활성 표시는 컴포넌트에서 직접 지정한다.
 - **색 클래스:** 용도별 토큰 이름을 우선 쓴다.
-  - 배경: `bg-bg`·`bg-bg-subtle`·`bg-primary`·`bg-primary-soft`·`bg-brand`·`bg-brand-soft`·`bg-selected`·`bg-accent`·`bg-danger`·`bg-danger-soft`·`bg-success-soft`·`bg-warning-soft`
-  - 글자: `text-text`·`text-text-muted`·`text-primary-hover`(링크)·`text-primary-soft-text`·`text-brand-text`·`text-brand-soft-text`·`text-selected-text`·`text-danger-text`·`text-success-text`·`text-warning-text`
+  - 배경: `bg-bg`·`bg-bg-subtle`·`bg-primary`·`bg-primary-hover`(눌림)·`bg-primary-soft`·`bg-brand`·`bg-brand-soft`·`bg-selected`·`bg-accent`·`bg-accent-soft`·`bg-danger`·`bg-danger-soft`·`bg-success-soft`·`bg-warning-soft`
+  - 바탕 그라데이션(레이아웃 전용): `bg-linear-to-br from-canvas-start via-canvas-mid to-canvas-end`
+  - 글자: `text-text`·`text-text-muted`·`text-link`(링크)·`text-primary-soft-text`·`text-brand-text`·`text-brand-soft-text`·`text-selected-text`·`text-accent-soft-text`·`text-danger-text`·`text-success-text`·`text-warning-text`
   - 테두리: `border-border`·`border-border-input`
   - 포커스: `outline-focus`
   - 단계 색(`blue-600` 등)은 용도별 토큰으로 표현할 수 없을 때만 쓴다.
@@ -78,9 +82,10 @@
   - 크기·줄 높이·굵기·자간이 함께 정해지고, `tablet` 이상에서 자동으로 커진다.
   - Tailwind 기본 글자 크기(`text-sm` 등)는 지워져 있다.
 - **그 밖의 토큰**
-  - 모서리: `rounded-sm`(8)·`rounded-md`(12)·`rounded-lg`(16)·`rounded-xl`(20)·`rounded-full`
-  - 그림자: `shadow-overlay`
+  - 모서리: `rounded-sm`(8)·`rounded-md`(12)·`rounded-lg`(16)·`rounded-xl`(20)·`rounded-2xl`(24)·`rounded-full`
+  - 그림자: `shadow-card`(카드·패널·입력란)·`shadow-primary`(화면의 대표 주 동작 1개)·`shadow-overlay`(대화상자·시트·토스트·메뉴)
   - 최대 폭: `max-w-auth`(480)·`max-w-dialog`(560)·`max-w-form`(640)·`max-w-reading`(720)·`max-w-content`(1040)
+  - 메뉴 폭: `w-rail`(88, `tablet`)·`w-sidebar`(240, `tablet-lg`)
   - 화면 조건: `tablet:`·`tablet-lg:`·`short:`
   - 간격·크기: Tailwind 기본 단위(4px)를 쓴다 (예: `h-12` = 48px, `w-22` = 88px)
 - **검사:** `npm run lint`가 스타일 규칙(`frontend/scripts/check-styles.mjs`)을 함께 검사한다.
