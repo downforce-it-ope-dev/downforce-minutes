@@ -2,7 +2,7 @@
 // 근거: docs/renewal/시안_적용_기준.md 4.1, CLAUDE.md
 export { cn } from './cn';
 export { Icon, type IconProps, type IconSize } from './Icon';
-export { Button, type ButtonProps, type ButtonSize, type ButtonVariant } from './Button';
+export { Button, ButtonLink, type ButtonLinkProps, type ButtonProps, type ButtonSize, type ButtonVariant } from './Button';
 export { IconButton, type IconButtonProps, type IconButtonVariant } from './IconButton';
 export { TextField, type TextFieldProps } from './TextField';
 export { OtpInput, type OtpInputProps } from './OtpInput';
@@ -23,6 +23,8 @@ export { CanvasWaves, type CanvasWavesProps } from './art/CanvasWaves';
 export { Waveform, type WaveformProps } from './art/Waveform';
 export { RecordToMinutesIllustration } from './art/RecordToMinutesIllustration';
 export { MailCodeIllustration } from './art/MailCodeIllustration';
+export { ServerRecoveryIllustration, type ServerRecoveryIllustrationProps } from './art/ServerRecoveryIllustration';
+export { NotFoundIllustration } from './art/NotFoundIllustration';
 // 레이아웃
 export { AppCanvas, type AppCanvasProps } from './layout/AppCanvas';
 export { AuthLayout, type AuthLayoutProps } from './layout/AuthLayout';

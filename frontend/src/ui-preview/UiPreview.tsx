@@ -10,6 +10,7 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
+import { recoverBackendAvailability } from '../apiRecovery';
 import {
   AppCanvas,
   AppShell,
@@ -22,6 +23,8 @@ import {
   Dialog,
   IconButton,
   Logo,
+  NotFoundIllustration,
+  ServerRecoveryIllustration,
   MailCodeIllustration,
   OtpInput,
   Pill,
@@ -111,6 +114,7 @@ function ComponentsView() {
         <StatusSection />
         <SurfacesSection />
         <OverlaySection />
+        <RecoverySection />
         <ArtSection />
       </div>
     </AppCanvas>
@@ -403,5 +407,38 @@ function ShellSample({ focus }: { focus: boolean }) {
       </div>
       <LeaveConfirmDialog open={leaveOpen} onStay={() => setLeaveOpen(false)} onLeave={() => setLeaveOpen(false)} />
     </AppShell>
+  );
+}
+
+/** 응답하지 않는 서버를 흉내 낸다. upAfterMs가 있으면 그 뒤부터 정상 응답한다 */
+function fakeBackend(upAfterMs?: number): typeof fetch {
+  const upAt = upAfterMs === undefined ? Infinity : Date.now() + upAfterMs;
+  return async () => {
+    if (Date.now() < upAt) throw new TypeError('Failed to fetch');
+    return new Response(JSON.stringify({ data: { status: 'UP' } }), { headers: { 'Content-Type': 'application/json' } });
+  };
+}
+
+/** 서버 연결 복구 (CMN-02)·페이지 없음 (CMN-03). Preview에서는 운영 서버를 끌 수 없어 가짜 응답으로 띄운다 */
+function RecoverySection() {
+  return (
+    <Section title="서버 연결 복구 · 페이지 없음">
+      <Row label="일러스트">
+        <ServerRecoveryIllustration state="waiting" className="w-30 tablet:w-40" />
+        <ServerRecoveryIllustration state="ready" className="w-30 tablet:w-40" />
+        <NotFoundIllustration className="w-30 tablet:w-40" />
+      </Row>
+      <Row label="오버레이">
+        <Button variant="secondary" onClick={() => void recoverBackendAvailability(fakeBackend())}>
+          연결 끊김
+        </Button>
+        <Button variant="secondary" onClick={() => void recoverBackendAvailability(fakeBackend(6000))}>
+          6초 뒤 복구
+        </Button>
+        <Link to="/__ui/없는-주소" className="inline-flex h-12 items-center px-2 text-label text-link">
+          페이지 없음
+        </Link>
+      </Row>
+    </Section>
   );
 }

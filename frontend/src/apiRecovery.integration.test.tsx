@@ -2,7 +2,8 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { apiFetch } from './apiFetch';
 import { getApiBaseUrl } from './apiBase';
-import { BackendRecoveryOverlay } from './components/BackendRecoveryOverlay';
+import { MemoryRouter } from 'react-router';
+import { ServerRecoveryOverlay } from './recovery/ServerRecoveryOverlay';
 import { dismissApiRecovery, getApiRecoveryState } from './apiRecovery';
 
 afterEach(() => {
@@ -17,7 +18,11 @@ describe('backend recovery integration', () => {
     vi.stubEnv('VITE_API_BASE_URL', '/api/backend');
     const fetchMock = vi.fn<typeof fetch>().mockRejectedValue(new TypeError('Failed to fetch'));
     let requestSettled = false;
-    render(<BackendRecoveryOverlay />);
+    render(
+      <MemoryRouter>
+        <ServerRecoveryOverlay />
+      </MemoryRouter>,
+    );
 
     const request = apiFetch(
       `${getApiBaseUrl()}/api/v1/document-setup`,

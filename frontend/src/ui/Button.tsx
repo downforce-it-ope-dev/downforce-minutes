@@ -1,4 +1,5 @@
 import type { ButtonHTMLAttributes, MouseEvent, ReactNode, Ref } from 'react';
+import { Link } from 'react-router';
 import { LoaderCircle, type LucideIcon } from 'lucide-react';
 import { cn } from './cn';
 import { Icon } from './Icon';
@@ -98,5 +99,30 @@ export function Button({
       )}
       {children}
     </button>
+  );
+}
+
+export interface ButtonLinkProps {
+  /** 앱 안 경로 */
+  to: string;
+  variant?: Exclude<ButtonVariant, 'hero'>;
+  size?: ButtonSize;
+  icon?: LucideIcon;
+  fullWidth?: boolean;
+  shape?: 'default' | 'pill';
+  className?: string;
+  children: ReactNode;
+}
+
+/** 버튼 모양의 화면 이동 링크. 이동은 링크로 둬야 새 탭 열기·화면 읽기 프로그램이 올바르게 동작한다 */
+export function ButtonLink({ to, variant = 'primary', size = 'md', icon, fullWidth = false, shape = 'default', className, children }: ButtonLinkProps) {
+  return (
+    <Link
+      to={to}
+      className={cn(BASE, SIZE[size], shape === 'pill' ? 'rounded-full' : 'rounded-md', VARIANT[variant], fullWidth && 'w-full', className)}
+    >
+      {icon && <Icon icon={icon} size="md" />}
+      {children}
+    </Link>
   );
 }

@@ -35,7 +35,6 @@ import type { MinutesSaveState } from './ReviewMinutesEditor';
 import { HomePage, MeetingsPage } from './MeetingHistory';
 import { MeetingDetailPage } from './MeetingDetailPage';
 import { SettingsPage } from './SettingsPage';
-import { BackendRecoveryOverlay } from './components/BackendRecoveryOverlay';
 import { NavigationLeaveGuard } from './components/NavigationLeaveGuard';
 import { useReportSessionWork } from './auth/sessionWork';
 import { Toast } from './components/Toast';
@@ -340,20 +339,6 @@ function ParticipantsPage() {
       </div>
     </main>
   );
-}
-
-function FutureRouteNotice() {
-  return <main className="future-page" aria-labelledby="future-title">
-    <section className="future-route-card">
-      <p className="eyebrow">PAGE NOT FOUND</p>
-      <h1 id="future-title">페이지를 찾을 수 없습니다</h1>
-      <p>주소가 잘못되었거나 페이지가 이동되었을 수 있습니다.</p>
-      <nav className="future-route-actions" aria-label="다른 페이지로 이동">
-        <Link className="button button-primary" to="/">홈으로 이동</Link>
-        <Link className="button button-secondary" to="/meetings">회의록 목록</Link>
-      </nav>
-    </section>
-  </main>;
 }
 
 function SetupGate({ children }: { children: React.ReactNode }) {
@@ -705,11 +690,9 @@ export function App({ onNewMeetingSubmit = () => undefined, onMinutesSave, minut
           <Route path="/meetings/:sessionId/complete" element={<CompletePage />} />
           <Route path="/participants" element={<SetupGate><ParticipantsPage /></SetupGate>} />
           <Route path="/settings/participants" element={<SetupGate><ParticipantsPage /></SetupGate>} />
-          <Route path="*" element={<FutureRouteNotice />} />
         </Routes>
       </div>
       {!isActiveRecording && !isDocumentConnectionRoute && <BottomNavigation />}
-      <BackendRecoveryOverlay />
     </div>
   );
 }
