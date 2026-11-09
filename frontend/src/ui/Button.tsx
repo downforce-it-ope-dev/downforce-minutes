@@ -1,0 +1,91 @@
+import type { ButtonHTMLAttributes, MouseEvent, ReactNode, Ref } from 'react';
+import { LoaderCircle, type LucideIcon } from 'lucide-react';
+import { cn } from './cn';
+import { Icon } from './Icon';
+
+export type ButtonVariant = 'primary' | 'hero' | 'secondary' | 'ghost' | 'danger';
+export type ButtonSize = 'lg' | 'md' | 'sm';
+
+export interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'disabled'> {
+  variant?: ButtonVariant;
+  /** lg 56 / md 48 / sm 40(누르는 영역 48). hero는 크기를 무시한다(휴대폰 56, 태블릿 72) */
+  size?: ButtonSize;
+  /** 앞쪽 아이콘 */
+  icon?: LucideIcon;
+  /** 처리 중. 누를 수 없고 회전 표시가 나온다. 문구는 부르는 쪽에서 바꾼다(예: "보내는 중…") */
+  loading?: boolean;
+  /**
+   * 사용할 수 없는 상태. 초점은 받되(화면 읽기 프로그램이 알 수 있게) 눌러도 동작하지 않는다.
+   * `aria-disabled`로 알리고, 이유는 가까운 안내 문구로 함께 보여 준다.
+   */
+  disabled?: boolean;
+  fullWidth?: boolean;
+  ref?: Ref<HTMLButtonElement>;
+  children: ReactNode;
+}
+
+const BASE =
+  'relative inline-flex items-center justify-center gap-2 font-sans whitespace-nowrap select-none transition-colors cursor-pointer aria-disabled:cursor-not-allowed';
+
+// 글자 토큰은 크기·변형 중 한 곳에만 둔다(같은 요소에 text-* 토큰이 둘이면 우선순위가 CSS 출력 순서에 달림)
+const SIZE: Record<ButtonSize, string> = {
+  lg: 'h-14 px-6 rounded-md text-label',
+  md: 'h-12 px-5 rounded-md text-label',
+  // 보이는 높이 40, 위아래 4px씩 넓혀 누르는 영역 48
+  sm: 'h-10 px-4 rounded-md text-label before:absolute before:inset-x-0 before:-inset-y-1',
+};
+
+const VARIANT: Record<ButtonVariant, string> = {
+  primary:
+    'bg-primary text-white active:bg-primary-hover aria-disabled:bg-neutral-100 aria-disabled:text-neutral-400',
+  hero:
+    'h-14 tablet:h-18 px-8 rounded-full text-title bg-linear-to-r from-primary to-primary-hover text-white shadow-primary aria-disabled:bg-none aria-disabled:bg-neutral-100 aria-disabled:text-neutral-400 aria-disabled:shadow-none',
+  secondary:
+    'border border-border bg-bg text-text active:bg-bg-subtle aria-disabled:bg-neutral-100 aria-disabled:text-neutral-400',
+  ghost: 'bg-transparent text-link active:bg-accent-soft aria-disabled:text-neutral-400 aria-disabled:bg-transparent',
+  danger: 'bg-danger text-white active:bg-red-700 aria-disabled:bg-neutral-100 aria-disabled:text-neutral-400',
+};
+
+/** 공통 버튼 (시안 적용 기준 4.1, 스타일 검토 8.5) */
+export function Button({
+  variant = 'primary',
+  size = 'md',
+  icon,
+  loading = false,
+  disabled = false,
+  fullWidth = false,
+  type = 'button',
+  className,
+  onClick,
+  children,
+  ...rest
+}: ButtonProps) {
+  const inactive = disabled || loading;
+
+  function handleClick(event: MouseEvent<HTMLButtonElement>) {
+    if (inactive) {
+      // aria-disabled는 브라우저가 막지 않으므로 직접 막는다(submit 포함)
+      event.preventDefault();
+      return;
+    }
+    onClick?.(event);
+  }
+
+  return (
+    <button
+      type={type}
+      {...rest}
+      aria-disabled={inactive || undefined}
+      aria-busy={loading || undefined}
+      onClick={handleClick}
+      className={cn(BASE, variant !== 'hero' && SIZE[size], VARIANT[variant], fullWidth && 'w-full', className)}
+    >
+      {loading ? (
+        <Icon icon={LoaderCircle} size="md" className="animate-spin motion-reduce:animate-none" />
+      ) : (
+        icon && <Icon icon={icon} size={variant === 'hero' ? 'xl' : 'md'} />
+      )}
+      {children}
+    </button>
+  );
+}
