@@ -1,6 +1,7 @@
 /*
  * 스타일 진입점 (Tailwind CSS v4).
- * 근거: docs/renewal/스타일_전환_검토.md 7.4(색), 8(크기·글자·컴포넌트)
+ * 근거: docs/renewal/스타일_전환_검토.md 7.4(색), 8(크기·글자·컴포넌트),
+ *       docs/renewal/시안_적용_기준.md (시안 반영: 색 역할·바탕·그림자·메뉴 폭, S-09~S-12)
  *
  * layer 순서: theme → base(Tailwind 초기화) → legacy(기존 CSS) → components → utilities
  * - 기존 CSS는 legacy layer에 가두어 Tailwind 유틸리티보다 항상 낮은 우선순위를 갖는다.
@@ -118,25 +119,34 @@
   --color-amber-800: #633d02;
   --color-amber-900: #452901;
 
-  /* ---------- 색: 용도별 토큰 (화면에서는 이 이름을 우선 쓴다) ---------- */
+  /* ---------- 색: 용도별 토큰 (화면에서는 이 이름을 우선 쓴다) ----------
+   * 역할(시안 적용 기준 2장, S-09): 분홍 = 주 동작·선택·브랜드, 보라 = 링크·보조·AI 강조,
+   * 파랑 = 로고·일러스트·파형 장식. 대비 검증값은 docs/renewal/시안_적용_기준.md 3장. */
   --color-bg: var(--color-white);
   --color-bg-subtle: var(--color-neutral-50);
   --color-text: var(--color-neutral-900);
   --color-text-muted: var(--color-neutral-600);
   --color-border: var(--color-neutral-200);
   --color-border-input: var(--color-neutral-500);
-  --color-primary: var(--color-blue-600);
-  --color-primary-hover: var(--color-blue-700);
-  --color-primary-soft: var(--color-blue-50);
-  --color-primary-soft-text: var(--color-blue-800);
-  --color-focus: var(--color-blue-600);
+  --color-primary: var(--color-pink-600);
+  --color-primary-hover: var(--color-pink-700);
+  --color-primary-soft: var(--color-pink-50);
+  --color-primary-soft-text: var(--color-pink-800);
+  --color-focus: var(--color-pink-600);
+  --color-link: var(--color-lavender-700);
   --color-brand: var(--color-pink-300);
   --color-brand-text: var(--color-pink-700);
   --color-brand-soft: var(--color-pink-100);
   --color-brand-soft-text: var(--color-pink-800);
-  --color-selected: var(--color-lavender-100);
-  --color-selected-text: var(--color-lavender-800);
+  --color-selected: var(--color-pink-100);
+  --color-selected-text: var(--color-pink-800);
   --color-accent: var(--color-lavender-300);
+  --color-accent-soft: var(--color-lavender-100);
+  --color-accent-soft-text: var(--color-lavender-800);
+  /* 레이아웃 바탕 그라데이션 (S-10). 인증 레이아웃·앱 틀의 가장 바깥 면에만 쓴다 */
+  --color-canvas-start: var(--color-lavender-50);
+  --color-canvas-mid: var(--color-pink-50);
+  --color-canvas-end: var(--color-pink-100);
   --color-danger: var(--color-red-600);
   --color-danger-soft: var(--color-red-50);
   --color-danger-text: var(--color-red-700);
@@ -150,10 +160,16 @@
   --radius-sm: 0.5rem; /* 8: 배지, 작은 칩 */
   --radius-md: 0.75rem; /* 12: 버튼, 입력란 */
   --radius-lg: 1rem; /* 16: 카드 */
-  --radius-xl: 1.25rem; /* 20: 대화상자, 하단 시트 */
+  --radius-xl: 1.25rem; /* 20: 대화상자, 하단 시트, 목록 카드 */
+  --radius-2xl: 1.5rem; /* 24: 큰 패널(홈 안내 패널, 인증 패널) */
 
-  /* ---------- 그림자: 화면 위에 뜨는 요소 전용 ---------- */
+  /* ---------- 그림자 (S-10) ---------- */
   --shadow-*: initial;
+  /* 바탕 그라데이션 위의 카드·입력란·패널. 분홍 기운(pink-800)을 아주 약하게 섞었다 */
+  --shadow-card: 0 1px 3px rgb(116 40 72 / 0.06), 0 8px 24px rgb(116 40 72 / 0.06);
+  /* 화면의 대표 주 동작 버튼(새 회의 등) 전용 빛 번짐 */
+  --shadow-primary: 0 8px 24px rgb(196 69 123 / 0.28);
+  /* 화면 위에 뜨는 요소(대화상자, 하단 시트, 토스트, 메뉴) */
   --shadow-overlay: 0 8px 24px rgb(27 25 32 / 0.16), 0 2px 6px rgb(27 25 32 / 0.08);
   --inset-shadow-*: initial;
   --drop-shadow-*: initial;
@@ -166,6 +182,10 @@
   --container-form: 40rem; /* 640: 마법사·단독 폼 */
   --container-reading: 45rem; /* 720: 읽기 본문 */
   --container-content: 65rem; /* 1040: 본문 */
+
+  /* ---------- 레이아웃 고정 폭 (S-11) ---------- */
+  --spacing-rail: 5.5rem; /* 88: 내비게이션 레일 (tablet) */
+  --spacing-sidebar: 15rem; /* 240: 사이드바 (tablet-lg) */
 }
 
 /*
