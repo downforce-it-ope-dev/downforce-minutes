@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router';
 import { RefreshCw } from 'lucide-react';
-import { AuthLayout, Banner, Button, RecordToMinutesIllustration } from '../ui';
+import { AuthLayout, Button, RecordToMinutesIllustration } from '../ui';
 import { getSession, type SessionResult } from './authApi';
 import { safeReturnPath, type LoginLocationState } from './routes';
 
@@ -60,7 +60,6 @@ function SessionUnavailable({ onRetry }: { onRetry: () => void }) {
     <AuthLayout illustration={<RecordToMinutesIllustration className="w-full" />}>
       <div className="flex flex-col gap-6">
         <h1 className="text-headline text-text">로그인 상태를 확인하지 못했습니다</h1>
-        <Banner tone="danger">서버에 연결하지 못했습니다. 네트워크를 확인한 뒤 다시 시도해 주세요.</Banner>
         <Button size="lg" fullWidth icon={RefreshCw} onClick={onRetry}>
           다시 시도
         </Button>

@@ -65,14 +65,13 @@ test('회사 도메인이 아니면 코드를 요청하지 않는다', async ({ 
 test('메인 화면에 들어가면 로그인이 먼저 나오고, 로그인하면 메인 화면으로 돌아간다', async ({ page }) => {
   await page.goto('/');
   await expect(page).toHaveURL(/\/login$/);
-  await expect(page.getByText('테스트 모드')).toBeVisible();
   await page.getByLabel('회사 이메일').fill('meet@miinit.com');
   await page.getByRole('button', { name: '인증 코드 받기' }).click();
   await expect(page.getByRole('heading', { level: 1, name: '인증 코드 입력' })).toBeVisible();
 
   await page.getByRole('textbox', { name: '1번째 자리' }).fill('1');
   await page.keyboard.type('11111');
-  await expect(page.getByRole('alert')).toHaveText('코드가 올바르지 않습니다. 다시 확인해 주세요.');
+  await expect(page.getByText('코드가 올바르지 않습니다. 다시 확인해 주세요.')).toBeVisible();
 
   await page.getByRole('textbox', { name: '1번째 자리' }).fill('1');
   await page.keyboard.type('23456');
@@ -101,11 +100,12 @@ for (const size of [SIZES[0], SIZES[2]]) {
     await page.setViewportSize(size);
     await page.goto('/login');
     await page.getByLabel('회사 이메일').fill('meet@miinit.com');
-    await expect(page.getByText('인증 코드를 보낼 메일 설정이 필요합니다.', { exact: false })).toBeVisible();
-    await expect(page.getByRole('button', { name: '인증 코드 받기' })).toHaveAttribute('aria-disabled', 'true');
+    await page.getByRole('button', { name: '인증 코드 받기' }).click();
+    await expect(page.getByText('인증 코드를 보낼 메일 설정이 필요합니다.')).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: '회사 이메일로 로그인' })).toBeVisible();
     await expectAccessibleWithoutOverflow(page);
 
-    await page.getByRole('button', { name: '메일 설정' }).click();
+    await page.getByRole('button', { name: '메일 설정', exact: true }).first().click();
     const dialog = page.getByRole('dialog', { name: '메일 설정' });
     await expect(dialog).toBeVisible();
     await expectAccessibleWithoutOverflow(page);
@@ -116,7 +116,7 @@ for (const size of [SIZES[0], SIZES[2]]) {
     await dialog.getByRole('button', { name: '저장하고 연결 확인' }).click();
     await expect(dialog).toHaveCount(0);
 
-    await expect(page.getByRole('button', { name: '메일 설정' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: '메일 설정', exact: true })).toHaveCount(0);
     await page.getByRole('button', { name: '인증 코드 받기' }).click();
     await expect(page.getByRole('heading', { level: 1, name: '인증 코드 입력' })).toBeVisible();
   });

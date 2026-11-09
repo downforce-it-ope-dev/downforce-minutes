@@ -58,7 +58,6 @@ export function MailSetupDialog({ open, onOpenChange, onConfigured }: MailSetupD
       open={open}
       onOpenChange={onOpenChange}
       title="메일 설정"
-      description="인증 코드를 보낼 Gmail을 연결합니다. 4개 항목을 모두 입력해 주세요."
       dismissible={!busy}
       footer={
         <>

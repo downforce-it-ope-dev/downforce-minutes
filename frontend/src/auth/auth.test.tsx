@@ -84,7 +84,7 @@ describe('AUTH-01 로그인', () => {
   const emailInput = () => screen.getByLabelText('회사 이메일');
   const submit = () => screen.getByRole('button', { name: '인증 코드 받기' });
 
-  it('회사 도메인이 아니면 요청하지 않고 입력란 아래에 오류를 보인다', async () => {
+  it('회사 도메인이 아니면 요청하지 않고 토스트로 알리며 입력란을 오류 상태로 둔다', async () => {
     renderAt('/login');
     fireEvent.change(emailInput(), { target: { value: 'meet@gmail.com' } });
     await waitFor(() => expect(submit().getAttribute('aria-disabled')).toBeNull());
@@ -115,14 +115,16 @@ describe('AUTH-01 로그인', () => {
     expect(await screen.findByText('잠시 후 다시 시도해 주세요. (42초 후 가능)')).toBeTruthy();
   });
 
-  it('메일 설정이 없으면 코드 요청을 막고 메일 설정으로 연결한다', async () => {
+  it('메일 설정이 없으면 설정 아이콘을 보이고, 코드 요청 대신 메일 설정을 안내한다', async () => {
     getEmailSettings.mockResolvedValue(settings(false));
     saveEmailSettings.mockResolvedValue(settings(true));
     verifyEmailConnection.mockResolvedValue({ connected: true, message: '' });
     renderAt('/login');
     const openSetup = await screen.findByRole('button', { name: '메일 설정' });
     fireEvent.change(emailInput(), { target: { value: 'meet@miinit.com' } });
-    expect(submit().getAttribute('aria-disabled')).toBe('true');
+    fireEvent.click(submit());
+    expect(await screen.findByText('인증 코드를 보낼 메일 설정이 필요합니다.')).toBeTruthy();
+    expect(requestOtp).not.toHaveBeenCalled();
     fireEvent.click(openSetup);
 
     const dialog = await screen.findByRole('dialog', { name: '메일 설정' });
@@ -136,7 +138,8 @@ describe('AUTH-01 로그인', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(saveEmailSettings).toHaveBeenCalledWith({ clientId: 'id', clientSecret: 'secret', refreshToken: 'token', senderAddress: 'mail@miinit.com' });
     expect(verifyEmailConnection).toHaveBeenCalled();
-    expect(submit().getAttribute('aria-disabled')).toBeNull();
+    expect(screen.queryByRole('button', { name: '메일 설정' })).toBeNull();
+    expect(screen.getByText('메일 연결을 확인했습니다.')).toBeTruthy();
   });
 });
 
@@ -157,19 +160,20 @@ describe('AUTH-02 인증 코드', () => {
     expect(verifyOtp).toHaveBeenCalledWith('meet@miinit.com', '123456');
   });
 
-  it('틀린 코드면 오류를 보이고 칸을 비운다', async () => {
+  it('틀린 코드면 토스트로 알리고 칸을 비운다', async () => {
     verifyOtp.mockResolvedValue({ ok: false, reason: 'INVALID' });
     renderAt({ pathname: '/login/verify', state: verifyState });
     typeCode('111111');
-    expect((await screen.findByRole('alert')).textContent).toBe('코드가 올바르지 않습니다. 다시 확인해 주세요.');
+    expect(await screen.findByText('코드가 올바르지 않습니다. 다시 확인해 주세요.')).toBeTruthy();
     expect((cell(1) as HTMLInputElement).value).toBe('');
   });
 
-  it('5회 실패로 잠기면 남은 시간과 처음으로 버튼을 보인다', async () => {
+  it('5회 실패로 잠기면 토스트로 알리고, 처음으로 누르면 로그인 화면으로 간다', async () => {
     verifyOtp.mockResolvedValue({ ok: false, reason: 'LOCKED', retryAfterSeconds: 300 });
     renderAt({ pathname: '/login/verify', state: verifyState });
     typeCode('222222');
-    expect(await screen.findByText('시도 횟수를 초과했습니다.')).toBeTruthy();
+    expect(await screen.findByText('시도 횟수를 초과했습니다. 5분 뒤에 다시 시도해 주세요.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /코드 다시 받기/ }).getAttribute('aria-disabled')).toBe('true');
     fireEvent.click(screen.getByRole('button', { name: '처음으로' }));
     expect(await screen.findByRole('heading', { name: '회사 이메일로 로그인' })).toBeTruthy();
     expect((screen.getByLabelText('회사 이메일') as HTMLInputElement).value).toBe('meet@miinit.com');
