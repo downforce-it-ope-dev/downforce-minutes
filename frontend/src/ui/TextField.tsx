@@ -10,6 +10,8 @@ export interface TextFieldProps extends Omit<InputHTMLAttributes<HTMLInputElemen
   help?: ReactNode;
   /** 오류 문구. 있으면 테두리·문구가 오류 상태가 되고 aria-invalid가 켜진다 */
   error?: ReactNode;
+  /** 문구 없이 오류 상태(테두리·aria-invalid)만 켠다. 오류 내용은 토스트로 알릴 때 쓴다 */
+  invalid?: boolean;
   /** 입력란 안 앞쪽 아이콘 (장식) */
   icon?: LucideIcon;
   /** default: 모서리 12 / pill: 알약형 (한 줄짜리 단독 입력, 시안 로그인 화면) */
@@ -29,6 +31,7 @@ export function TextField({
   label,
   help,
   error,
+  invalid = false,
   icon,
   shape = 'default',
   hideLabel = false,
@@ -42,6 +45,7 @@ export function TextField({
   const inputId = id ?? `field-${autoId}`;
   const helpId = help ? `${inputId}-help` : undefined;
   const errorId = error ? `${inputId}-error` : undefined;
+  const isInvalid = Boolean(error) || invalid;
   const describedByIds = [describedBy, helpId, errorId].filter(Boolean).join(' ') || undefined;
 
   return (
@@ -59,14 +63,14 @@ export function TextField({
         <input
           id={inputId}
           {...rest}
-          aria-invalid={error ? true : undefined}
+          aria-invalid={isInvalid || undefined}
           aria-describedby={describedByIds}
           className={cn(
             'h-12 tablet:h-13 w-full border bg-bg text-body text-text placeholder:text-text-muted',
             'disabled:cursor-not-allowed disabled:bg-neutral-100 disabled:text-neutral-500',
             shape === 'pill' ? 'rounded-full px-5 shadow-card' : 'rounded-md px-3.5',
             icon && (shape === 'pill' ? 'pl-14' : 'pl-12'),
-            error ? 'border-danger' : 'border-border-input',
+            isInvalid ? 'border-danger' : 'border-border-input',
           )}
         />
       </div>

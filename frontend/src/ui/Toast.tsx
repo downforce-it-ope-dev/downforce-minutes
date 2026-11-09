@@ -26,7 +26,7 @@ const TONE_ICON: Record<ToastTone, { icon: LucideIcon; color: string }> = {
 
 const PLACEMENT: Record<ToastPlacement, string> = {
   base: 'bottom-4',
-  tabbar: 'bottom-20',
+  tabbar: 'bottom-20 tablet:bottom-4', // 탭 바는 휴대폰에만 있다
   action: 'bottom-24',
 };
 
@@ -72,7 +72,7 @@ export function ToastProvider({ placement = 'base', children }: { placement?: To
                 className="pointer-events-auto flex min-h-12 items-center gap-3 rounded-full bg-bg py-2 pr-2 pl-5 shadow-overlay"
               >
                 <Icon icon={icon} size="md" className={cn('shrink-0', color)} />
-                <p className="text-body text-text">
+                <p className="text-body break-keep text-text">
                   {tone === 'danger' && <span className="sr-only">오류: </span>}
                   {toast.message}
                 </p>

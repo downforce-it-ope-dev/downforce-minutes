@@ -7,8 +7,8 @@ import { expect, test, type Page } from '@playwright/test';
  */
 const VIEWS = [
   { name: '부품 전체', path: '/__ui', heading: '부품 확인 화면' },
-  { name: '로그인 틀', path: '/__ui?view=login', heading: '회사 이메일로 로그인' },
-  { name: '인증 코드 틀', path: '/__ui?view=verify', heading: '인증 코드 입력' },
+  { name: '앱 틀', path: '/__ui?view=shell', heading: '앱 틀' },
+  { name: '집중 모드', path: '/__ui?view=focus', heading: '문서 연결' },
 ];
 const SIZES = [
   { label: '휴대폰', width: 390, height: 844 },
@@ -66,10 +66,44 @@ test('대화상자는 Portal에서도 리뉴얼 글꼴을 쓰고 Esc로 닫힌�
   await expect(dialog).toBeHidden();
 });
 
-test('낮은 화면(short)에서는 인증 화면의 로고와 일러스트를 숨긴다', async ({ page }) => {
-  await page.setViewportSize({ width: 844, height: 390 });
-  await open(page, '/__ui?view=login', '회사 이메일로 로그인');
-  await expect(page.getByRole('img', { name: 'Downforce' })).toBeHidden();
+test('앱 틀 메뉴는 폭에 따라 탭 바 → 레일 → 사이드바로 바뀐다', async ({ page }) => {
+  const nav = page.getByRole('navigation', { name: '주 메뉴' });
+  const box = async () => (await nav.boundingBox())!;
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await open(page, '/__ui?view=shell', '앱 틀');
+  expect((await box()).width).toBe(390);
+  expect((await box()).y).toBeGreaterThan(700);
+
+  await page.setViewportSize({ width: 820, height: 1180 });
+  await expect.poll(async () => (await box()).width).toBe(88);
+  await expect(nav.getByRole('img', { name: 'Downforce' })).toBeVisible();
+
   await page.setViewportSize({ width: 1180, height: 820 });
-  await expect(page.getByRole('img', { name: 'Downforce' })).toBeVisible();
+  await expect.poll(async () => (await box()).width).toBe(240);
+});
+
+test('앱 틀 메뉴를 키보드로 이동하면 해당 화면으로 가고 선택 표시가 붙는다', async ({ page }) => {
+  await page.setViewportSize({ width: 1180, height: 820 });
+  await open(page, '/__ui?view=shell', '앱 틀');
+  const settings = page.getByRole('navigation', { name: '주 메뉴' }).getByRole('link', { name: '설정' });
+  await settings.focus();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/settings$/);
+});
+
+test('집중 모드는 메뉴를 숨기고 뒤로 가기만 둔다', async ({ page }) => {
+  await open(page, '/__ui?view=focus', '문서 연결');
+  await expect(page.getByRole('navigation', { name: '주 메뉴' })).toHaveCount(0);
+  await page.getByRole('button', { name: '뒤로 가기' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: '앱 틀' })).toBeVisible();
+});
+
+test('이탈 확인은 머무르기에 초점이 간다', async ({ page }) => {
+  await open(page, '/__ui?view=shell', '앱 틀');
+  await page.getByRole('button', { name: '이탈 확인 열기' }).click();
+  await expect(page.getByRole('dialog', { name: '저장하지 않은 내용이 사라집니다. 나갈까요?' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '머무르기' })).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
 });

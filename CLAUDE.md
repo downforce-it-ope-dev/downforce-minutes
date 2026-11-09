@@ -36,6 +36,9 @@
   - CI 원색 면 위의 글자는 neutral-900만, 흰 배경 위 색 글자는 700 이상 단계만 쓴다.
   - 색·글자 크기·간격·둥글기·그림자·화면 폭 기준은 `@theme` 토큰만 쓴다.
   - 임의값(`text-[13px]`, `bg-[#0b2d5b]`)은 쓰지 않고, 필요하면 토큰을 추가한다.
+- **설명 문구 금지 (S-13)**
+  - 화면에는 제목·입력·버튼과 꼭 필요한 값만 둔다. 부제·도움말·안내 배너·테스트 안내를 넣지 않는다.
+  - 오류·상태 알림은 토스트(`useToast`)로 보내고, 입력 오류는 테두리(`TextField invalid`)로만 표시한다. 대화상자 안의 오류만 예외다.
 - **공통 컴포넌트 사용**
   - 버튼·카드·입력·대화상자·토스트 등은 Tailwind로 만든 공통 React 컴포넌트를 쓴다.
   - 클래스 문자열을 화면마다 복사하지 않는다.
@@ -60,6 +63,9 @@
 - **테스트 기준**
   - 테스트는 클래스 이름이 아니라 역할(role)·레이블·`data-testid`로 요소를 찾는다.
   - 리뉴얼 화면은 브라우저 접근성 검사(axe)에서 심각(serious·critical) 위반이 0건이어야 완료로 본다. 보통(moderate)·경미(minor)는 기록만 한다.
+- **Backend 범위 (R-18)**
+  - Backend는 `donghyunlee-dev/meeting-automation` 저장소에서 개발·배포한다. 이 저장소에서는 Frontend만 개발하고 `backend/`를 고치거나 배포하지 않는다.
+  - 화면에 필요한데 구현되지 않은 Backend 기능은 이슈 댓글로 정리해 사용자에게 요청한다.
 - **반영 단위**
   - 브랜치는 `main`(운영)과 `develop`(작업)만 둔다. 작업은 `develop`에서 하고, 커밋 메시지에 GitHub 이슈 번호(`Refs #n`)를 적는다.
   - 작업 순서와 완료 기준은 GitHub 로드맵 이슈 #3과 각 이슈 본문을 따른다.
@@ -74,6 +80,10 @@
   - 공통 부품은 `frontend/src/ui/`에 있고 `../ui`(index)에서 불러온다. 같은 부품을 화면에 새로 만들지 않는다.
   - 리뉴얼 화면 라우트는 `frontend/src/RootRoutes.tsx`에 추가한다. 여기 라우트는 기존 `App` 레이아웃(헤더·하단 탭 바·기존 CSS) 밖에서 그려진다.
   - 부품 확인 화면 `/__ui`는 개발 서버와 Vercel Preview에서만 열린다(운영 빌드 제외). 새 부품을 만들면 여기에도 추가한다.
+- **로그인과 인증 목업 (#15)**
+  - `/login`·`/__ui`를 뺀 모든 경로는 `RequireAuth`(`src/auth/AuthGate.tsx`)를 거친다. 로그인하지 않았으면 로그인 화면으로 보낸다.
+  - 개발 서버와 Vercel Preview는 인증 목업(`src/auth/authMock.ts`)을 쓴다. 메일을 보내지 않고, 인증 코드는 `123456`이다. Backend가 Preview 출처를 허용하면 Vercel Preview 환경 변수 `AUTH_MOCK=0`으로 끈다. Vercel Production에서는 값과 관계없이 꺼진다.
+  - 기존 화면 e2e는 목업 세션(`e2e/authSession.ts`)을 넣어 진입 보호를 통과한다. 로그인 화면 e2e는 세션 없이 실행한다.
 - **리뉴얼 화면 루트**
   - 리뉴얼 화면(또는 새 레이아웃)의 가장 바깥 요소에 `data-ui="renewal"`을 붙인다.
   - 이 영역 안에서만 Tailwind 초기화(Preflight)가 적용된다. 밖의 기존 화면은 `src/styles/legacy-reset.css`가 브라우저 기본값을 유지한다.

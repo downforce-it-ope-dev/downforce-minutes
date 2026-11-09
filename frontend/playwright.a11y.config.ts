@@ -1,14 +1,16 @@
 import { defineConfig, devices } from '@playwright/test';
+import { mockSessionState } from './e2e/authSession';
 
 export default defineConfig({
   testDir: './e2e',
-  testMatch: ['**/accessibility.spec.ts', '**/ui-preview.spec.ts'],
+  testMatch: ['**/accessibility.spec.ts', '**/ui-preview.spec.ts', '**/auth.spec.ts', '**/common-screens.spec.ts'],
   fullyParallel: true,
   timeout: 30_000,
   reporter: 'list',
   outputDir: './test-results/accessibility',
   use: {
     baseURL: 'http://127.0.0.1:4174',
+    storageState: mockSessionState('http://127.0.0.1:4174'),
     ...devices['Desktop Chrome'],
     viewport: { width: 390, height: 844 },
   },

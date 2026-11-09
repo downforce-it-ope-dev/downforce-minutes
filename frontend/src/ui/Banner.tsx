@@ -36,7 +36,7 @@ export function Banner({ tone, title, action, className, children }: BannerProps
         <Icon icon={icon} size="lg" className="shrink-0" />
         <div className="flex flex-col gap-1">
           {title && <p className="text-label">{title}</p>}
-          <div className="text-body">{children}</div>
+          <div className="text-body break-keep">{children}</div>
         </div>
       </div>
       {action && <div className="shrink-0 self-end tablet:self-auto">{action}</div>}
