@@ -1,9 +1,11 @@
 import { getApiBaseUrl } from '../apiBase';
+import { mockGetSession, mockLogout, mockRecordActivity, mockRequestOtp, mockVerifyOtp } from './authMock';
 
 /*
  * 인증 API (Backend 저장소 구현, docs/product/api-spec.md "인증 API", README R-18·R-19).
  * 502(메일 발송 실패)·503(메일 미설정)을 업무 오류로 쓰므로 apiFetch(서버 장애 복구 흐름)를 쓰지 않는다.
  * 세션 쿠키(ma_session)는 HttpOnly라 스크립트에서 읽지 않는다. 같은 출처 요청이라 브라우저가 자동으로 보낸다.
+ * __AUTH_MOCK__이 true(개발 서버·Vercel Preview 기본값)이면 Backend 대신 authMock을 쓴다. 운영 빌드에서는 항상 false다.
  */
 
 const TIMEOUT_MS = 15_000;
@@ -61,7 +63,7 @@ function retryAfter(response: Response, body: Record<string, unknown>): number {
 }
 
 /** 인증 코드 발송 (AUTH-01-F04, 재발송 AUTH-02) */
-export async function requestOtp(email: string): Promise<OtpRequestResult> {
+async function realRequestOtp(email: string): Promise<OtpRequestResult> {
   let response: Response;
   try {
     response = await post('/otp-requests', { email });
@@ -80,7 +82,7 @@ export async function requestOtp(email: string): Promise<OtpRequestResult> {
 }
 
 /** 인증 코드 검증 → 성공하면 Backend가 세션 쿠키를 심는다 (AUTH-02) */
-export async function verifyOtp(email: string, code: string): Promise<OtpVerifyResult> {
+async function realVerifyOtp(email: string, code: string): Promise<OtpVerifyResult> {
   let response: Response;
   try {
     response = await post('/otp-verifications', { email, code });
@@ -96,7 +98,7 @@ export async function verifyOtp(email: string, code: string): Promise<OtpVerifyR
 }
 
 /** 세션 확인 (활동으로 세지 않음) */
-export async function getSession(): Promise<SessionResult> {
+async function realGetSession(): Promise<SessionResult> {
   try {
     const response = await send('/session', { method: 'GET', headers: { Accept: 'application/json' } });
     if (response.status === 401) return { status: 'unauthenticated' };
@@ -109,7 +111,7 @@ export async function getSession(): Promise<SessionResult> {
 }
 
 /** 활동 갱신 (마지막 활동 후 2시간 연장) */
-export async function recordActivity(): Promise<SessionResult> {
+async function realRecordActivity(): Promise<SessionResult> {
   try {
     const response = await post('/session/activity');
     if (response.status === 401) return { status: 'unauthenticated' };
@@ -120,10 +122,16 @@ export async function recordActivity(): Promise<SessionResult> {
   }
 }
 
-export async function logout(): Promise<void> {
+async function realLogout(): Promise<void> {
   try {
     await post('/logout');
   } catch {
     // 네트워크 오류여도 화면은 로그인으로 보낸다. 세션은 2시간 뒤 만료된다
   }
 }
+
+export const requestOtp: (email: string) => Promise<OtpRequestResult> = __AUTH_MOCK__ ? mockRequestOtp : realRequestOtp;
+export const verifyOtp: (email: string, code: string) => Promise<OtpVerifyResult> = __AUTH_MOCK__ ? mockVerifyOtp : realVerifyOtp;
+export const getSession: () => Promise<SessionResult> = __AUTH_MOCK__ ? mockGetSession : realGetSession;
+export const recordActivity: () => Promise<SessionResult> = __AUTH_MOCK__ ? mockRecordActivity : realRecordActivity;
+export const logout: () => Promise<void> = __AUTH_MOCK__ ? mockLogout : realLogout;

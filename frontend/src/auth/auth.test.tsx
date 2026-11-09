@@ -2,6 +2,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '../ui';
+import { GuestOnly, RequireAuth } from './AuthGate';
 import { LoginPage } from './LoginPage';
 import { VerifyPage } from './VerifyPage';
 import { checkLoginEmail, normalizeEmail } from './email';
@@ -9,7 +10,7 @@ import { safeReturnPath } from './routes';
 import * as authApi from './authApi';
 import * as emailSettingsApi from '../emailSettingsApi';
 
-vi.mock('./authApi', () => ({ requestOtp: vi.fn(), verifyOtp: vi.fn() }));
+vi.mock('./authApi', () => ({ requestOtp: vi.fn(), verifyOtp: vi.fn(), getSession: vi.fn() }));
 vi.mock('../emailSettingsApi', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../emailSettingsApi')>()),
   getEmailSettings: vi.fn(),
@@ -19,6 +20,7 @@ vi.mock('../emailSettingsApi', async (importOriginal) => ({
 
 const requestOtp = vi.mocked(authApi.requestOtp);
 const verifyOtp = vi.mocked(authApi.verifyOtp);
+const getSession = vi.mocked(authApi.getSession);
 const getEmailSettings = vi.mocked(emailSettingsApi.getEmailSettings);
 const saveEmailSettings = vi.mocked(emailSettingsApi.saveEmailSettings);
 const verifyEmailConnection = vi.mocked(emailSettingsApi.verifyEmailConnection);
@@ -194,5 +196,44 @@ describe('AUTH-02 인증 코드', () => {
     expect(requestOtp).toHaveBeenCalledWith('meet@miinit.com');
     expect(screen.getByText('새 인증 코드를 보냈습니다.')).toBeTruthy();
     expect(screen.getByText('01:00')).toBeTruthy();
+  });
+});
+
+describe('진입 보호 (#15)', () => {
+  function renderGate(entry: string) {
+    return render(
+      <MemoryRouter initialEntries={[entry]}>
+        <ToastProvider>
+          <Routes>
+            <Route path="/login" element={<GuestOnly><LoginPage /></GuestOnly>} />
+            <Route path="*" element={<RequireAuth><h1>기존 화면</h1></RequireAuth>} />
+          </Routes>
+        </ToastProvider>
+      </MemoryRouter>,
+    );
+  }
+
+  it('로그인하지 않았으면 로그인 화면을 먼저 보이고, 가려던 경로를 기억한다', async () => {
+    getSession.mockResolvedValue({ status: 'unauthenticated' });
+    requestOtp.mockResolvedValue({ ok: true, expiresInSeconds: 60, resendAfterSeconds: 60 });
+    renderGate('/meetings?tab=done');
+    expect(await screen.findByRole('heading', { name: '회사 이메일로 로그인' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: '기존 화면' })).toBeNull();
+  });
+
+  it('로그인했으면 기존 화면을 보이고, 로그인 화면에 오면 홈으로 보낸다', async () => {
+    getSession.mockResolvedValue({ status: 'authenticated', remainingIdleSeconds: 7200 });
+    renderGate('/');
+    expect(await screen.findByRole('heading', { name: '기존 화면' })).toBeTruthy();
+    cleanup();
+    renderGate('/login');
+    expect(await screen.findByRole('heading', { name: '기존 화면' })).toBeTruthy();
+  });
+
+  it('세션을 확인할 수 없으면 다시 시도할 수 있다', async () => {
+    getSession.mockResolvedValueOnce({ status: 'unavailable' }).mockResolvedValueOnce({ status: 'authenticated', remainingIdleSeconds: 7200 });
+    renderGate('/');
+    fireEvent.click(await screen.findByRole('button', { name: '다시 시도' }));
+    expect(await screen.findByRole('heading', { name: '기존 화면' })).toBeTruthy();
   });
 });

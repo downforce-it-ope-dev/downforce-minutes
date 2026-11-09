@@ -6,6 +6,7 @@ import { AuthLayout, Banner, Button, IconButton, RecordToMinutesIllustration, Te
 import { requestOtp } from './authApi';
 import { checkLoginEmail, EMAIL_CHECK_MESSAGE, normalizeEmail } from './email';
 import { MailSetupDialog } from './MailSetupDialog';
+import { MockNotice } from './MockNotice';
 import type { LoginLocationState, VerifyLocationState } from './routes';
 
 type MailStatus = 'checking' | 'configured' | 'missing' | 'unknown';
@@ -25,11 +26,13 @@ export function LoginPage() {
     state.reason === 'expired' ? { tone: 'info', text: '로그인이 만료되었습니다. 다시 로그인해 주세요.' } : null,
   );
   const [sending, setSending] = useState(false);
-  const [mailStatus, setMailStatus] = useState<MailStatus>('checking');
+  // 목업은 메일을 보내지 않으므로 메일 설정을 확인하지 않는다
+  const [mailStatus, setMailStatus] = useState<MailStatus>(__AUTH_MOCK__ ? 'configured' : 'checking');
   const [mailDialog, setMailDialog] = useState(false);
 
   // 메일 설정 여부는 configured만 본다 (R-02)
   useEffect(() => {
+    if (__AUTH_MOCK__) return;
     let active = true;
     getEmailSettings()
       .then((settings) => active && setMailStatus(settings.configured ? 'configured' : 'missing'))
@@ -83,6 +86,7 @@ export function LoginPage() {
   return (
     <AuthLayout illustration={<RecordToMinutesIllustration className="w-full" />}>
       <div className="flex flex-col gap-6">
+        <MockNotice />
         {notice && <Banner tone={notice.tone}>{notice.text}</Banner>}
         <div className="flex flex-col gap-2">
           <h1 className="text-headline text-text">회사 이메일로 로그인</h1>

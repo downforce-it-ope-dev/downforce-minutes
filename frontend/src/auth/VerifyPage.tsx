@@ -3,6 +3,7 @@ import { Navigate, useLocation, useNavigate } from 'react-router';
 import { Clock, Info, Pencil, RefreshCw, ShieldCheck } from 'lucide-react';
 import { AuthLayout, Banner, Button, cn, Icon, MailCodeIllustration, OtpInput, ProgressBar, useToast } from '../ui';
 import { requestOtp, verifyOtp } from './authApi';
+import { MockNotice } from './MockNotice';
 import { safeReturnPath, type LoginLocationState, type VerifyLocationState } from './routes';
 
 const CODE_LENGTH = 6;
@@ -141,6 +142,7 @@ function VerifyForm({ initial }: { initial: VerifyLocationState }) {
   return (
     <AuthLayout width="dialog" illustration={<MailCodeIllustration className="w-full" />}>
       <form className="flex flex-col gap-6" onSubmit={submit} noValidate>
+        <MockNotice />
         {notice && <Banner tone={notice.tone}>{notice.text}</Banner>}
         {locked && (
           <Banner

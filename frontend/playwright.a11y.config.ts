@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import { mockSessionState } from './e2e/authSession';
 
 export default defineConfig({
   testDir: './e2e',
@@ -9,6 +10,7 @@ export default defineConfig({
   outputDir: './test-results/accessibility',
   use: {
     baseURL: 'http://127.0.0.1:4174',
+    storageState: mockSessionState('http://127.0.0.1:4174'),
     ...devices['Desktop Chrome'],
     viewport: { width: 390, height: 844 },
   },

@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import { mockSessionState } from './e2e/authSession';
 
 export default defineConfig({
   testDir: './e2e',
@@ -10,6 +11,7 @@ export default defineConfig({
   outputDir: './test-results/viewport',
   use: {
     baseURL: 'http://127.0.0.1:4173',
+    storageState: mockSessionState('http://127.0.0.1:4173'),
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',
   },
