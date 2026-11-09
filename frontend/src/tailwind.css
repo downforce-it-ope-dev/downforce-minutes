@@ -17,6 +17,39 @@
 /* 높이가 낮은 화면(휴대폰 가로, 화면 키보드 열림) */
 @custom-variant short (@media (max-height: 560px));
 
+/*
+ * 안전 영역(노치·홈 표시줄) 여백. env()는 Tailwind 클래스로 표현할 수 없는 브라우저 전용 표기다(CLAUDE.md).
+ * 상단 바·하단 탭 바·하단 고정 버튼·하단 시트가 쓴다. 값이 없는 기기에서는 0이다.
+ */
+@utility pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/*
+ * 리뉴얼 영역 기본 규칙 (스타일 검토 5.3 결정, GitHub #5). CLAUDE.md "토큰만" 규칙의 예외 2가지.
+ * - 키보드 포커스 표시: 모든 요소에 같은 표시를 빠짐없이 적용한다. 컴포넌트는 필요할 때만 유틸리티로 덮어쓴다.
+ * - 스크롤바 숨김: 기존 화면과 같게 숨긴다.
+ * base layer라 컴포넌트의 Tailwind 유틸리티가 항상 우선한다. 리뉴얼 영역 밖(기존 화면)에는 적용되지 않는다.
+ */
+@layer base {
+  [data-ui='renewal']:focus-visible,
+  [data-ui='renewal'] :focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+  [data-ui='renewal'],
+  [data-ui='renewal'] * {
+    scrollbar-width: none;
+  }
+  [data-ui='renewal']::-webkit-scrollbar,
+  [data-ui='renewal'] *::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 @theme {
   /* ---------- 화면 폭 기준: 휴대폰이 기본, tablet 600px, tablet-lg 960px ---------- */
   --breakpoint-*: initial;

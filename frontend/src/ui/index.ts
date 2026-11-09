@@ -1,0 +1,25 @@
+// 리뉴얼 공통 부품 (Tailwind 전용). 기존 CSS 클래스를 쓰지 않는다.
+// 근거: docs/renewal/시안_적용_기준.md 4.1, CLAUDE.md
+export { cn } from './cn';
+export { Icon, type IconProps, type IconSize } from './Icon';
+export { Button, type ButtonProps, type ButtonSize, type ButtonVariant } from './Button';
+export { IconButton, type IconButtonProps, type IconButtonVariant } from './IconButton';
+export { TextField, type TextFieldProps } from './TextField';
+export { OtpInput, type OtpInputProps } from './OtpInput';
+export { Card, type CardProps } from './Card';
+export { Pill, type PillProps, type PillTone } from './Pill';
+export { ProgressBar, type ProgressBarProps } from './ProgressBar';
+export { Banner, type BannerProps, type BannerTone } from './Banner';
+export { Dialog, type DialogProps } from './Dialog';
+export { ToastProvider, type ToastPlacement } from './Toast';
+export { useToast, type ToastOptions, type ToastTone } from './toastContext';
+export { RENEWAL_ROOT_CLASS } from './renewalRoot';
+// 그림 부품 (S-12, 단순화 SVG. 원본을 받으면 같은 자리에서 교체)
+export { Logo, type LogoProps } from './art/Logo';
+export { CanvasWaves, type CanvasWavesProps } from './art/CanvasWaves';
+export { Waveform, type WaveformProps } from './art/Waveform';
+export { RecordToMinutesIllustration } from './art/RecordToMinutesIllustration';
+export { MailCodeIllustration } from './art/MailCodeIllustration';
+// 레이아웃
+export { AppCanvas, type AppCanvasProps } from './layout/AppCanvas';
+export { AuthLayout, type AuthLayoutProps } from './layout/AuthLayout';

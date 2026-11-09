@@ -13,7 +13,7 @@ const output = process.env.LEGACY_STYLE_OUT;
 const sizes = [
   { width: 390, height: 844 },
   { width: 820, height: 1180 },
-  { width: 1280, height: 900 },
+  { width: 1180, height: 820 },
 ];
 
 test.skip(!output, 'LEGACY_STYLE_OUT이 없으면 실행하지 않습니다.');

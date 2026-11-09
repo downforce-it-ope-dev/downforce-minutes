@@ -58,6 +58,7 @@ function styleOf(page: Page, area: string, probe: string) {
       opacity: style.opacity,
       cursor: style.cursor,
       boxSizing: style.boxSizing,
+      scrollbarWidth: style.scrollbarWidth,
     };
   });
 }
@@ -109,7 +110,14 @@ test.describe('기존 CSS와 리뉴얼 영역 격리', () => {
       return button.evaluate((element) => getComputedStyle(element).outlineColor);
     };
     expect(await outlineColor('legacy')).toBe('rgb(59, 130, 246)');
-    expect(await outlineColor('renewal')).not.toBe('rgb(59, 130, 246)');
+    // 리뉴얼 영역은 진입 파일의 기본 규칙(focus 토큰, pink-600)을 쓴다 (#5 결정)
+    expect(await outlineColor('renewal')).toBe('rgb(196, 69, 123)');
+  });
+
+  test('리뉴얼 영역도 스크롤바를 숨긴다', async ({ page }) => {
+    for (const area of ['legacy', 'renewal']) {
+      expect((await styleOf(page, area, 'label')).scrollbarWidth).toBe('none');
+    }
   });
 
   test('글자 토큰은 tablet(600px) 이상에서 커진다', async ({ page }) => {
