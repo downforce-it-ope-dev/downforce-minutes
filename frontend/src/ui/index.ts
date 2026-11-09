@@ -10,3 +10,7 @@ export { Card, type CardProps } from './Card';
 export { Pill, type PillProps, type PillTone } from './Pill';
 export { ProgressBar, type ProgressBarProps } from './ProgressBar';
 export { Banner, type BannerProps, type BannerTone } from './Banner';
+export { Dialog, type DialogProps } from './Dialog';
+export { ToastProvider, type ToastPlacement } from './Toast';
+export { useToast, type ToastOptions, type ToastTone } from './toastContext';
+export { RENEWAL_ROOT_CLASS } from './renewalRoot';

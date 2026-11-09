@@ -18,6 +18,17 @@
 @custom-variant short (@media (max-height: 560px));
 
 /*
+ * 안전 영역(노치·홈 표시줄) 여백. env()는 Tailwind 클래스로 표현할 수 없는 브라우저 전용 표기다(CLAUDE.md).
+ * 상단 바·하단 탭 바·하단 고정 버튼·하단 시트가 쓴다. 값이 없는 기기에서는 0이다.
+ */
+@utility pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/*
  * 리뉴얼 영역 기본 규칙 (스타일 검토 5.3 결정, GitHub #5). CLAUDE.md "토큰만" 규칙의 예외 2가지.
  * - 키보드 포커스 표시: 모든 요소에 같은 표시를 빠짐없이 적용한다. 컴포넌트는 필요할 때만 유틸리티로 덮어쓴다.
  * - 스크롤바 숨김: 기존 화면과 같게 숨긴다.
