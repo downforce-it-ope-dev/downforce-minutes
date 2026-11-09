@@ -471,7 +471,8 @@ describe('Participants settings', () => {
     mockList(pending);
     renderParticipantsApp();
 
-    expect(screen.getAllByRole('main')).toHaveLength(1);
+    // 문서 연결 확인(CMN-04) 화면은 main 없이 상태만 알린다. main이 겹쳐 생기지 않는지만 본다
+    expect(screen.queryAllByRole('main').length).toBeLessThanOrEqual(1);
     expect(screen.getByRole('status').textContent).toMatch(/확인하는 중|불러오는 중/);
     resolve(response({ data: { items: participants } }));
     expect(await screen.findByText('Ada Lovelace')).toBeTruthy();

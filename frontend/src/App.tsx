@@ -15,7 +15,6 @@ import { cancelMeetingSession, createMeetingSession, type MeetingDraft, type Mee
 import { RecordingPage, type RecordingViewState } from './RecordingPage';
 import { DocumentSetupWizard } from './DocumentSetupWizard';
 import { CompletePage } from './CompletePage';
-import { getSetupSnapshot } from './documentSetupApi';
 import { restoreSlackWebhookSettings } from './slackSettingsApi';
 import { restoreEmailSettings } from './emailSettingsApi';
 import { browserMediaAdapter } from './browserMediaAdapter';
@@ -37,6 +36,8 @@ import { MeetingDetailPage } from './MeetingDetailPage';
 import { SettingsPage } from './SettingsPage';
 import { NavigationLeaveGuard } from './components/NavigationLeaveGuard';
 import { useReportSessionWork } from './auth/sessionWork';
+import { DocumentGate } from './documentGate/DocumentGate';
+import { useGateBlocking } from './documentGate/gateBlocking';
 import { Toast } from './components/Toast';
 import { useToast } from './components/useToast';
 
@@ -341,32 +342,6 @@ function ParticipantsPage() {
   );
 }
 
-function SetupGate({ children }: { children: React.ReactNode }) {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [allowed, setAllowed] = useState(false);
-  const [failed, setFailed] = useState(false);
-  const [attempt, setAttempt] = useState(0);
-  useEffect(() => {
-    let live = true;
-    void getSetupSnapshot().then(({ snapshot }) => {
-      if (!live) return;
-      if (snapshot.status === 'READY' && snapshot.canCreateMeeting) setAllowed(true);
-      else navigate(snapshot.status === 'STORAGE_UNAVAILABLE' ? '/settings/document' : '/setup/document', { replace: true, state: { from: location.pathname } });
-    }).catch(() => { if (live) setFailed(true); });
-    return () => { live = false; };
-  }, [attempt, location.pathname, navigate]);
-  if (failed) return <main className="setup-page"><section className="setup-card" role="alert">
-    <h1>문서 연결 상태를 확인할 수 없습니다</h1>
-    <p>서버 연결을 확인한 뒤 다시 시도하거나 문서 연결 설정을 열어 주세요.</p>
-    <div className="setup-gate-actions">
-      <button className="button button-primary" type="button" onClick={() => { setFailed(false); setAttempt((value) => value + 1); }}>다시 확인</button>
-      <Link className="button button-secondary" to="/settings/document">문서 연결 설정</Link>
-    </div>
-  </section></main>;
-  return allowed ? <>{children}</> : <main className="setup-page"><p role="status">문서 연결 상태를 확인하는 중…</p></main>;
-}
-
 type RecordingSession = MeetingSession & { title: string; draft?: MeetingDraft };
 const RECORDING_SESSION_STORAGE_KEY = 'meeting-automation.recording-session';
 
@@ -663,36 +638,38 @@ export function App({ onNewMeetingSubmit = () => undefined, onMinutesSave, minut
   const shouldWarnBeforeLeaving = recordingGuard || processingNavigationGuard || reviewNavigationGuard;
   // 로그인 세션 관리(#15): 진행 중 작업이 있으면 만료돼도 끝날 때까지 로그인 화면으로 보내지 않고, 녹음·처리 중에는 세션을 계속 갱신한다
   useReportSessionWork(shouldWarnBeforeLeaving, isActiveRecording);
+  // 문서 연결 확인(CMN-04, #19) 중·실패 화면은 메뉴를 숨기는 새 화면이라, 그동안 기존 헤더·하단 탭을 숨긴다
+  const gateBlocking = useGateBlocking();
 
   return (
     <div className="app-shell">
       <NavigationLeaveGuard active={shouldWarnBeforeLeaving} />
-      <header className="product-header">
+      {!gateBlocking && <header className="product-header">
         <Link className="product-header-brand" to="/" aria-label="Windsoft Minutes 홈">
           <img src="/assets/windsoft-favicon-mark.png" alt="" />
           <span className="product-header-company"><span>Wind</span><span>soft</span></span>
           <span className="product-header-divider" aria-hidden="true" />
           <span className="product-header-product">Minutes</span>
         </Link>
-      </header>
+      </header>}
       <div className="app-route-viewport">
         <Routes>
-          <Route path="/" element={<SetupGate><HomePage /></SetupGate>} />
+          <Route path="/" element={<DocumentGate><HomePage /></DocumentGate>} />
           <Route path="/setup/document" element={<DocumentSetupWizard />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/settings/document" element={<DocumentSetupWizard settings />} />
           <Route path="/meetings" element={<MeetingsPage />} />
-          <Route path="/meetings/new" element={<SetupGate><NewMeetingRoute onCreated={(session) => { setCreatedSession(session); saveRecordingSession(session); setRecordingState('Ready'); setRecordingNavigationLocked(false); }} onSubmitted={onNewMeetingSubmit} /></SetupGate>} />
+          <Route path="/meetings/new" element={<DocumentGate><NewMeetingRoute onCreated={(session) => { setCreatedSession(session); saveRecordingSession(session); setRecordingState('Ready'); setRecordingNavigationLocked(false); }} onSubmitted={onNewMeetingSubmit} /></DocumentGate>} />
           <Route path="/meetings/:documentId" element={<MeetingDetailPage />} />
           <Route path="/meetings/:sessionId/recording" element={<MeetingRecordingRoute session={createdSession} setState={setRecordingState} setNavigationLocked={setRecordingNavigationLocked} clearSession={() => setCreatedSession(null)} mediaAdapter={mediaAdapter} />} />
           <Route path="/meetings/:sessionId/processing" element={<ProcessingPage onNavigationGuardChange={setProcessingNavigationGuard} />} />
           <Route path="/meetings/:sessionId/review" element={<ReviewSpeakerPage drafts={speakerDrafts} onInitialize={initializeSpeakerDraft} onChange={updateSpeakerDraft} onCommit={commitSpeakerMappings} onMinutesSave={onMinutesSave} minutesSaveState={minutesSaveState} onNavigationGuardChange={setReviewNavigationGuard} />} />
           <Route path="/meetings/:sessionId/complete" element={<CompletePage />} />
-          <Route path="/participants" element={<SetupGate><ParticipantsPage /></SetupGate>} />
-          <Route path="/settings/participants" element={<SetupGate><ParticipantsPage /></SetupGate>} />
+          <Route path="/participants" element={<DocumentGate><ParticipantsPage /></DocumentGate>} />
+          <Route path="/settings/participants" element={<DocumentGate><ParticipantsPage /></DocumentGate>} />
         </Routes>
       </div>
-      {!isActiveRecording && !isDocumentConnectionRoute && <BottomNavigation />}
+      {!isActiveRecording && !isDocumentConnectionRoute && !gateBlocking && <BottomNavigation />}
     </div>
   );
 }

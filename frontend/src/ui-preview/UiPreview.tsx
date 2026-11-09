@@ -11,6 +11,7 @@ import {
   X,
 } from 'lucide-react';
 import { recoverBackendAvailability } from '../apiRecovery';
+import { DocumentGateScreen } from '../documentGate/DocumentGateScreen';
 import {
   AppCanvas,
   AppShell,
@@ -45,7 +46,9 @@ export default function UiPreview() {
   const view = params.get('view');
   return (
     <ToastProvider>
-      {view === 'shell' || view === 'focus' ? (
+      {view === 'gate-checking' || view === 'gate-failed' ? (
+        <DocumentGateScreen state={view === 'gate-checking' ? 'checking' : 'failed'} onRetry={() => undefined} />
+      ) : view === 'shell' || view === 'focus' ? (
         <ShellSample focus={view === 'focus'} />
       ) : (
         <ComponentsView />
@@ -422,7 +425,7 @@ function fakeBackend(upAfterMs?: number): typeof fetch {
 /** 서버 연결 복구 (CMN-02)·페이지 없음 (CMN-03). Preview에서는 운영 서버를 끌 수 없어 가짜 응답으로 띄운다 */
 function RecoverySection() {
   return (
-    <Section title="서버 연결 복구 · 페이지 없음">
+    <Section title="공통 상태 화면">
       <Row label="일러스트">
         <ServerRecoveryIllustration state="waiting" className="w-30 tablet:w-40" />
         <ServerRecoveryIllustration state="ready" className="w-30 tablet:w-40" />
@@ -437,6 +440,12 @@ function RecoverySection() {
         </Button>
         <Link to="/__ui/없는-주소" className="inline-flex h-12 items-center px-2 text-label text-link">
           페이지 없음
+        </Link>
+        <Link to="/__ui?view=gate-checking" className="inline-flex h-12 items-center px-2 text-label text-link">
+          문서 연결 확인 중
+        </Link>
+        <Link to="/__ui?view=gate-failed" className="inline-flex h-12 items-center px-2 text-label text-link">
+          문서 연결 확인 실패
         </Link>
       </Row>
     </Section>
