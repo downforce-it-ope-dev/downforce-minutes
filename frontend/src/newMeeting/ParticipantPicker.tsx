@@ -132,7 +132,7 @@ export function ParticipantPicker({
             )}
           </div>
         ) : (
-          <ul aria-label="참석자 목록" className="flex flex-col p-2">
+          <ul aria-label="참석자 목록" className="flex flex-col gap-1 p-2">
             {visible.map((item) => {
               const checked = selectedIds.includes(item.id);
               const self = item.id === selfId;
@@ -140,7 +140,7 @@ export function ParticipantPicker({
                 <li key={item.id}>
                   <label
                     className={cn(
-                      'flex min-h-18 items-center gap-3 rounded-md px-3 tablet:min-h-15',
+                      'flex min-h-17 items-center gap-3 rounded-md px-3 tablet:min-h-14',
                       self ? 'cursor-default' : 'cursor-pointer active:bg-bg-subtle',
                       checked && 'bg-selected',
                     )}
