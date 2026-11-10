@@ -16,6 +16,8 @@ export interface OtpInputProps {
   describedBy?: string;
   disabled?: boolean;
   autoFocus?: boolean;
+  /** 칸을 키워 바깥 폭을 가득 채운다 (인증 코드 화면에서 남은 시간 막대와 폭을 맞춤) */
+  fullWidth?: boolean;
   className?: string;
 }
 
@@ -35,6 +37,7 @@ export function OtpInput({
   describedBy,
   disabled = false,
   autoFocus = false,
+  fullWidth = false,
   className,
 }: OtpInputProps) {
   const groupId = useId();
@@ -109,7 +112,7 @@ export function OtpInput({
       role="group"
       aria-labelledby={`${groupId}-label`}
       aria-describedby={describedBy}
-      className={cn('flex gap-2', className)}
+      className={cn('flex', fullWidth ? 'w-full gap-2 tablet:gap-4' : 'gap-2', className)}
     >
       <span id={`${groupId}-label`} className="sr-only">
         {label}
@@ -138,7 +141,8 @@ export function OtpInput({
           onKeyDown={(event) => handleKeyDown(index, event)}
           onPaste={(event) => handlePaste(index, event)}
           className={cn(
-            'size-12 tablet:size-13 rounded-md border bg-bg text-center text-title text-text tabular-nums caret-primary',
+            fullWidth ? 'aspect-square min-w-0 flex-1 text-headline' : 'size-12 text-title tablet:size-13',
+            'rounded-md border bg-bg text-center text-text tabular-nums caret-primary',
             'disabled:cursor-not-allowed disabled:bg-neutral-100 disabled:text-neutral-500',
             error ? 'border-danger' : 'border-border-input focus:border-primary',
           )}

@@ -172,6 +172,7 @@ function VerifyForm({ initial }: { initial: VerifyLocationState }) {
             error={codeError}
             disabled={expired || locked || verifying}
             autoFocus
+            fullWidth
           />
         </div>
 
@@ -188,7 +189,6 @@ function VerifyForm({ initial }: { initial: VerifyLocationState }) {
             value={remaining}
             max={totalSeconds}
             valueText={`${remaining}초 남음`}
-            className="max-w-sm"
           />
           <span className="sr-only" aria-live="polite">
             {spokenRemaining(remaining)}
@@ -208,7 +208,7 @@ function VerifyForm({ initial }: { initial: VerifyLocationState }) {
           loading={resending}
           onClick={() => void resend()}
         >
-          코드 다시 받기{resendWait > 0 && <span className="tabular-nums"> ({resendWait}초)</span>}
+          코드 다시 받기
         </Button>
       </form>
     </AuthLayout>
