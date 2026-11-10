@@ -164,6 +164,31 @@ describe('회의 녹음 (MTG-02)', () => {
     await waitFor(() => expect(adapter.getUserMedia).toHaveBeenCalledTimes(2));
   });
 
+  it('마이크가 멈춘 신호만 보내면 입력 없음을 보이고 토스트로 알리며, 다시 확인하면 마이크를 새로 연다', async () => {
+    const adapter = fakeAdapter();
+    let now = 0;
+    let emit: ((level: number, signal?: { frozen?: boolean }) => void) | undefined;
+    adapter.now = () => now;
+    adapter.monitorInput = vi.fn((_stream, onLevel) => {
+      emit = onLevel;
+      return () => undefined;
+    });
+    renderRoute(adapter);
+    await waitFor(() => expect(emit).toBeDefined());
+    act(() => emit?.(0.4));
+    expect(await screen.findByRole('status', { name: '마이크 입력이 감지되었습니다' })).toBeTruthy();
+
+    act(() => emit?.(0, { frozen: true }));
+    now = 6_000;
+    act(() => emit?.(0, { frozen: true }));
+
+    expect(await screen.findByRole('status', { name: '마이크 소리가 들어오지 않습니다' })).toBeTruthy();
+    expect(screen.getByText('마이크 소리가 들어오지 않습니다. 기기의 마이크 설정을 확인해 주세요.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: '녹음 시작' }).getAttribute('aria-disabled')).toBe('true');
+    fireEvent.click(screen.getByRole('button', { name: '마이크 다시 확인' }));
+    await waitFor(() => expect(adapter.getUserMedia).toHaveBeenCalledTimes(2));
+  });
+
   it('녹음 중 화면 꺼짐 방지를 요청하고, 지원하지 않으면 한 번만 알린다', async () => {
     const release = vi.fn(async () => undefined);
     const request = vi.fn(async () => ({ released: false, release }));

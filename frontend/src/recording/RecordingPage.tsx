@@ -55,6 +55,8 @@ function SessionMissing() {
 
 const dateFormat = new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' });
 
+const MIC_STALLED_MESSAGE = '마이크 소리가 들어오지 않습니다. 기기의 마이크 설정을 확인해 주세요.';
+
 const END_FAILURES = ['retryable', 'incomplete', 'upload-failed', 'failed'] as const;
 const END_RUNNING = ['stopping', 'persisting', 'uploading', 'starting'] as const;
 const END_STEP_LABEL: Record<string, string> = {
@@ -123,7 +125,8 @@ function RecordingBody({
   // 오류·실패 문구는 토스트로 알린다. 토스트는 하나만 보이므로 가장 중요한 것 하나만 고른다
   // (종료 처리 실패 > 업로드 실패 > 마이크·저장 오류). 같은 문구는 한 번만 띄운다
   const uploadProblem = ['retryable', 'failed', 'session-not-found'].includes(uploadSnapshot.status) ? (uploadSnapshot.message ?? '') : '';
-  const notice = (endFailed ? endSnapshot.message : '') || uploadProblem || storageError || snapshot.errorMessage || '';
+  const stalledProblem = snapshot.microphoneInputStalled && !snapshot.completed ? MIC_STALLED_MESSAGE : '';
+  const notice = (endFailed ? endSnapshot.message : '') || uploadProblem || storageError || snapshot.errorMessage || stalledProblem || '';
   useNotice(notice, (message) => toast({ message, tone: 'danger', duration: 8000 }));
 
   const draft = session.draft;
@@ -193,7 +196,7 @@ function RecordingBody({
             <RoundActionButton
               icon={Mic}
               label="녹음 시작"
-              disabled={snapshot.microphoneStatus !== 'ready' || !snapshot.microphoneInputDetected || returning}
+              disabled={snapshot.microphoneStatus !== 'ready' || !snapshot.microphoneInputDetected || snapshot.microphoneInputStalled || returning}
               onClick={() => void actions.start()}
             />
           )}
@@ -356,16 +359,20 @@ function LevelWaveform({ level, state }: { level: number; state: RecordingSnapsh
 }
 
 function MicrophoneChip({ snapshot, onRetry }: { snapshot: RecordingSnapshot; onRetry: () => void }) {
-  const { microphoneStatus, microphoneInputDetected } = snapshot;
+  const { microphoneStatus, microphoneInputDetected, microphoneInputStalled } = snapshot;
+  const unavailable = microphoneStatus === 'error' || (microphoneStatus === 'ready' && microphoneInputStalled);
   const view =
     microphoneStatus === 'checking'
       ? { label: '마이크를 확인하고 있습니다', short: '확인 중', lamp: 'bg-neutral-400', tone: 'bg-bg-subtle' }
       : microphoneStatus === 'error'
         ? { label: '마이크를 사용할 수 없습니다', short: '사용 불가', lamp: 'bg-danger', tone: 'bg-danger-soft' }
-        : microphoneInputDetected
+        : microphoneInputStalled
+          ? { label: '마이크 소리가 들어오지 않습니다', short: '입력 없음', lamp: 'bg-danger', tone: 'bg-danger-soft' }
+          : microphoneInputDetected
           ? { label: '마이크 입력이 감지되었습니다', short: '입력 감지', lamp: 'bg-success-text', tone: 'bg-success-soft' }
-          : { label: '마이크 입력 대기 중', short: '입력 대기', lamp: 'bg-warning-text', tone: 'bg-warning-soft' };
-  const canRetry = microphoneStatus === 'error' || (microphoneStatus === 'ready' && !microphoneInputDetected);
+            : { label: '마이크 입력 대기 중', short: '입력 대기', lamp: 'bg-warning-text', tone: 'bg-warning-soft' };
+  // 다시 확인은 녹음 시작 전에만 동작한다(녹음 중에는 마이크를 바꾸지 않음)
+  const canRetry = snapshot.state === 'Ready' && !snapshot.completed && (unavailable || (microphoneStatus === 'ready' && !microphoneInputDetected));
   return (
     <div className="flex items-center gap-2">
       <div
@@ -375,7 +382,7 @@ function MicrophoneChip({ snapshot, onRetry }: { snapshot: RecordingSnapshot; on
         className={cn('inline-flex h-10 items-center gap-2 rounded-full px-4 text-body text-text tablet:h-12 tablet:px-5 tablet:text-body-lg', view.tone)}
       >
         <span className="relative shrink-0">
-          <Icon icon={microphoneStatus === 'error' ? MicOff : Mic} size="md" />
+          <Icon icon={unavailable ? MicOff : Mic} size="md" />
           <span aria-hidden="true" className={cn('absolute -right-0.5 -bottom-0.5 size-2.5 rounded-full ring-2 ring-bg', view.lamp)} />
         </span>
         <span aria-hidden="true">{view.short}</span>
@@ -383,7 +390,7 @@ function MicrophoneChip({ snapshot, onRetry }: { snapshot: RecordingSnapshot; on
       {canRetry && (
         <IconButton
           icon={RefreshCw}
-          label={microphoneStatus === 'error' ? '마이크 다시 확인' : '마이크 입력 다시 확인'}
+          label={unavailable ? '마이크 다시 확인' : '마이크 입력 다시 확인'}
           variant="surface"
           onClick={onRetry}
         />
@@ -410,7 +417,7 @@ function DiagnosticsPanel({ recording }: { recording: ReturnType<typeof useRecor
   const { snapshot, uploadSnapshot, endSnapshot, diagnostics } = recording;
   const rows: Array<[string, string]> = [
     ['state', `${snapshot.state}${snapshot.completed ? ' (completed)' : ''}`],
-    ['mic', `${snapshot.microphoneStatus} / detected=${snapshot.microphoneInputDetected}`],
+    ['mic', `${snapshot.microphoneStatus} / detected=${snapshot.microphoneInputDetected} / stalled=${Boolean(snapshot.microphoneInputStalled)}`],
     ['level', `${snapshot.microphoneLevel.toFixed(3)} (updates ${diagnostics.levelUpdates})`],
     ['elapsedMs', String(snapshot.elapsedMs)],
     ['chunks', `${diagnostics.chunks} (${diagnostics.chunkBytes} bytes)`],
@@ -418,7 +425,7 @@ function DiagnosticsPanel({ recording }: { recording: ReturnType<typeof useRecor
     ['end', endSnapshot.status],
     ['error', recording.storageError || snapshot.errorMessage || uploadSnapshot.message || endSnapshot.message || '-'],
     ['audioContext', monitorDiagnostics.audioContext],
-    ['monitor ticks', `${monitorDiagnostics.ticks} (raw ${monitorDiagnostics.rawLevel.toFixed(4)})`],
+    ['monitor ticks', `${monitorDiagnostics.ticks} (raw ${monitorDiagnostics.rawLevel.toExponential(2)}${monitorDiagnostics.frozen ? ' frozen' : ''})`],
     ['mic track', monitorDiagnostics.track],
   ];
   return (

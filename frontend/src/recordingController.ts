@@ -27,7 +27,8 @@ export type MediaRecorderAdapter = {
   isMediaRecorderSupported: () => boolean;
   isTypeSupported: (mimeType: string) => boolean;
   getUserMedia: () => Promise<MediaStreamLike>;
-  monitorInput?: (stream: MediaStreamLike, onLevel: (level: number) => void) => () => void;
+  /** signal.frozen: 측정 구간의 샘플이 모두 같음 (기기가 멈춘 신호를 보냄) */
+  monitorInput?: (stream: MediaStreamLike, onLevel: (level: number, signal?: { frozen?: boolean }) => void) => () => void;
   createRecorder: (stream: MediaStreamLike, options: { mimeType: string }) => RecorderLike;
   now: () => number;
   nowEpoch: () => number;
@@ -42,6 +43,8 @@ export type RecordingSnapshot = {
   microphoneStatus: 'checking' | 'ready' | 'error';
   microphoneLevel: number;
   microphoneInputDetected: boolean;
+  /** 마이크가 INPUT_STALL_MS 넘게 멈춘 신호만 보냄 (녹음해도 소리가 담기지 않음, #27) */
+  microphoneInputStalled?: boolean;
   errorMessage?: string;
   completed?: boolean;
 };
@@ -63,6 +66,8 @@ type ControllerOptions = {
 };
 
 const ELAPSED_REFRESH_MS = 1_000;
+/** 이 시간 넘게 멈춘 신호만 들어오면 입력이 없다고 본다. 측정 시작 직후의 빈 구간은 넘긴다 */
+export const INPUT_STALL_MS = 5_000;
 const ERRORS = {
   unsupported: '이 브라우저에서는 녹음을 지원하지 않습니다.',
   unsupportedMime: '지원되는 녹음 형식이 없습니다.',
@@ -97,6 +102,7 @@ export class RecordingController {
   private startGeneration = 0;
   private monitorCleanup: (() => void) | null = null;
   private microphoneCheckInProgress = false;
+  private frozenSince: number | null = null;
 
   constructor(options: ControllerOptions) { this.options = options; }
 
@@ -152,7 +158,9 @@ export class RecordingController {
   async prepareMicrophone(): Promise<void> {
     if (this.disposed || this.snapshot.state !== 'Ready' || this.microphoneCheckInProgress) return;
     this.microphoneCheckInProgress = true;
-    this.publish({ microphoneStatus: 'checking', microphoneLevel: 0, microphoneInputDetected: false, errorMessage: undefined });
+    // 멈춘 신호를 보내던 마이크는 측정만 다시 해서는 돌아오지 않으므로 새로 연다
+    if (this.stream && this.snapshot.microphoneInputStalled) this.releaseTracks();
+    this.publish({ microphoneStatus: 'checking', microphoneLevel: 0, microphoneInputDetected: false, microphoneInputStalled: false, errorMessage: undefined });
     if (this.stream) {
       try {
         this.monitorCleanup?.();
@@ -198,9 +206,19 @@ export class RecordingController {
   }
 
   private startInputMonitor(stream: MediaStreamLike) {
-    this.monitorCleanup = this.options.adapter.monitorInput?.(stream, (level) => {
+    this.frozenSince = null;
+    this.monitorCleanup = this.options.adapter.monitorInput?.(stream, (level, signal) => {
       const normalizedLevel = Math.max(0, Math.min(1, level));
-      this.publish({ microphoneStatus: 'ready', microphoneLevel: normalizedLevel, microphoneInputDetected: this.snapshot.microphoneInputDetected || normalizedLevel > .025 });
+      const now = this.options.adapter.now();
+      if (!signal?.frozen) this.frozenSince = null;
+      else if (this.frozenSince === null) this.frozenSince = now;
+      const stalled = this.frozenSince !== null && now - this.frozenSince >= INPUT_STALL_MS;
+      this.publish({
+        microphoneStatus: 'ready',
+        microphoneLevel: normalizedLevel,
+        microphoneInputDetected: this.snapshot.microphoneInputDetected || normalizedLevel > .025,
+        microphoneInputStalled: stalled,
+      });
     }) ?? null;
     if (!this.options.adapter.monitorInput) this.publish({ microphoneStatus: 'ready', microphoneInputDetected: true });
     else this.publish({ microphoneStatus: 'ready' });
