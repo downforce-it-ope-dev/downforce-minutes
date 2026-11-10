@@ -7,6 +7,7 @@ import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-rou
 import { App } from './App';
 import { HomePage } from './home/HomePage';
 import { NewMeetingPage } from './newMeeting/NewMeetingPage';
+import { RecordingRoute } from './recording/RecordingPage';
 import type { MediaRecorderAdapter, RecorderLike } from './recordingController';
 import { ChunkRepository } from './chunkRepository';
 // @ts-expect-error Node's Blob exercises browser-style IndexedDB structured cloning in jsdom.
@@ -103,14 +104,22 @@ function renderHomeWithDestinationFixture() {
   );
 }
 
+/** 실제 RootRoutes처럼 새 회의·녹음(리뉴얼)은 App 밖, 처리 이후는 App이 그린다 */
+function RecordingRoutes({ mediaAdapter }: { mediaAdapter?: MediaRecorderAdapter }) {
+  return (
+    <Routes>
+      <Route path="/meetings/new" element={<NewMeetingPage />} />
+      <Route path="/meetings/:sessionId/recording" element={<RecordingRoute mediaAdapter={mediaAdapter} />} />
+      <Route path="*" element={<App />} />
+    </Routes>
+  );
+}
+
 /** 새 회의(리뉴얼, App 밖)에서 시작해 녹음 이후(기존 App)로 이어지는 흐름. 실제 RootRoutes처럼 두 라우트를 나란히 둔다 */
 function renderNewMeetingFlow({ mediaAdapter, strict = false, extra }: { mediaAdapter?: MediaRecorderAdapter; strict?: boolean; extra?: ReactNode } = {}) {
   const tree = (
     <MemoryRouter initialEntries={['/meetings/new']}>
-      <Routes>
-        <Route path="/meetings/new" element={<NewMeetingPage />} />
-        <Route path="*" element={<App mediaAdapter={mediaAdapter} />} />
-      </Routes>
+      <RecordingRoutes mediaAdapter={mediaAdapter} />
       {extra}
     </MemoryRouter>
   );
@@ -700,7 +709,7 @@ describe('Recording route', () => {
     const fetchMock = vi.fn(async () => response({ data: { receivedSequences: [], receivedChunks: 0, totalBytes: 0 } }));
     installFetchMock(fetchMock);
 
-    render(<MemoryRouter initialEntries={['/meetings/session-immediate-start/recording']}><App mediaAdapter={mediaAdapter} /></MemoryRouter>);
+    render(<MemoryRouter initialEntries={['/meetings/session-immediate-start/recording']}><RecordingRoutes mediaAdapter={mediaAdapter} /></MemoryRouter>);
     fireEvent.click(await screen.findByRole('button', { name: '녹음 시작' }));
     expect(mediaAdapter.getUserMedia).toHaveBeenCalledTimes(1);
     expect(await screen.findByText('녹음 중')).toBeTruthy();
@@ -726,7 +735,7 @@ describe('Recording route', () => {
     });
     installFetchMock(fetchMock);
 
-    render(<MemoryRouter initialEntries={['/meetings/session-reload/recording']}><App /></MemoryRouter>);
+    render(<MemoryRouter initialEntries={['/meetings/session-reload/recording']}><RecordingRoutes /></MemoryRouter>);
 
     expect(await screen.findByRole('heading', { name: 'Recovered planning' })).toBeTruthy();
     await waitFor(async () => {
@@ -754,7 +763,7 @@ describe('Recording route', () => {
     const fetchMock = vi.fn().mockResolvedValue(response({ error: { code: 'SESSION_NOT_FOUND' } }, 404));
     installFetchMock(fetchMock);
 
-    render(<MemoryRouter initialEntries={[`/meetings/${session.sessionId}/recording`]}><App /></MemoryRouter>);
+    render(<MemoryRouter initialEntries={[`/meetings/${session.sessionId}/recording`]}><RecordingRoutes /></MemoryRouter>);
 
     expect(await screen.findByText(/로컬 오디오는 보존되었습니다/)).toBeTruthy();
     const check = new ChunkRepository({ dbName: 'meeting-automation-chunks', maxChunkBytes: 1000000 });
@@ -818,7 +827,8 @@ describe('Recording route', () => {
     expect(await screen.findByRole('status', { name: '마이크 입력이 감지되었습니다' })).toBeTruthy();
     expect(screen.getByText('00:00:00')).toBeTruthy();
     expect(screen.getByRole('button', { name: '녹음 시작' })).toBeTruthy();
-    expect(screen.getByRole('navigation', { name: '주요 메뉴' })).toBeTruthy();
+    // 녹음은 집중 모드라 처음부터 메뉴가 없다 (MTG-02)
+    expect(screen.queryByRole('navigation', { name: '주 메뉴' })).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: '녹음 시작' }));
     expect(mediaAdapter.getUserMedia).toHaveBeenCalledTimes(2);
@@ -843,7 +853,7 @@ describe('Recording route', () => {
     expect(screen.getByText('녹음 중')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '회의 종료' }));
     fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: '회의 종료' }));
-    expect(await screen.findByText('녹음이 종료되었습니다.')).toBeTruthy();
+    expect(await screen.findByText('녹음 종료')).toBeTruthy();
     expect(screen.queryByRole('button', { name: '녹음 시작' })).toBeNull();
     expect(track.stop).toHaveBeenCalledTimes(2);
     fireEvent.click(screen.getByRole('button', { name: 'Open another session' }));
@@ -900,7 +910,7 @@ describe('Recording route', () => {
     installFetchMock(fetchMock);
 
     render(<MemoryRouter initialEntries={[`/meetings/${session.sessionId}/recording`]}>
-      <App mediaAdapter={mediaAdapter} />
+      <RecordingRoutes mediaAdapter={mediaAdapter} />
       <CurrentPath />
     </MemoryRouter>);
 
@@ -963,7 +973,7 @@ describe('Recording route', () => {
     });
     installFetchMock(fetchMock);
     render(<MemoryRouter initialEntries={[`/meetings/${session.sessionId}/recording`]}>
-      <App mediaAdapter={mediaAdapter} />
+      <RecordingRoutes mediaAdapter={mediaAdapter} />
       <CurrentPath />
     </MemoryRouter>);
 
@@ -1021,7 +1031,7 @@ describe('Recording route', () => {
     });
     installFetchMock(fetchMock);
 
-    render(<MemoryRouter initialEntries={[`/meetings/${session.sessionId}/recording`]}><App mediaAdapter={mediaAdapter} /></MemoryRouter>);
+    render(<MemoryRouter initialEntries={[`/meetings/${session.sessionId}/recording`]}><RecordingRoutes mediaAdapter={mediaAdapter} /></MemoryRouter>);
     await screen.findByRole('status', { name: '마이크 입력이 감지되었습니다' });
     fireEvent.click(await screen.findByRole('button', { name: '녹음 시작' }));
     await screen.findByText('녹음 중');
@@ -1034,7 +1044,8 @@ describe('Recording route', () => {
       fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: '회의 종료' }));
       recorder.onerror?.({ error: { name: 'UnknownError' } });
 
-      await waitFor(() => expect(screen.getByLabelText('처리 시작 상태').textContent).toContain('처리를 시작하지 못했습니다.'), { timeout: 1_000 });
+      await waitFor(() => expect(screen.getByLabelText('처리 시작 상태').textContent).toContain('처리 시작 실패'), { timeout: 1_000 });
+      expect(screen.getByText(/처리를 시작하지 못했습니다/)).toBeTruthy();
       expect(screen.queryByRole('button', { name: '녹음 시작' })).toBeNull();
       expect(screen.getByRole('link', { name: '새 회의 시작' }).getAttribute('href')).toBe('/meetings/new');
       expect(fetchMock.mock.calls.filter(([url]) => new URL(String(url)).pathname.endsWith('/process'))).toHaveLength(0);
@@ -1048,7 +1059,7 @@ describe('Recording route', () => {
   });
 
   it('offers a new meeting and no recording controls when runtime session context is missing or mismatched', () => {
-    render(<MemoryRouter initialEntries={['/meetings/missing-session/recording']}><App /></MemoryRouter>);
+    render(<MemoryRouter initialEntries={['/meetings/missing-session/recording']}><RecordingRoutes /></MemoryRouter>);
 
     expect(screen.getByRole('heading', { name: '녹음 세션을 찾을 수 없습니다' })).toBeTruthy();
     expect(screen.getByRole('link', { name: '새 회의 시작' }).getAttribute('href')).toBe('/meetings/new');

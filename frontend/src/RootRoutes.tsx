@@ -10,6 +10,7 @@ import { HomePage } from './home/HomePage';
 import { LEGACY_PATHS } from './legacyRoutes';
 import { NewMeetingPage } from './newMeeting/NewMeetingPage';
 import { NotFoundPage } from './notFound/NotFoundPage';
+import { RecordingRoute } from './recording/RecordingPage';
 import { ServerRecoveryOverlay } from './recovery/ServerRecoveryOverlay';
 import { ToastProvider } from './ui';
 
@@ -74,6 +75,15 @@ function AppRoutes() {
             <DocumentGate>
               <NewMeetingPage />
             </DocumentGate>
+          </RequireAuth>
+        }
+      />
+      {/* 회의 녹음 (MTG-02, #27). 집중 모드 */}
+      <Route
+        path="/meetings/:sessionId/recording"
+        element={
+          <RequireAuth>
+            <RecordingRoute />
           </RequireAuth>
         }
       />

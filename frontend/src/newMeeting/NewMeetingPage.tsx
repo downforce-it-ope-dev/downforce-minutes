@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router';
 import { FileText, Mic, UserPlus, X } from 'lucide-react';
 import { AccountButton, SidebarAccount } from '../auth/AccountMenu';
 import { loadAccountEmail } from '../auth/accountEmail';
-import { saveRecordingSession } from '../meeting/recordingSessionStore';
+import { saveRecordingSession, type RecordingDraft } from '../meeting/recordingSessionStore';
 import { createMeetingSession, type MeetingDraft, type MeetingSessionAttempt } from '../newMeetingApi';
 import {
   AppShell,
@@ -40,13 +40,14 @@ export function NewMeetingPage() {
   const location = useLocation();
   const initialDraft = (location.state as { draft?: MeetingDraft } | null)?.draft;
 
-  async function submit(attempt: MeetingSessionAttempt) {
+  async function submit(attempt: MeetingSessionAttempt, labels: { templateName?: string; participantNames: string[] }) {
     const session = await createMeetingSession(attempt);
-    const draft: MeetingDraft = {
+    const draft: RecordingDraft = {
       title: attempt.title,
       meetingDate: attempt.meetingDate,
       templateId: attempt.templateId,
       participantIds: [...attempt.participantIds],
+      ...labels,
     };
     saveRecordingSession({ ...session, title: attempt.title, draft });
     navigate(`/meetings/${encodeURIComponent(session.sessionId)}/recording`);
@@ -74,7 +75,7 @@ function NewMeetingForm({
   onSubmit,
 }: {
   initialDraft?: MeetingDraft;
-  onSubmit: (attempt: MeetingSessionAttempt) => Promise<void>;
+  onSubmit: (attempt: MeetingSessionAttempt, labels: { templateName?: string; participantNames: string[] }) => Promise<void>;
 }) {
   const toast = useToast();
   const tablet = useMediaQuery(TABLET_QUERY);

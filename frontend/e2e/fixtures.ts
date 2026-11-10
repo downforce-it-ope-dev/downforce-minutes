@@ -60,10 +60,9 @@ export function requestCapture(): CapturedRequests {
   return { meetingCreates: 0, confirmBodies: [], publishBodies: [], retryDeliveryIds: [] };
 }
 
-// SCR-002 새 회의는 리뉴얼(#26)되어 기존 화면 검사에서 뺐다. 검사는 e2e/new-meeting.spec.ts
+// SCR-002 새 회의(#26)·SCR-003 회의 녹음(#27)은 리뉴얼되어 기존 화면 검사에서 뺐다. 검사는 e2e/new-meeting.spec.ts·recording.spec.ts
 export const screens: Screen[] = [
   { id: 'SCR-001', route: '/', heading: /회의를 시작할까요\?/, headingLevel: 2, contentSelector: '.home-content', paddingSelector: '.home-page' },
-  { id: 'SCR-003', route: `/meetings/${sessionId}/recording`, heading: new RegExp(longKoreanTitle), contentSelector: '.recording-page', paddingSelector: '.recording-page' },
   { id: 'SCR-005', route: `/meetings/${sessionId}/processing`, heading: /회의 처리/, contentSelector: '.processing-page', paddingSelector: '.processing-page', apiState: 'processing' },
   { id: 'SCR-006', route: `/meetings/${sessionId}/review`, heading: /회의록 검토/, contentSelector: '.review-speaker-page', paddingSelector: '.review-speaker-page', apiState: 'review' },
   { id: 'SCR-007', route: `/meetings/${sessionId}/share`, heading: /회의록 공유/, contentSelector: '.share-page', paddingSelector: '.share-page', apiState: 'review' },

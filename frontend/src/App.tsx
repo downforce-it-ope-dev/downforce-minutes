@@ -9,23 +9,12 @@ import {
   updateParticipant,
 } from './participantsApi';
 import './tailwind.css';
-import { Link, NavLink, Route, Routes, useLocation, useNavigate, useParams } from 'react-router';
-import { cancelMeetingSession } from './newMeetingApi';
-import { clearRecordingSession, restoreRecordingSession, type RecordingSession } from './meeting/recordingSessionStore';
-import { RecordingPage, type RecordingViewState } from './RecordingPage';
+import { Link, NavLink, Route, Routes, useLocation } from 'react-router';
 import { CompletePage } from './CompletePage';
 import { restoreSlackWebhookSettings } from './slackSettingsApi';
 import { restoreEmailSettings } from './emailSettingsApi';
-import { browserMediaAdapter } from './browserMediaAdapter';
-import { RecordingController, type MediaRecorderAdapter, type RecordingSnapshot } from './recordingController';
 import { AsyncState } from './components/async-state/AsyncState';
 import { normalizeApiError } from './lib/api/normalizeApiError';
-import { ChunkRecorderAdapter } from './chunkRecorderAdapter';
-import { ChunkRepository } from './chunkRepository';
-import { getReceivedAudioStatus, putAudioChunk } from './audioUploadApi';
-import { ChunkUploadCoordinator, type ChunkUploadSnapshot } from './chunkUploadCoordinator';
-import { startProcessing } from './processingStartApi';
-import { ProcessingAttemptStore, RecordingEndCoordinator, type RecordingEndSnapshot } from './recordingEndCoordinator';
 import { ProcessingPage } from './ProcessingPage';
 import { ReviewSpeakerPage } from './ReviewSpeakerPage';
 import type { ReviewSpeaker, StructuredMinutes } from './reviewApi';
@@ -341,203 +330,6 @@ function ParticipantsPage() {
   );
 }
 
-function MeetingRecordingRoute({ session, setState, setNavigationLocked, clearSession, mediaAdapter }: {
-  session: RecordingSession | null;
-  setState: (state: RecordingViewState) => void;
-  setNavigationLocked: (locked: boolean) => void;
-  clearSession: () => void;
-  mediaAdapter: MediaRecorderAdapter;
-}) {
-  const { sessionId } = useParams();
-  if (!session || session.sessionId !== sessionId) return (
-    <main className="recording-unavailable">
-      <h1>녹음 세션을 찾을 수 없습니다</h1>
-      <p>새 회의를 시작해 녹음 세션을 만들어 주세요.</p>
-      <Link className="button button-primary" to="/meetings/new">새 회의 시작</Link>
-    </main>
-  );
-  return <ActiveMeetingRecordingRoute session={session} setState={setState} setNavigationLocked={setNavigationLocked} clearSession={clearSession} mediaAdapter={mediaAdapter} />;
-}
-
-function ActiveMeetingRecordingRoute({ session, setState, setNavigationLocked, clearSession, mediaAdapter }: {
-  session: RecordingSession;
-  setState: (state: RecordingViewState) => void;
-  setNavigationLocked: (locked: boolean) => void;
-  clearSession: () => void;
-  mediaAdapter: MediaRecorderAdapter;
-}) {
-  const navigate = useNavigate();
-  const [snapshot, setSnapshot] = useState<RecordingSnapshot>({ state: 'Ready', elapsedMs: 0, microphoneStatus: 'checking', microphoneLevel: 0, microphoneInputDetected: false });
-  const [storageError, setStorageError] = useState('');
-  const [uploadSnapshot, setUploadSnapshot] = useState<ChunkUploadSnapshot>({ status: 'idle', totalCount: 0, confirmedCount: 0, pendingCount: 0 });
-  const [endSnapshot, setEndSnapshot] = useState<RecordingEndSnapshot>({ status: 'idle' });
-  const controllerRef = useRef<RecordingController | null>(null);
-  const persistenceTail = useRef<Promise<unknown>>(Promise.resolve());
-  const persistenceError = useRef<unknown>(null);
-  const finalDurationMs = useRef<number | null>(null);
-  const stopPromise = useRef<Promise<number> | null>(null);
-  const stopWaiter = useRef<{ resolve: (durationMs: number) => void; reject: (error: unknown) => void } | null>(null);
-  const repository = useMemo(() => new ChunkRepository({
-    dbName: 'meeting-automation-chunks',
-    maxChunkBytes: session.uploadPolicy.maxChunkBytes,
-  }), [session.uploadPolicy.maxChunkBytes]);
-  const uploader = useMemo(() => {
-    const fetchImpl = globalThis.fetch.bind(globalThis);
-    return new ChunkUploadCoordinator({
-      repository,
-      api: {
-        getReceivedSequences: async (sessionId) => (await getReceivedAudioStatus(sessionId, fetchImpl)).receivedSequences,
-        putChunk: async (_sessionId, chunk) => putAudioChunk(chunk, fetchImpl),
-      },
-      onChange: setUploadSnapshot,
-    });
-  }, [repository]);
-  const endCoordinator = useRef<RecordingEndCoordinator | null>(null);
-  useEffect(() => {
-    const coordinator = new RecordingEndCoordinator({
-      sessionId: session.sessionId,
-      stopRecorderAndWait: () => {
-        if (finalDurationMs.current !== null) return Promise.resolve(finalDurationMs.current);
-        if (stopPromise.current) return stopPromise.current;
-        const waitingForStop = new Promise<number>((resolve, reject) => {
-          const controller = controllerRef.current;
-          if (!controller) { reject(new Error('Recorder is unavailable.')); return; }
-          stopWaiter.current = { resolve, reject };
-          controller.stop();
-          const current = controller.getSnapshot();
-          if (current.errorMessage && !current.completed) {
-            stopWaiter.current = null;
-            reject(new Error('Recorder did not stop cleanly.'));
-          }
-        });
-        stopPromise.current = waitingForStop;
-        return waitingForStop;
-      },
-      waitForPersistence: async () => {
-        await persistenceTail.current;
-        if (persistenceError.current) throw new Error('Chunk persistence did not complete.');
-      },
-      flushUploads: async () => {
-        const result = await uploader.uploadPending(session.sessionId);
-        const pending = await repository.getPending(session.sessionId);
-        if (pending.chunks.length > 0 || (pending.session?.pendingCount ?? 0) > 0) {
-          return { ...result, status: 'retryable', pendingCount: pending.chunks.length };
-        }
-        return result;
-      },
-      reconcileUploads: () => uploader.reconcile(session.sessionId),
-      getAudioState: () => repository.getPending(session.sessionId),
-      startProcessing: (request, idempotencyKey) => startProcessing(session.sessionId, request, idempotencyKey),
-      clearLocalAudio: () => repository.clearSessionAudio(session.sessionId),
-      navigateToProcessing: (sessionId) => navigate(`/meetings/${encodeURIComponent(sessionId)}/processing`),
-      attemptStore: new ProcessingAttemptStore(),
-      onChange: setEndSnapshot,
-    });
-    endCoordinator.current = coordinator;
-    return () => { if (endCoordinator.current === coordinator) endCoordinator.current = null; };
-  }, [navigate, repository, session.sessionId, uploader]);
-
-  useEffect(() => () => repository.close(), [repository]);
-  useEffect(() => {
-    void uploader.uploadPending(session.sessionId).catch(() => undefined);
-  }, [uploader, session.sessionId]);
-
-  useLayoutEffect(() => {
-    let active = true;
-    const chunkAdapter = new ChunkRecorderAdapter({
-      repository,
-      sessionId: session.sessionId,
-      onError: () => {
-        if (!active) return;
-        setStorageError('녹음 데이터를 브라우저 임시 저장소에 보관하지 못했습니다. 저장 공간이나 브라우저 상태를 확인해 주세요.');
-        controllerRef.current?.stop();
-      },
-    });
-    const current = new RecordingController({
-      uploadPolicy: session.uploadPolicy,
-      adapter: mediaAdapter,
-      onChange: (next) => {
-        setSnapshot(next);
-        setState(next.state);
-        if (next.completed) setNavigationLocked(false);
-        else if (next.state === 'Recording' || next.state === 'Paused') setNavigationLocked(true);
-        if (next.errorMessage && stopWaiter.current) {
-          const waiter = stopWaiter.current;
-          stopWaiter.current = null;
-          waiter.reject(new Error('Recorder did not stop cleanly.'));
-        }
-      },
-      onChunk: (chunk) => {
-        const persisted = persistenceTail.current.catch(() => undefined).then(() => chunkAdapter.accept(chunk));
-        persistenceTail.current = persisted;
-        void persisted.then(() => uploader.uploadPending(session.sessionId)).catch((error: unknown) => {
-          persistenceError.current = error;
-          setStorageError('녹음 데이터를 브라우저 임시 저장소에 보관하지 못했습니다. 저장 공간이나 브라우저 상태를 확인해 주세요.');
-          controllerRef.current?.stop();
-        });
-      },
-      onStopComplete: (elapsedMs) => {
-        finalDurationMs.current = elapsedMs;
-        setSnapshot((previous) => ({ ...previous, state: 'Ready', elapsedMs, completed: true }));
-        setState('Ready');
-        void persistenceTail.current.then(() => uploader.uploadPending(session.sessionId)).catch(() => undefined);
-        stopWaiter.current?.resolve(elapsedMs);
-        stopWaiter.current = null;
-      },
-    });
-    controllerRef.current = current;
-    void current.prepareMicrophone();
-    return () => {
-      active = false;
-      current.dispose();
-      if (controllerRef.current === current) controllerRef.current = null;
-    };
-  }, [session, setState, setNavigationLocked, mediaAdapter, repository, uploader]);
-
-  return <RecordingPage
-    sessionId={session.sessionId}
-    title={session.title}
-    state={snapshot.state}
-    elapsedMs={snapshot.elapsedMs}
-    microphoneStatus={snapshot.microphoneStatus}
-    microphoneLevel={snapshot.microphoneLevel}
-    microphoneInputDetected={snapshot.microphoneInputDetected}
-    errorMessage={storageError || snapshot.errorMessage}
-    completed={snapshot.completed}
-    endFlowFailed={endSnapshot.status === 'failed'}
-    uploadSnapshot={uploadSnapshot}
-    endSnapshot={endSnapshot}
-    onRetryUpload={() => {
-      void uploader.retryManually(session.sessionId).then((result) => {
-        if (endSnapshot.status === 'upload-failed' && result.status === 'complete') void endCoordinator.current?.start();
-      });
-    }}
-    onRetryProcessing={() => { setNavigationLocked(true); void endCoordinator.current?.start(); }}
-    onRetryMicrophone={() => { void controllerRef.current?.prepareMicrophone(); }}
-    onReturnToSetup={async () => {
-      await cancelMeetingSession(session.sessionId);
-      setNavigationLocked(false);
-      setState('Ready');
-      clearSession();
-      clearRecordingSession();
-      navigate('/meetings/new', { state: session.draft ? { draft: session.draft } : null });
-    }}
-    onStart={async () => {
-      setNavigationLocked(true);
-      const controller = controllerRef.current;
-      if (!controller) { setNavigationLocked(false); return; }
-      await controller.start();
-      const current = controller.getSnapshot();
-      if (current.state === 'Ready' && current.errorMessage && !current.completed) setNavigationLocked(false);
-    }}
-    onPause={() => controllerRef.current?.pause()}
-    onResume={() => controllerRef.current?.resume()}
-    onRequestEnd={() => undefined}
-    onConfirmEnd={() => { setNavigationLocked(true); void endCoordinator.current?.start(); }}
-    onCancelEnd={() => undefined}
-  />;
-}
-
 function BottomNavigation() {
   return (
     <nav className="bottom-navigation" aria-label="주요 메뉴">
@@ -549,18 +341,14 @@ function BottomNavigation() {
   );
 }
 
-export function App({ onMinutesSave, minutesSaveState, mediaAdapter = browserMediaAdapter }: {
+export function App({ onMinutesSave, minutesSaveState }: {
   onMinutesSave?: (sessionId: string, minutes: StructuredMinutes) => void;
   minutesSaveState?: MinutesSaveState;
-  mediaAdapter?: MediaRecorderAdapter;
 } = {}) {
   useEffect(() => {
     void restoreSlackWebhookSettings().catch(() => undefined);
     void restoreEmailSettings().catch(() => undefined);
   }, []);
-  const [createdSession, setCreatedSession] = useState<RecordingSession | null>(restoreRecordingSession);
-  const [recordingState, setRecordingState] = useState<RecordingViewState>('Ready');
-  const [recordingNavigationLocked, setRecordingNavigationLocked] = useState(false);
   const [processingNavigationGuard, setProcessingNavigationGuard] = useState(false);
   const [reviewNavigationGuard, setReviewNavigationGuard] = useState(false);
   const [speakerDrafts, setSpeakerDrafts] = useState<Record<string, Record<string, string | null>>>({});
@@ -587,9 +375,9 @@ export function App({ onMinutesSave, minutesSaveState, mediaAdapter = browserMed
       [sessionId]: Object.fromEntries(speakers.map((speaker) => [speaker.speakerId, speaker.participantId])),
     }));
   }, []);
-  const isActiveRecording = (/^\/meetings\/[^/]+\/recording$/.test(location.pathname) && (recordingState !== 'Ready' || recordingNavigationLocked)) || /^\/meetings\/[^/]+\/processing$/.test(location.pathname);
-  const recordingGuard = /^\/meetings\/[^/]+\/recording$/.test(location.pathname) && (recordingState !== 'Ready' || recordingNavigationLocked);
-  const shouldWarnBeforeLeaving = recordingGuard || processingNavigationGuard || reviewNavigationGuard;
+  // 녹음 화면(MTG-02)은 리뉴얼 라우트로 옮겼다(#27). 처리 중에는 메뉴를 숨기고 세션을 유지한다
+  const isActiveRecording = /^\/meetings\/[^/]+\/processing$/.test(location.pathname);
+  const shouldWarnBeforeLeaving = processingNavigationGuard || reviewNavigationGuard;
   // 로그인 세션 관리(#15): 진행 중 작업이 있으면 만료돼도 끝날 때까지 로그인 화면으로 보내지 않고, 녹음·처리 중에는 세션을 계속 갱신한다
   useReportSessionWork(shouldWarnBeforeLeaving, isActiveRecording);
   // 문서 연결 확인(CMN-04, #19) 중·실패 화면은 메뉴를 숨기는 새 화면이라, 그동안 기존 헤더·하단 탭을 숨긴다
@@ -611,7 +399,6 @@ export function App({ onMinutesSave, minutesSaveState, mediaAdapter = browserMed
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/meetings" element={<MeetingsPage />} />
           <Route path="/meetings/:documentId" element={<MeetingDetailPage />} />
-          <Route path="/meetings/:sessionId/recording" element={<MeetingRecordingRoute session={createdSession} setState={setRecordingState} setNavigationLocked={setRecordingNavigationLocked} clearSession={() => setCreatedSession(null)} mediaAdapter={mediaAdapter} />} />
           <Route path="/meetings/:sessionId/processing" element={<ProcessingPage onNavigationGuardChange={setProcessingNavigationGuard} />} />
           <Route path="/meetings/:sessionId/review" element={<ReviewSpeakerPage drafts={speakerDrafts} onInitialize={initializeSpeakerDraft} onChange={updateSpeakerDraft} onCommit={commitSpeakerMappings} onMinutesSave={onMinutesSave} minutesSaveState={minutesSaveState} onNavigationGuardChange={setReviewNavigationGuard} />} />
           <Route path="/meetings/:sessionId/complete" element={<CompletePage />} />

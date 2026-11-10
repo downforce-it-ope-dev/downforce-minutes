@@ -11,8 +11,9 @@ import { ToastContext, type ToastOptions, type ToastTone } from './toastContext'
  * - base: 화면 아래 16 + 안전 영역 (탭 바·고정 버튼이 없는 화면, 인증 화면)
  * - tabbar: 하단 탭 바(64) 위 16
  * - action: 하단 고정 버튼 줄(56 + 위아래 12) 위 16
+ * - top: 화면 위 16 + 안전 영역 (아래쪽에 큰 동작 버튼이 있는 화면, 예: 회의 녹음)
  */
-export type ToastPlacement = 'base' | 'tabbar' | 'action';
+export type ToastPlacement = 'base' | 'tabbar' | 'action' | 'top';
 
 interface ToastState extends ToastOptions {
   id: number;
@@ -28,6 +29,7 @@ const PLACEMENT: Record<ToastPlacement, string> = {
   base: 'bottom-4',
   tabbar: 'bottom-20 tablet:bottom-4', // 탭 바는 휴대폰에만 있다
   action: 'bottom-24',
+  top: 'top-4 pt-safe',
 };
 
 /**

@@ -3,9 +3,11 @@ import { Link, useSearchParams } from 'react-router';
 import {
   ArrowRight,
   Bell,
+  CircleStop,
   FileText,
   Mail,
   Mic,
+  Pause,
   Pencil,
   RefreshCw,
   Trash2,
@@ -32,6 +34,7 @@ import {
   SelectField,
   Checkbox,
   FilterChips,
+  RoundActionButton,
   ChoiceGroup,
   DateField,
   toDateValue,
@@ -122,6 +125,7 @@ function ComponentsView() {
         <InputsSection />
         <OtpSection />
         <ChoiceSection />
+        <RecordingButtonSection />
         <StatusSection />
         <SurfacesSection />
         <OverlaySection />
@@ -198,6 +202,19 @@ function InputsSection() {
         <SelectField label="선택 상자 (오류)" invalid defaultValue="">
           <option value="">선택 안 함</option>
         </SelectField>
+      </div>
+    </Section>
+  );
+}
+
+function RecordingButtonSection() {
+  return (
+    <Section title="녹음 버튼">
+      <div className="flex flex-wrap items-start gap-8">
+        <RoundActionButton icon={Mic} label="녹음 시작" />
+        <RoundActionButton icon={Pause} label="일시정지" />
+        <RoundActionButton icon={CircleStop} label="회의 종료" tone="danger" size="md" />
+        <RoundActionButton icon={Mic} label="비활성" disabled />
       </div>
     </Section>
   );

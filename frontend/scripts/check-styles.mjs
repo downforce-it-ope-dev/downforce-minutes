@@ -25,7 +25,6 @@ const LEGACY_CSS_FILES = new Set([
   'src/styles/pages/meetings.css',
   'src/styles/pages/participants.css',
   'src/styles/pages/processing.css',
-  'src/styles/pages/recording.css',
   'src/styles/pages/review.css',
   'src/styles/pages/settings.css',
   'src/styles/pages/share.css',

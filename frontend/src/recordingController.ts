@@ -1,4 +1,5 @@
-import type { RecordingViewState } from './RecordingPage';
+/** 녹음 화면 상태 (기존 RecordingPage.tsx에서 옮김, #27) */
+export type RecordingViewState = 'Ready' | 'Recording' | 'Paused';
 
 export type RecordingUploadPolicy = {
   chunkDurationSeconds: number;

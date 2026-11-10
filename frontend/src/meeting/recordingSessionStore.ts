@@ -2,11 +2,12 @@ import type { MeetingDraft, MeetingSession } from '../newMeetingApi';
 
 /*
  * 새 회의에서 만든 녹음 세션을 녹음 화면에 넘긴다 (GitHub #26).
- * 새 회의(MTG-01)는 리뉴얼 라우트라 기존 App 밖에서 그려지므로, 세션을 이 브라우저 탭(sessionStorage)에 두고
- * 기존 App이 녹음 화면을 그릴 때 읽는다. 새로고침 복원도 같은 값을 쓴다.
+ * 세션을 이 브라우저 탭(sessionStorage)에 두고 녹음 화면(MTG-02, #27)이 읽는다. 새로고침 복원도 같은 값을 쓴다.
  * 저장소를 쓸 수 없는 브라우저에서도 같은 탭 안에서는 넘어가도록 메모리에도 둔다.
  */
-export type RecordingSession = MeetingSession & { title: string; draft?: MeetingDraft };
+/** 녹음 화면 회의 정보(태블릿 가로)에 보일 이름. 새 회의에서 만들 때 함께 저장한다 */
+export type RecordingDraft = MeetingDraft & { templateName?: string; participantNames?: string[] };
+export type RecordingSession = MeetingSession & { title: string; draft?: RecordingDraft };
 
 const KEY = 'meeting-automation.recording-session';
 let memory: RecordingSession | null = null;

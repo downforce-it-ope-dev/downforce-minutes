@@ -13,6 +13,7 @@ export { ChoiceGroup, type ChoiceGroupProps, type ChoiceOption } from './ChoiceG
 export { DateField, type DateFieldProps } from './DateField';
 export { parseDateValue, toDateValue } from './dateValue';
 export { TABLET_QUERY, useMediaQuery } from './useMediaQuery';
+export { RoundActionButton, type RoundActionButtonProps } from './RoundActionButton';
 export { Card, type CardProps } from './Card';
 export { Pill, type PillProps, type PillTone } from './Pill';
 export { ProgressBar, type ProgressBarProps } from './ProgressBar';

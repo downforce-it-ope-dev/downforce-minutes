@@ -6,7 +6,7 @@ import { Icon } from '../Icon';
 import { IconButton } from '../IconButton';
 import { Logo } from '../art/Logo';
 import { LogoSymbol } from '../art/LogoSymbol';
-import { ToastProvider } from '../Toast';
+import { ToastProvider, type ToastPlacement } from '../Toast';
 import { AppCanvas } from './AppCanvas';
 
 interface NavEntry {
@@ -41,6 +41,8 @@ export interface AppShellProps {
   account?: ReactNode;
   /** 태블릿 이상에서 본문 높이를 화면에 맞춘다. 화면 안 영역(예: 참석자 목록)이 따로 스크롤할 때 쓴다. 낮은 화면(short)은 페이지 스크롤 */
   fillHeight?: boolean;
+  /** 토스트 위치. 기본: 집중 모드는 화면 아래, 그 밖은 탭 바 위. 아래쪽에 큰 동작 버튼이 있으면 top */
+  toastPlacement?: ToastPlacement;
   children: ReactNode;
 }
 
@@ -51,10 +53,10 @@ export interface AppShellProps {
  * - tablet-lg(960 이상): 왼쪽 사이드바 240(글자 로고 + Minutes, 아이콘·이름 가로, 아래 계정)
  * - 메뉴와 상단 바는 고정이고 본문만 스크롤한다. short(높이 560 이하)에서는 상단 바를 줄인다
  */
-export function AppShell({ title, hideTitle = false, back, actions, focus = false, account, fillHeight = false, children }: AppShellProps) {
+export function AppShell({ title, hideTitle = false, back, actions, focus = false, account, fillHeight = false, toastPlacement, children }: AppShellProps) {
   return (
     <AppCanvas>
-      <ToastProvider placement={focus ? 'base' : 'tabbar'}>
+      <ToastProvider placement={toastPlacement ?? (focus ? 'base' : 'tabbar')}>
         <a
           href="#main-content"
           className="sr-only z-50 rounded-md bg-bg px-4 py-3 text-label shadow-overlay focus:not-sr-only focus:fixed focus:top-4 focus:left-4"

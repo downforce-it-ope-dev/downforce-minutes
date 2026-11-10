@@ -1,20 +1,14 @@
 import { expect, test } from '@playwright/test';
-import { graceParticipant, installSyntheticApi, longKoreanTitle, meetingFixtures, participant, screens, sessionId, widths } from './fixtures';
+import { graceParticipant, installSyntheticApi, meetingFixtures, participant, screens, widths } from './fixtures';
 
-// SCR-003·007·012는 현재 화면과 제목이 맞지 않아 제외했다.
-for (const screen of screens.filter(({ id }) => !['SCR-001', 'SCR-003', 'SCR-007', 'SCR-012'].includes(id))) {
+// SCR-007·012는 현재 화면과 제목이 맞지 않아 제외했다.
+for (const screen of screens.filter(({ id }) => !['SCR-001', 'SCR-007', 'SCR-012'].includes(id))) {
   test.describe(`${screen.id} ${screen.route}`, () => {
     for (const width of widths) {
       test(`${width}px renders core content without page overflow or clipped bounds`, async ({ page }) => {
         const runtimeErrors: string[] = [];
         page.on('pageerror', (error) => runtimeErrors.push(error.message));
         await page.setViewportSize({ width, height: width <= 430 ? 800 : 900 });
-        if (screen.id === 'SCR-003') {
-          await page.addInitScript((session) => sessionStorage.setItem('meeting-automation.recording-session', JSON.stringify(session)), {
-            sessionId, version: 3, status: 'CREATED', title: longKoreanTitle,
-            uploadPolicy: { chunkDurationSeconds: 30, maxChunkBytes: 1_000_000, acceptedMimeTypes: ['audio/webm'] },
-          });
-        }
         await installSyntheticApi(page, screen);
         await page.goto(screen.route);
 
@@ -118,12 +112,6 @@ test('all app routes keep the brand and page heading visible during scrolling', 
   const routes = screens.filter((screen) => !['SCR-001', 'SCR-007'].includes(screen.id));
   for (const screen of routes) {
     await installSyntheticApi(page, screen);
-    if (screen.id === 'SCR-003') {
-      await page.addInitScript((session) => sessionStorage.setItem('meeting-automation.recording-session', JSON.stringify(session)), {
-        sessionId, version: 3, status: 'CREATED', title: longKoreanTitle,
-        uploadPolicy: { chunkDurationSeconds: 30, maxChunkBytes: 1_000_000, acceptedMimeTypes: ['audio/webm'] },
-      });
-    }
     await page.goto(screen.route);
     const heading = page.getByRole('heading', { name: screen.heading }).first();
     await expect(heading).toBeVisible();
