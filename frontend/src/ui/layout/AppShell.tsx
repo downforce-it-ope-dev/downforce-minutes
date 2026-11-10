@@ -29,7 +29,8 @@ export interface AppShellProps {
   /** 상단 바 제목(h1) */
   title: ReactNode;
   /** 상세 화면의 뒤로 가기. to가 없으면 브라우저 뒤로 가기 */
-  back?: { to?: string; label?: string };
+  /** 뒤로 가기. onClick이 있으면 그것만 한다(같은 경로 안에서 화면 상태를 되돌릴 때) */
+  back?: { to?: string; label?: string; onClick?: () => void };
   /** 상단 바 오른쪽 (문서 연결 상태 칩, 새 회의 버튼 등). 집중 모드에서는 숨긴다 */
   actions?: ReactNode;
   /** 집중 모드 (CMN-01-F03): 메뉴를 숨기고 상단 바에는 제목과 뒤로 가기만 둔다 */
@@ -59,7 +60,8 @@ export function AppShell({ title, back, actions, focus = false, account, childre
         {!focus && <MainNav account={account} />}
         <div className={cn('flex h-dvh flex-col', !focus && 'tablet:pl-rail tablet-lg:pl-sidebar')}>
           <TopBar title={title} back={back} actions={focus ? undefined : actions} />
-          <main id="main-content" tabIndex={-1} className="min-h-0 flex-1 overflow-y-auto outline-none">
+          {/* 본문만 스크롤하므로, 안에 누를 요소가 없어도 키보드로 스크롤할 수 있게 초점을 받는다 */}
+          <main id="main-content" tabIndex={0} aria-label="본문" className="min-h-0 flex-1 overflow-y-auto">
             <div className="mx-auto w-full max-w-content px-4 pt-2 pb-8 tablet:px-6 tablet-lg:px-8 short:pb-4">{children}</div>
           </main>
           {/* 휴대폰 하단 탭 바 자리 */}
@@ -139,11 +141,13 @@ function TopBar({ title, back, actions }: Pick<AppShellProps, 'title' | 'back' |
     <header className="shrink-0 pt-safe">
       <div className="mx-auto flex h-14 w-full max-w-content items-center gap-2 px-4 tablet:h-20 tablet:px-6 tablet-lg:px-8 short:h-12 short:tablet:h-14">
         {back && (
+          // 뒤로 가기는 흰 원형 버튼(시안의 상단 바 보조 동작과 같은 모양)
           <IconButton
             icon={ArrowLeft}
             label={back.label ?? '뒤로 가기'}
-            className="-ml-3"
-            onClick={() => (back.to ? navigate(back.to) : navigate(-1))}
+            variant="surface"
+            className="mr-2"
+            onClick={() => (back.onClick ? back.onClick() : back.to ? navigate(back.to) : navigate(-1))}
           />
         )}
         <h1 className="min-w-0 flex-1 truncate text-headline text-text">{title}</h1>

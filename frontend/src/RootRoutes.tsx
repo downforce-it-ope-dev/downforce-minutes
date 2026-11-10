@@ -4,6 +4,7 @@ import { App } from './App';
 import { GuestOnly, RequireAuth } from './auth/AuthGate';
 import { LoginPage } from './auth/LoginPage';
 import { VerifyPage } from './auth/VerifyPage';
+import { DocumentSetupPage } from './documentSetup/DocumentSetupPage';
 import { LEGACY_PATHS } from './legacyRoutes';
 import { NotFoundPage } from './notFound/NotFoundPage';
 import { ServerRecoveryOverlay } from './recovery/ServerRecoveryOverlay';
@@ -49,6 +50,23 @@ function AppRoutes() {
               <VerifyPage />
             </ToastProvider>
           </GuestOnly>
+        }
+      />
+      {/* 문서 연결 (SET-02~06, #20~#22). 기존 App 레이아웃 밖에서 그린다 */}
+      <Route
+        path="/setup/document"
+        element={
+          <RequireAuth>
+            <DocumentSetupPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/settings/document"
+        element={
+          <RequireAuth>
+            <DocumentSetupPage settings />
+          </RequireAuth>
         }
       />
       {UiPreview && (

@@ -13,7 +13,6 @@ import { Link, NavLink, Route, Routes, useLocation, useNavigate, useParams } fro
 import { NewMeetingPage, type NewMeetingPayload } from './NewMeetingPage';
 import { cancelMeetingSession, createMeetingSession, type MeetingDraft, type MeetingSession, type MeetingSessionAttempt } from './newMeetingApi';
 import { RecordingPage, type RecordingViewState } from './RecordingPage';
-import { DocumentSetupWizard } from './DocumentSetupWizard';
 import { CompletePage } from './CompletePage';
 import { restoreSlackWebhookSettings } from './slackSettingsApi';
 import { restoreEmailSettings } from './emailSettingsApi';
@@ -634,7 +633,6 @@ export function App({ onNewMeetingSubmit = () => undefined, onMinutesSave, minut
   }, []);
   const isActiveRecording = (/^\/meetings\/[^/]+\/recording$/.test(location.pathname) && (recordingState !== 'Ready' || recordingNavigationLocked)) || /^\/meetings\/[^/]+\/processing$/.test(location.pathname);
   const recordingGuard = /^\/meetings\/[^/]+\/recording$/.test(location.pathname) && (recordingState !== 'Ready' || recordingNavigationLocked);
-  const isDocumentConnectionRoute = location.pathname === '/setup/document' || location.pathname === '/settings/document';
   const shouldWarnBeforeLeaving = recordingGuard || processingNavigationGuard || reviewNavigationGuard;
   // 로그인 세션 관리(#15): 진행 중 작업이 있으면 만료돼도 끝날 때까지 로그인 화면으로 보내지 않고, 녹음·처리 중에는 세션을 계속 갱신한다
   useReportSessionWork(shouldWarnBeforeLeaving, isActiveRecording);
@@ -655,9 +653,7 @@ export function App({ onNewMeetingSubmit = () => undefined, onMinutesSave, minut
       <div className="app-route-viewport">
         <Routes>
           <Route path="/" element={<DocumentGate><HomePage /></DocumentGate>} />
-          <Route path="/setup/document" element={<DocumentSetupWizard />} />
           <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/settings/document" element={<DocumentSetupWizard settings />} />
           <Route path="/meetings" element={<MeetingsPage />} />
           <Route path="/meetings/new" element={<DocumentGate><NewMeetingRoute onCreated={(session) => { setCreatedSession(session); saveRecordingSession(session); setRecordingState('Ready'); setRecordingNavigationLocked(false); }} onSubmitted={onNewMeetingSubmit} /></DocumentGate>} />
           <Route path="/meetings/:documentId" element={<MeetingDetailPage />} />
@@ -669,7 +665,7 @@ export function App({ onNewMeetingSubmit = () => undefined, onMinutesSave, minut
           <Route path="/settings/participants" element={<DocumentGate><ParticipantsPage /></DocumentGate>} />
         </Routes>
       </div>
-      {!isActiveRecording && !isDocumentConnectionRoute && !gateBlocking && <BottomNavigation />}
+      {!isActiveRecording && !gateBlocking && <BottomNavigation />}
     </div>
   );
 }

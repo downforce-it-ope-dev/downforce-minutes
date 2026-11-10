@@ -95,7 +95,8 @@ export function Button({
       {loading ? (
         <Icon icon={LoaderCircle} size="md" className="animate-spin motion-reduce:animate-none" />
       ) : (
-        icon && <Icon icon={icon} size={variant === 'hero' ? 'xl' : 'md'} />
+        // 큰 버튼(lg 56)은 아이콘도 24로 키운다(태블릿 기준)
+        icon && <Icon icon={icon} size={variant === 'hero' ? 'xl' : size === 'lg' ? 'lg' : 'md'} />
       )}
       {children}
     </button>
@@ -111,17 +112,20 @@ export interface ButtonLinkProps {
   fullWidth?: boolean;
   shape?: 'default' | 'pill';
   className?: string;
+  /** 이동 전에 할 일 (예: 입력 지우기) */
+  onClick?: () => void;
   children: ReactNode;
 }
 
 /** 버튼 모양의 화면 이동 링크. 이동은 링크로 둬야 새 탭 열기·화면 읽기 프로그램이 올바르게 동작한다 */
-export function ButtonLink({ to, variant = 'primary', size = 'md', icon, fullWidth = false, shape = 'default', className, children }: ButtonLinkProps) {
+export function ButtonLink({ to, variant = 'primary', size = 'md', icon, fullWidth = false, shape = 'default', className, onClick, children }: ButtonLinkProps) {
   return (
     <Link
       to={to}
+      onClick={onClick}
       className={cn(BASE, SIZE[size], shape === 'pill' ? 'rounded-full' : 'rounded-md', VARIANT[variant], fullWidth && 'w-full', className)}
     >
-      {icon && <Icon icon={icon} size="md" />}
+      {icon && <Icon icon={icon} size={size === 'lg' ? 'lg' : 'md'} />}
       {children}
     </Link>
   );

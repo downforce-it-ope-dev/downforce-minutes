@@ -1,6 +1,6 @@
 # 리뉴얼 준비
 
-> **상태:** 0단계(스타일 기반)와 **1단계(로그인용 공통 기반, R1)를 완료해 `main`에 반영했다(2026-11-09, GitHub #4).** 공통 부품은 `frontend/src/ui/`, 부품 확인 화면은 `/__ui`(Preview 전용)다. 다음은 R2 로그인(#10)이다. Phase 결정 항목(P-1~P-6)과 화면 묶음 순서는 아래 4절, 결정 기록은 7절, 작업 순서는 GitHub 로드맵 이슈 #3에 있다.
+> **상태:** 0단계(스타일 기반), R1 공통 기반(#4), R2 로그인(#10), **R3 문서 연결(#16)을 `main`에 반영했다(2026-11-10).** R3에서 앱 틀(CMN-01), 서버 연결 복구·페이지 없음(CMN-02·03), 문서 연결 확인(CMN-04), 문서 연결 화면(SET-02~06)을 바꿨다. 문서 연결 화면은 모두 메뉴를 숨기는 집중 모드다(SET-02는 2026-11-10 변경). 다음은 R4 홈(#23)이다. Preview는 실제 인증 API를 쓴다(R-20 종료). 공통 부품은 `frontend/src/ui/`, 부품 확인 화면은 `/__ui`(Preview 전용)다. Phase 결정 항목(P-1~P-6)과 화면 묶음 순서는 아래 4절, 결정 기록은 7절, 작업 순서는 GitHub 로드맵 이슈 #3에 있다.
 
 ## 고정 제약
 
@@ -47,8 +47,8 @@ GitHub 이슈로 관리한다(R-17, 2026-11-09). **작업 순서와 규칙은 �
 | 묶음 | 목표 | Epic |
 |---|---|---|
 | R1 공통 기반 | 로그인용 공통 부품·인증 화면 틀 (R-16) | #4 |
-| R2 로그인 | AUTH-01·02, 인증 API, 진입 보호 | #10 |
-| R3 문서 연결 | 앱 틀, CMN-02~04, SET-02~06 | #16 |
+| R2 로그인 | AUTH-01·02, 인증 API, 진입 보호 (**완료, 2026-11-10**) | #10 |
+| R3 문서 연결 | 앱 틀, CMN-02~04, SET-02~06 (**완료, 2026-11-10**) | #16 |
 | R4 홈 | HOME-01, 로그아웃 | #23 |
 | R5 회의 진행 | MTG-01~05, Slack 단계 제거 | #25 |
 | R6 회의록 | MIN-01·02 | #31 |
@@ -76,7 +76,7 @@ GitHub 이슈로 관리한다(R-17, 2026-11-09). **작업 순서와 규칙은 �
 |---|---|---|---|---|---|
 | 1단계 | 공통 기반 (로그인용) | 공통 부품·인증 화면 틀 (화면 없음) | `App.tsx`(라우트) | 스타일 검토 문서 5.3 항목(아이콘 방식, 기본 포커스 표시 등). 공통 컴포넌트 목록과 순서는 [시안 적용 기준](시안_적용_기준.md) 4·6장. 앱 틀(CMN-01)·CMN-02·CMN-03은 문서 연결 묶음으로 옮겼다(R-16) | 관리자 메뉴는 나누지 않는다(P-4). CMN-01의 인증 만료(F09)는 AUTH 묶음, 계정 표시·로그아웃(F05)과 로그아웃 확인(CMN-01-P02)은 HOME 묶음에서 만든다(R-01) |
 | 1 | AUTH | AUTH-01, AUTH-02 (+ CMN-01-F09) | 없음 (신규) | 인증 화면 용어(D-08, R-09). 공개 전: 로고 원본·파생 색 승인(스타일 검토 5.3) | Backend에 인증 API만 새로 만들고 기존 API에는 인증을 적용하지 않는다(화면 진입만 막음). 세션은 HttpOnly 쿠키, Backend 메모리 보관(R-04). 메일이 설정되지 않았으면(`configured=false`) 로그인 화면에서 설정한다(AUTH-01-F07, R-02·R-03). 메뉴 없는 인증 전용 배치라 새 공통 레이아웃은 이 묶음에서 사용자에게 보이지 않는다. 이 묶음 공개부터 HOME 묶음 공개 전까지는 로그아웃 버튼이 없다(R-01). Backend와 Frontend를 같은 시점에 배포한다(R-06). 시안(`뉴_UI`) 있음 |
-| 2 | 문서 연결 | 앱 틀(CMN-01), CMN-02, CMN-03, CMN-04, SET-02 ~ SET-06 | `App.tsx` `SetupGate`, `BackendRecoveryOverlay.tsx`, `DocumentSetupWizard.tsx` | **결정(2026-11-09):** SET-02는 메뉴를 보인다. CMN-04 확인 중에는 메뉴를 숨긴다(집중 모드). 레일 로고는 회사 CI 심볼 이미지. 용어(R-09) | 로그인 직후 첫 연결 흐름(CMN-04 → SET-03 → SET-04 → SET-05)과 설정의 변경 흐름(SET-02 → SET-03 → SET-04 → SET-06 → SET-05)이 같은 화면을 쓰므로 함께 리뉴얼한다. SET-03~06은 메뉴를 숨기는 집중 모드다. SET-02는 기획 제안상 레일·탭 바를 보이는 일반 화면이라, 이 제안이 확정되면 새 공통 레이아웃이 이 묶음에서 처음 보인다(SET-02 문서 "확인 필요"). CMN-04 점검 중 공통 레이아웃 표시 여부도 확인 필요다. 설정 메인(SET-01)에서 SET-02로 갈 때는 기존 화면에서 새 화면으로 바뀐다 |
+| 2 | 문서 연결 | 앱 틀(CMN-01), CMN-02, CMN-03, CMN-04, SET-02 ~ SET-06 | `App.tsx` `SetupGate`, `BackendRecoveryOverlay.tsx`, `DocumentSetupWizard.tsx` | **결정(2026-11-09, 2026-11-10 변경):** SET-02도 메뉴를 숨긴다(집중 모드, 뒤로 가기 → 설정). CMN-04 확인 중에는 메뉴를 숨긴다(집중 모드). 레일 로고는 회사 CI 심볼 이미지. 용어(R-09) | 로그인 직후 첫 연결 흐름(CMN-04 → SET-03 → SET-04 → SET-05)과 설정의 변경 흐름(SET-02 → SET-03 → SET-04 → SET-06 → SET-05)이 같은 화면을 쓰므로 함께 리뉴얼한다. SET-03~06은 메뉴를 숨기는 집중 모드다. SET-02는 기획 제안상 레일·탭 바를 보이는 일반 화면이라, 이 제안이 확정되면 새 공통 레이아웃이 이 묶음에서 처음 보인다(SET-02 문서 "확인 필요"). CMN-04 점검 중 공통 레이아웃 표시 여부도 확인 필요다. 설정 메인(SET-01)에서 SET-02로 갈 때는 기존 화면에서 새 화면으로 바뀐다 |
 | 3 | HOME | HOME-01 (+ HOME-01-P01, CMN-01-F05, CMN-01-P02) | `MeetingHistory.tsx` `HomePage` | 용어(R-09). 그 밖에는 화면 내 확인 필요 항목만 | 계정 표시·로그아웃을 이 묶음에서 만든다(HOME-01-F07, R-01). `MeetingHistory.tsx` 한 파일에 MIN-01이 같이 있다. 시안(`뉴_UI`) 있음 |
 | 4 | MTG | MTG-01 ~ MTG-05 | `NewMeetingPage`, `RecordingPage`, `ProcessingPage`, `ReviewSpeakerPage`, `CompletePage` 외 | S-03(참석자 선택 부품), 용어(R-09) | 회의록 재생성·발송 대상 선택은 넣지 않는다(P-3). 회의 결과의 Slack 단계와 앱 시작 시 Slack 복구 코드를 지운다(D-11, R-08). 화면 수가 가장 많다 |
 | 5 | MIN | MIN-01, MIN-02 | `MeetingHistory.tsx` `MeetingsPage`, `MeetingDetailPage.tsx`, `ProcessingFailureList.tsx` | 용어(R-09) | MIN-01 실패 회의 재처리는 MTG-03으로 이어진다 |
@@ -166,4 +166,4 @@ GitHub 이슈로 관리한다(R-17, 2026-11-09). **작업 순서와 규칙은 �
 | R-17 | 작업 방식: GitHub 이슈 + `develop` 브랜치 (2026-11-09) | 묶음마다 Epic 이슈와 하위 작업 이슈를 둔다. 브랜치는 `main`(운영)과 `develop`(작업)만 둔다. 작업은 `develop`에 이슈 번호를 단 커밋으로 올리고(`Refs #n`), `develop`의 고정 Vercel Preview 주소에서 확인한다. 묶음이 끝나면 `develop` → `main` PR로 합친다(S-05). 다음 묶음은 합친 뒤 시작해 `develop`에 두 묶음이 섞이지 않게 한다. `develop` 고정 Preview 주소를 운영 Backend `ALLOWED_ORIGINS`에 한 번 추가한다(운영 설정 변경, 실행 전 확인). Preview도 운영 Backend를 쓰므로 실제 문서·메일에 영향이 간다 | 아래 "Phase 계획", GitHub 로드맵 이슈 #3 |
 | R-18 | Backend 기준 저장소 (2026-11-09) | 인증 API 등 Backend는 `donghyunlee-dev/meeting-automation` 저장소에서 개발·배포한다(사용자 결정). 이 저장소(`downforce-minutes`)에서는 Frontend만 개발한다. 이 저장소의 `backend/` 폴더는 인증 API가 없는 이전 상태라 **여기서 Backend를 배포하지 않는다**. 화면에 필요한데 구현되지 않은 Backend 기능은 사용자가 그 저장소에서 개발해 전달한다 | 이 문서 고정 제약, AUTH-01 7장 |
 | R-19 | 인증 정책: 구현된 Backend 기준 (2026-11-09) | 인증 API는 운영에 배포되어 있다(그 저장소 커밋 `aecb5bd`, 운영 `GET /api/v1/auth/session` → 401 확인). 정책은 구현을 따른다: 코드 유효 **60초**, 재발송 **60초**, 틀린 코드 **5회면 5분 잠금**(429 `retryAfterSeconds`), 남은 시도 횟수는 응답에 없어 **표시하지 않음**, 세션은 활동 후 2시간·`HttpOnly`·`SameSite=Strict` 쿠키 `ma_session`(인증 경로 전용). **`@miinit.com` 제한은 Frontend가 코드 요청 전에 검사한다**(Backend는 도메인을 검사하지 않음, 받아들임). D-02의 "화면과 서버 모두 검증", D-04·R-13의 시간 값을 대신한다 | AUTH-01·02, `docs/product/api-spec.md` 인증 API |
-| R-20 | 인증 목업 (2026-11-09) | 운영 Backend가 Preview 출처를 허용하기 전까지(POST 403 `Invalid CORS request` 확인) 개발 서버와 Vercel Preview는 인증 목업(`frontend/src/auth/authMock.ts`)을 쓴다. 메일을 보내지 않고 코드는 고정값이며, 정책 값(R-19)은 구현과 같다. 메일 설정도 목업으로 저장 여부만 기억한다. Vercel Production에서는 항상 꺼진다. Backend 준비 후 Preview 환경 변수 `AUTH_MOCK=0`으로 끄고 실제 메일로 확인한다(#12). R-12(개발용 우회 없음)를 이 기간 동안 대신한다 | AUTH-01·02, #15 |
+| R-20 | 인증 목업 (2026-11-09) | **종료(2026-11-10): Backend CORS 반영 후 Vercel Preview `AUTH_MOCK=0`, 실제 메일 로그인 확인(#12).** 운영 Backend가 Preview 출처를 허용하기 전까지(POST 403 `Invalid CORS request` 확인) 개발 서버와 Vercel Preview는 인증 목업(`frontend/src/auth/authMock.ts`)을 쓴다. 메일을 보내지 않고 코드는 고정값이며, 정책 값(R-19)은 구현과 같다. 메일 설정도 목업으로 저장 여부만 기억한다. Vercel Production에서는 항상 꺼진다. Backend 준비 후 Preview 환경 변수 `AUTH_MOCK=0`으로 끄고 실제 메일로 확인한다(#12). R-12(개발용 우회 없음)를 이 기간 동안 대신한다 | AUTH-01·02, #15 |

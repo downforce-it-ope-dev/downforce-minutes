@@ -1,5 +1,5 @@
 import { withHealthyBackend } from './testUtils/withHealthyBackend';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router';
 import { App } from './App';
@@ -33,7 +33,8 @@ describe('meeting history routes', () => {
     fireEvent.click(screen.getByRole('link', { name: '홈' }));
 
     expect(await screen.findByRole('button', { name: /새 회의 시작/ })).toBeTruthy();
-    expect(fetchMock.mock.calls.some(([input]) => String(input).endsWith('/meetings?limit=3'))).toBe(true);
+    // 문서 연결 확인(CMN-04)을 거친 뒤 홈이 최근 회의를 불러오므로 요청이 나갈 때까지 기다린다
+    await waitFor(() => expect(fetchMock.mock.calls.some(([input]) => String(input).endsWith('/meetings?limit=3'))).toBe(true));
     expect(screen.getByRole('link', { name: '회의록' }).getAttribute('href')).toBe('/meetings');
   });
 });
