@@ -160,49 +160,49 @@ function DocumentSetupScreens({ settings }: { settings: boolean }) {
     const active = snapshot.active;
     return (
       <AppShell title="문서 연결" back={{ to: '/settings', label: '설정으로 돌아가기' }}>
-        <div className="mx-auto flex w-full max-w-form flex-col gap-4">
+        <div className="mx-auto flex w-full max-w-content flex-col gap-4">
           {active && (
-            <Card as="section" aria-label="현재 문서 연결" className="flex flex-col gap-6">
-              <div className="flex flex-wrap items-center gap-4">
+            <Card as="section" aria-label="현재 문서 연결" className="flex flex-col gap-6 tablet:flex-row tablet:items-center">
+              <div className="flex flex-1 flex-wrap items-center gap-4">
                 <ProviderIcon provider={active.provider} size="lg" />
-                <h2 className="flex-1 text-title text-text">{providerLabel(active.provider)}</h2>
+                <h2 className="text-title text-text">{providerLabel(active.provider)}</h2>
                 <span className="inline-flex h-8 items-center gap-1.5 rounded-full bg-success-soft px-3 text-label text-success-text">
                   <Icon icon={CircleCheck} size="sm" />
                   연결됨
                 </span>
               </div>
-              <a
-                href={active.rootUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-md border border-border bg-bg px-5 text-label text-text active:bg-bg-subtle tablet:self-start"
-              >
-                연결된 문서 열기
-                <Icon icon={ArrowRight} size="md" />
-                <span className="sr-only">(새 탭)</span>
-              </a>
+              <div className="flex flex-col gap-2 tablet:flex-row">
+                <a
+                  href={active.rootUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-md border border-border bg-bg px-5 text-label text-text active:bg-bg-subtle"
+                >
+                  연결된 문서 열기
+                  <Icon icon={ArrowRight} size="md" />
+                  <span className="sr-only">(새 탭)</span>
+                </a>
+                <Button variant="secondary" icon={Repeat} onClick={setup.beginChange}>
+                  문서 서비스 변경
+                </Button>
+              </div>
             </Card>
           )}
           {setup.consumerRefreshFailed && (
-            <Button variant="secondary" icon={RefreshCw} onClick={setup.retryConsumerRefresh}>
+            <Button variant="secondary" icon={RefreshCw} onClick={setup.retryConsumerRefresh} className="self-start">
               연결 데이터 다시 확인
             </Button>
           )}
-          <div className="flex flex-col gap-2 tablet:flex-row tablet:justify-end">
-            {setup.returnTo && (
-              <Link
-                to={setup.returnTo}
-                state={setup.returnState?.returnState}
-                className="inline-flex h-12 items-center justify-center gap-2 px-4 text-label text-link"
-              >
-                <Icon icon={ArrowLeft} size="md" />
-                이전 화면으로
-              </Link>
-            )}
-            <Button variant="secondary" icon={Repeat} onClick={setup.beginChange}>
-              문서 서비스 변경
-            </Button>
-          </div>
+          {setup.returnTo && (
+            <Link
+              to={setup.returnTo}
+              state={setup.returnState?.returnState}
+              className="inline-flex h-12 items-center gap-2 self-start text-label text-link"
+            >
+              <Icon icon={ArrowLeft} size="md" />
+              이전 화면으로
+            </Link>
+          )}
         </div>
       </AppShell>
     );
@@ -237,20 +237,30 @@ function Wizard({
 
   return (
     <AppShell title={title} focus>
-      <Column>
-        <StepIndicator steps={steps} current={Math.min(stepIndex, steps.length - 1)} />
+      {/* 휴대폰·태블릿 세로: 한 열 / 태블릿 가로: 왼쪽 진행 상황(1) + 오른쪽 본문(2) */}
+      <div className="mx-auto flex w-full max-w-content flex-col gap-4 tablet-lg:grid tablet-lg:grid-cols-3 tablet-lg:items-start tablet-lg:gap-8">
+        <aside aria-label="진행 상황" className="flex flex-col gap-4 tablet-lg:sticky tablet-lg:top-0 tablet-lg:rounded-xl tablet-lg:bg-bg tablet-lg:p-6 tablet-lg:shadow-card">
+          <StepIndicator steps={steps} current={Math.min(stepIndex, steps.length - 1)} />
 
-        {/* 변경·전환 중에도 어느 연결이 살아 있는지 보인다(원본 연결은 전환 완료 전까지 유지) */}
-        {snapshot.active && !setup.initializationSucceeded && (
-          <div aria-label="현재 활성 문서 연결" className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg bg-primary-soft px-4 py-3">
-            <ProviderIcon provider={snapshot.active.provider} />
-            <span className="text-label text-primary-soft-text">
-              현재 연결: {snapshot.active.provider === 'CONFLUENCE' ? 'Confluence Cloud' : 'Notion'}
+          {/* 변경·전환 중에도 어느 연결이 살아 있는지 보인다(원본 연결은 전환 완료 전까지 유지) */}
+          {snapshot.active && !setup.initializationSucceeded && (
+            <div aria-label="현재 활성 문서 연결" className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg bg-primary-soft px-4 py-3">
+              <ProviderIcon provider={snapshot.active.provider} />
+              <span className="text-label text-primary-soft-text">
+                현재 연결: {snapshot.active.provider === 'CONFLUENCE' ? 'Confluence Cloud' : 'Notion'}
+              </span>
+              <span className="text-caption text-primary-soft-text tabular-nums">연결 버전: {snapshot.active.connectionVersion}</span>
+            </div>
+          )}
+
+          {snapshot.status === 'READY' && (
+            <span className="hidden tablet-lg:block">
+              <BackToSettings setup={setup} />
             </span>
-            <span className="text-caption text-primary-soft-text tabular-nums">연결 버전: {snapshot.active.connectionVersion}</span>
-          </div>
-        )}
+          )}
+        </aside>
 
+        <div className="flex flex-col gap-4 tablet-lg:col-span-2">
         {provider && showChooser && (
           <button
             type="button"
@@ -292,20 +302,30 @@ function Wizard({
         )}
 
         {snapshot.status === 'READY' && (
-          <Link
-            to="/settings/document"
-            onClick={() => {
-              setup.setChanging(false);
-              setup.clearCredentials();
-            }}
-            className="inline-flex h-12 items-center gap-2 self-start text-label text-link"
-          >
-            <Icon icon={ArrowLeft} size="md" />
-            문서 서비스 설정으로
-          </Link>
+          <span className="tablet-lg:hidden">
+            <BackToSettings setup={setup} />
+          </span>
         )}
-      </Column>
+        </div>
+      </div>
     </AppShell>
+  );
+}
+
+/** 문서 서비스 설정(SET-02)으로 돌아가기. 변경을 그만두고 입력한 자격 증명을 지운다 */
+function BackToSettings({ setup }: { setup: Setup }) {
+  return (
+    <Link
+      to="/settings/document"
+      onClick={() => {
+        setup.setChanging(false);
+        setup.clearCredentials();
+      }}
+      className="inline-flex h-12 items-center gap-2 text-label text-link"
+    >
+      <Icon icon={ArrowLeft} size="md" />
+      문서 서비스 설정으로
+    </Link>
   );
 }
 
@@ -313,19 +333,22 @@ function Wizard({
 function ServiceChooser({ setup }: { setup: Setup }) {
   const current = setup.snapshot?.active?.provider;
   return (
-    <ul aria-label="연결할 문서 서비스" className="flex flex-col gap-3">
+    <ul aria-label="연결할 문서 서비스" className="grid gap-3 tablet:grid-cols-2">
       {(['NOTION', 'CONFLUENCE'] as const).map((item) => (
         <li key={item}>
           <button
             type="button"
             aria-label={`${item === 'CONFLUENCE' ? 'Confluence Cloud' : 'Notion'} 선택`}
             onClick={() => setup.chooseProvider(item)}
-            className="flex min-h-18 w-full cursor-pointer items-center gap-4 rounded-lg border border-border bg-bg px-4 text-left shadow-card active:bg-bg-subtle tablet:min-h-19 tablet:px-6"
+            className="flex min-h-18 w-full cursor-pointer items-center gap-4 rounded-lg border border-border bg-bg px-4 text-left shadow-card active:bg-bg-subtle tablet:min-h-28 tablet:px-6"
           >
             <ProviderIcon provider={item} />
-            <span className="flex-1 text-title text-text">{providerLabel(item)}</span>
-            {current === item && <Pill tone="accent">현재 사용 중</Pill>}
-            <Icon icon={ArrowRight} size="lg" className="text-text-muted" />
+            {/* 카드 폭이 좁아도 겹치지 않게 배지는 이름 아래에 둔다 */}
+            <span className="flex min-w-0 flex-1 flex-col items-start gap-1">
+              <span className="text-title text-text">{providerLabel(item)}</span>
+              {current === item && <Pill tone="accent">현재 사용 중</Pill>}
+            </span>
+            <Icon icon={ArrowRight} size="lg" className="shrink-0 text-text-muted" />
           </button>
         </li>
       ))}
@@ -346,7 +369,7 @@ function ConnectionForm({ setup, provider, formRef }: { setup: Setup; provider: 
         <IconButton icon={Info} label="연결 방법 안내" variant="surface" aria-haspopup="dialog" onClick={() => setGuideOpen(true)} />
       </div>
       <Card>
-        <form ref={formRef} className="flex flex-col gap-4" onSubmit={(event) => void setup.handleTest(event)} noValidate>
+        <form ref={formRef} className="grid gap-4 tablet:grid-cols-2" onSubmit={(event) => void setup.handleTest(event)} noValidate>
           {provider === 'NOTION' ? (
             <>
               <SecretField
@@ -408,7 +431,13 @@ function ConnectionForm({ setup, provider, formRef }: { setup: Setup; provider: 
               />
             </>
           )}
-          <Button type="submit" size="lg" fullWidth loading={busy} disabled={Boolean(tested)} className="mt-2">
+          <Button
+            type="submit"
+            size="lg"
+            loading={busy}
+            disabled={Boolean(tested)}
+            className="mt-2 w-full tablet:col-span-2 tablet:w-auto tablet:min-w-60 tablet:justify-self-end"
+          >
             {busy ? '연결 확인 중…' : tested ? '연결 확인 완료' : '연결 확인'}
           </Button>
         </form>
@@ -706,7 +735,7 @@ function SwitchCard({ setup }: { setup: Setup }) {
           </div>
         )}
       </div>
-      <fieldset className="flex flex-col gap-2">
+      <fieldset className="grid gap-2 tablet-lg:grid-cols-2">
         <legend className="sr-only">이전 방식 선택</legend>
         {options.map((option) => (
           <label
