@@ -28,6 +28,9 @@ import {
   ServerRecoveryIllustration,
   MailCodeIllustration,
   OtpInput,
+  SelectField,
+  Checkbox,
+  FilterChips,
   Pill,
   ProgressBar,
   RecordToMinutesIllustration,
@@ -114,6 +117,7 @@ function ComponentsView() {
         <IconButtonsSection />
         <InputsSection />
         <OtpSection />
+        <ChoiceSection />
         <StatusSection />
         <SurfacesSection />
         <OverlaySection />
@@ -183,7 +187,44 @@ function InputsSection() {
         <TextField label="회사 이메일 (오류)" type="email" defaultValue="meet@gmail.com" invalid />
         <TextField label="회사 이메일 (알약형)" type="email" shape="pill" icon={Mail} placeholder="name@miinit.com" />
         <TextField label="비활성" disabled defaultValue="수정할 수 없음" />
+        <SelectField label="회의록 템플릿" defaultValue="default.md">
+          <option value="default.md">기본 회의록</option>
+          <option value="project.md">프로젝트 회의</option>
+        </SelectField>
+        <SelectField label="선택 상자 (오류)" invalid defaultValue="">
+          <option value="">선택 안 함</option>
+        </SelectField>
       </div>
+    </Section>
+  );
+}
+
+function ChoiceSection() {
+  const [view, setView] = useState<'all' | 'selected'>('all');
+  const [checked, setChecked] = useState(true);
+  return (
+    <Section title="선택 부품">
+      <Row label="보기 필터 칩">
+        <FilterChips
+          label="보기"
+          value={view}
+          onChange={setView}
+          options={[
+            { value: 'all', label: '전체', count: 24 },
+            { value: 'selected', label: '선택됨', count: 3 },
+          ]}
+        />
+      </Row>
+      <Row label="체크 상자">
+        <label className="flex h-12 cursor-pointer items-center gap-3">
+          <Checkbox checked={checked} onChange={() => setChecked((value) => !value)} />
+          선택
+        </label>
+        <label className="flex h-12 items-center gap-3">
+          <Checkbox checked disabled onChange={() => {}} />
+          고정 선택
+        </label>
+      </Row>
     </Section>
   );
 }
