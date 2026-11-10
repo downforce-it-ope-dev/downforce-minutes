@@ -29,7 +29,8 @@ export interface AppShellProps {
   /** 상단 바 제목(h1) */
   title: ReactNode;
   /** 상세 화면의 뒤로 가기. to가 없으면 브라우저 뒤로 가기 */
-  back?: { to?: string; label?: string };
+  /** 뒤로 가기. onClick이 있으면 그것만 한다(같은 경로 안에서 화면 상태를 되돌릴 때) */
+  back?: { to?: string; label?: string; onClick?: () => void };
   /** 상단 바 오른쪽 (문서 연결 상태 칩, 새 회의 버튼 등). 집중 모드에서는 숨긴다 */
   actions?: ReactNode;
   /** 집중 모드 (CMN-01-F03): 메뉴를 숨기고 상단 바에는 제목과 뒤로 가기만 둔다 */
@@ -146,7 +147,7 @@ function TopBar({ title, back, actions }: Pick<AppShellProps, 'title' | 'back' |
             label={back.label ?? '뒤로 가기'}
             variant="surface"
             className="mr-2"
-            onClick={() => (back.to ? navigate(back.to) : navigate(-1))}
+            onClick={() => (back.onClick ? back.onClick() : back.to ? navigate(back.to) : navigate(-1))}
           />
         )}
         <h1 className="min-w-0 flex-1 truncate text-headline text-text">{title}</h1>

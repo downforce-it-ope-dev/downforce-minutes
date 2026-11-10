@@ -63,14 +63,19 @@ for (const screen of SCREENS) {
   }
 }
 
-test('연결 관리(SET-02)는 메뉴를 보이고, 마법사(SET-03~)는 메뉴를 숨긴다', async ({ page }) => {
+test('문서 연결 화면은 메뉴 없이 상단 바 뒤로 가기로 이동한다', async ({ page }) => {
   await mock(page, ready);
   await page.goto('/settings/document');
-  await expect(page.getByRole('navigation', { name: '주 메뉴' })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: '주 메뉴' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '설정으로 돌아가기' })).toBeVisible();
   await page.getByRole('button', { name: '문서 서비스 변경' }).click();
   await expect(page.getByRole('button', { name: 'Notion 선택' })).toBeVisible();
   await expect(page.getByRole('navigation', { name: '주 메뉴' })).toHaveCount(0);
   await expect(page.getByText('현재 연결: Notion')).toBeVisible();
+
+  // 변경 흐름에서 나가기는 상단 바 원형 뒤로 가기
+  await page.getByRole('button', { name: '문서 서비스 설정으로 돌아가기' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: '문서 연결' })).toBeVisible();
 });
 
 test('비밀 입력은 보기 버튼으로 확인하고, 빈 칸은 오류 테두리와 토스트로 알린다', async ({ page }) => {

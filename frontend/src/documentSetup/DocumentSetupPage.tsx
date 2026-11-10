@@ -23,7 +23,7 @@ import { STRUCTURE_STEPS, useDocumentSetup, type DocumentProvider, type SetupOpe
 /*
  * 문서 연결 (SET-02 관리 · SET-03 서비스 선택 · SET-04 연결 정보 · SET-05 진행·결과 · SET-06 전환, GitHub #20~#22).
  * 동작은 useDocumentSetup(기존 마법사 로직)이 맡고, 이 파일은 화면만 그린다.
- * - SET-02는 메뉴가 보이는 일반 화면, SET-03~06은 메뉴를 숨기는 집중 모드(결정 2026-11-09)
+ * - SET-02~06 모두 메뉴를 숨기는 집중 모드(SET-02는 2026-11-10 결정 변경), 뒤로 가기는 상단 바 원형 버튼
  * - 설명 문구 없이 제목·입력·버튼·상태만 두고, 오류·안내는 토스트로 보낸다(S-13)
  */
 
@@ -156,11 +156,11 @@ function DocumentSetupScreens({ settings }: { settings: boolean }) {
     );
   }
 
-  // SET-02 문서 연결 관리 (메뉴 보임)
+  // SET-02 문서 연결 관리. 설정의 하위 화면이라 메뉴 없이 뒤로 가기(설정)만 둔다(결정 2026-11-10)
   if (snapshot.status === 'READY' && settings && !setup.changing) {
     const active = snapshot.active;
     return (
-      <AppShell title="문서 연결" back={{ to: '/settings', label: '설정으로 돌아가기' }}>
+      <AppShell title="문서 연결" focus back={{ to: '/settings', label: '설정으로 돌아가기' }}>
         <div className="mx-auto flex w-full max-w-content flex-col gap-4">
           {active && (
             <Card as="section" aria-label="현재 문서 연결" className="flex flex-col gap-6 tablet:flex-row tablet:items-center">
@@ -225,11 +225,23 @@ function Wizard({
     setup.operationStatus === 'SUCCEEDED' && snapshot.operation
       ? snapshot.operation.type === 'SWITCH' ? '문서 서비스 변경 완료' : '문서 구조 준비 완료'
       : null;
+  // 변경 흐름에서 나가기: 상단 바 원형 뒤로 가기(SET-02와 같은 자리). 연결이 있을 때만
+  const exitToSettings =
+    snapshot.status === 'READY'
+      ? {
+          label: '문서 서비스 설정으로 돌아가기',
+          onClick: () => {
+            setup.setChanging(false);
+            setup.clearCredentials();
+            navigate('/settings/document');
+          },
+        }
+      : undefined;
   const goHome = () =>
     navigate('/', { state: { documentSetupCompleted: { provider: snapshot.active!.provider, rootUrl: snapshot.active!.rootUrl } } });
 
   return (
-    <AppShell title={title} focus>
+    <AppShell title={title} focus back={exitToSettings}>
       {/* 휴대폰·태블릿 세로: 한 열 / 태블릿 가로: 왼쪽 진행 상황(1) + 오른쪽 본문(2) */}
       <div className="mx-auto flex w-full max-w-content flex-col gap-4 tablet-lg:grid tablet-lg:grid-cols-3 tablet-lg:items-start tablet-lg:gap-8">
         <aside aria-label="진행 상황" className="flex flex-col gap-4 tablet-lg:sticky tablet-lg:top-0 tablet-lg:rounded-xl tablet-lg:bg-bg tablet-lg:p-6 tablet-lg:shadow-card">
@@ -254,11 +266,6 @@ function Wizard({
             </div>
           )}
 
-          {snapshot.status === 'READY' && (
-            <span className="hidden tablet-lg:block">
-              <BackToSettings setup={setup} />
-            </span>
-          )}
         </aside>
 
         <div className="flex flex-col gap-4 tablet-lg:col-span-2">
@@ -306,34 +313,9 @@ function Wizard({
           </StatusCard>
         )}
 
-        {snapshot.status === 'READY' && (
-          <span className="tablet-lg:hidden">
-            <BackToSettings setup={setup} />
-          </span>
-        )}
         </div>
       </div>
     </AppShell>
-  );
-}
-
-/** 문서 서비스 설정(SET-02)으로 돌아가기. 변경을 그만두고 입력한 자격 증명을 지운다 */
-function BackToSettings({ setup }: { setup: Setup }) {
-  return (
-    <ButtonLink
-      to="/settings/document"
-      size="lg"
-      shape="pill"
-      variant="secondary"
-      icon={ArrowLeft}
-      fullWidth
-      onClick={() => {
-        setup.setChanging(false);
-        setup.clearCredentials();
-      }}
-    >
-      문서 서비스 설정으로
-    </ButtonLink>
   );
 }
 
