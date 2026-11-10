@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router';
 import { CalendarDays, CircleStop, CloudUpload, FileText, Mic, MicOff, Pause, Play, Plus, RefreshCw, Users } from 'lucide-react';
 import { useReportSessionWork } from '../auth/sessionWork';
-import { browserMediaAdapter } from '../browserMediaAdapter';
+import { browserMediaAdapter, monitorDiagnostics } from '../browserMediaAdapter';
 import { NavigationLeaveGuard } from '../components/NavigationLeaveGuard';
 import { restoreRecordingSession, type RecordingSession } from '../meeting/recordingSessionStore';
 import type { MediaRecorderAdapter, RecordingSnapshot } from '../recordingController';
@@ -398,7 +398,15 @@ function MicrophoneChip({ snapshot, onRetry }: { snapshot: RecordingSnapshot; on
  */
 function DiagnosticsPanel({ recording }: { recording: ReturnType<typeof useRecordingSession> }) {
   const [searchParams] = useSearchParams();
-  if (!searchParams.has('debug')) return null;
+  const debug = searchParams.has('debug');
+  const [, setTick] = useState(0);
+  // 측정 값은 화면 상태 밖에 있으므로 0.5초마다 다시 그린다
+  useEffect(() => {
+    if (!debug) return undefined;
+    const timer = window.setInterval(() => setTick((value) => value + 1), 500);
+    return () => window.clearInterval(timer);
+  }, [debug]);
+  if (!debug) return null;
   const { snapshot, uploadSnapshot, endSnapshot, diagnostics } = recording;
   const rows: Array<[string, string]> = [
     ['state', `${snapshot.state}${snapshot.completed ? ' (completed)' : ''}`],
@@ -409,8 +417,9 @@ function DiagnosticsPanel({ recording }: { recording: ReturnType<typeof useRecor
     ['upload', `${uploadSnapshot.status} ${uploadSnapshot.confirmedCount}/${uploadSnapshot.totalCount} pending=${uploadSnapshot.pendingCount}`],
     ['end', endSnapshot.status],
     ['error', recording.storageError || snapshot.errorMessage || uploadSnapshot.message || endSnapshot.message || '-'],
-    ['audioContext', typeof AudioContext === 'undefined' ? 'unsupported' : 'available'],
-    ['mediaRecorder', typeof MediaRecorder === 'undefined' ? 'unsupported' : 'available'],
+    ['audioContext', monitorDiagnostics.audioContext],
+    ['monitor ticks', `${monitorDiagnostics.ticks} (raw ${monitorDiagnostics.rawLevel.toFixed(4)})`],
+    ['mic track', monitorDiagnostics.track],
   ];
   return (
     <dl aria-label="녹음 진단" className="grid w-full max-w-form grid-cols-3 gap-x-3 gap-y-1 rounded-md bg-bg-subtle p-3 text-left text-caption text-text">
