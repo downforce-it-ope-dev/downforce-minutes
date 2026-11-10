@@ -4,7 +4,7 @@ import {
   actOnSetupOperation, getSetupOperation, getSetupSnapshot, initializeSetup, saveSetupDraft, switchSetup, testSetupDraft,
   DocumentSetupError, type DocumentProvider, type DraftInput, type SetupOperation, type SetupSnapshot, type SwitchMode, type TestedDraft,
 } from '../documentSetupApi';
-import { savePendingDocumentConnection, saveReadyDocumentConnection } from '../documentConnectionStorage';
+import { loadStoredDocumentConnection, savePendingDocumentConnection, saveReadyDocumentConnection } from '../documentConnectionStorage';
 import { getDocumentAppConfig, listMeetingParticipants } from '../newMeetingApi';
 
 /*
@@ -111,6 +111,8 @@ export function useDocumentSetup(settings: boolean, notify: (message: string) =>
     refreshedConnection.current = version;
     let live = true;
     void (async () => {
+      // 이 브라우저에서 연결을 진행한 적이 없으면 백업할 정보가 없다. 실패가 아니므로 알리지 않고 끝낸다(2026-11-10 사용자 결정)
+      if (!loadStoredDocumentConnection()) return;
       try {
         saveReadyDocumentConnection(rootId, version);
       } catch {

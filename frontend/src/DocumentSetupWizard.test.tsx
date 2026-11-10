@@ -473,3 +473,19 @@ describe('document setup wizard', () => {
     expect(draftCalls[1][1]?.headers).toMatchObject({ 'If-Match': '"5"' });
   });
 });
+
+describe('브라우저 백업 (2026-11-10)', () => {
+  it('이 브라우저에 백업할 연결 정보가 없으면 저장 실패를 알리지 않는다', async () => {
+    window.localStorage.clear();
+    vi.stubGlobal('fetch', withHealthyBackend(vi.fn().mockImplementation(async (input: RequestInfo | URL) => {
+      const path = new URL(String(input)).pathname;
+      if (path.endsWith('/document-setup')) return response({ version: 71, status: 'READY', active: { provider: 'NOTION', connectionVersion: 2, rootId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', rootUrl: 'https://notion.example' }, draft: null, operation: { operationId: 'sw1', type: 'SWITCH', status: 'SUCCEEDED' }, canCreateMeeting: true });
+      if (path.endsWith('/operations/sw1')) return response({ ...operation('sw1', 'SUCCEEDED'), type: 'SWITCH' });
+      throw new Error(`Unexpected request: ${path}`);
+    })));
+    render(<MemoryRouter initialEntries={['/settings/document']}><SetupTestRoutes /></MemoryRouter>);
+    await screen.findByRole('heading', { name: '문서 연결' });
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(screen.queryByText(/연결 정보가 이 브라우저에 저장되지 않았습니다/)).toBeNull();
+  });
+});
