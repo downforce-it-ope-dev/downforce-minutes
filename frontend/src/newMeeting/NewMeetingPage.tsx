@@ -40,7 +40,7 @@ export function NewMeetingPage() {
   const location = useLocation();
   const initialDraft = (location.state as { draft?: MeetingDraft } | null)?.draft;
 
-  async function submit(attempt: MeetingSessionAttempt, labels: { templateName?: string; participantNames: string[] }) {
+  async function submit(attempt: MeetingSessionAttempt, labels: { templateName?: string; participants: Array<{ name: string; email: string }> }) {
     const session = await createMeetingSession(attempt);
     const draft: RecordingDraft = {
       title: attempt.title,
@@ -75,7 +75,7 @@ function NewMeetingForm({
   onSubmit,
 }: {
   initialDraft?: MeetingDraft;
-  onSubmit: (attempt: MeetingSessionAttempt, labels: { templateName?: string; participantNames: string[] }) => Promise<void>;
+  onSubmit: (attempt: MeetingSessionAttempt, labels: { templateName?: string; participants: Array<{ name: string; email: string }> }) => Promise<void>;
 }) {
   const toast = useToast();
   const tablet = useMediaQuery(TABLET_QUERY);

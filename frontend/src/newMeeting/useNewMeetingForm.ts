@@ -60,8 +60,8 @@ export function useNewMeetingForm({
   initialDraft?: MeetingDraft;
   /** 로그인한 이메일. 같은 이메일의 참석자를 늘 선택한다 */
   accountEmail: string | null;
-  /** labels: 녹음 화면 회의 정보에 보일 템플릿·참석자 이름 */
-  onSubmit: (attempt: MeetingSessionAttempt, labels: { templateName?: string; participantNames: string[] }) => Promise<void>;
+  /** labels: 녹음 화면 회의 정보에 보일 템플릿 이름·참석자(이름·이메일) */
+  onSubmit: (attempt: MeetingSessionAttempt, labels: { templateName?: string; participants: Array<{ name: string; email: string }> }) => Promise<void>;
   notify: (notice: NewMeetingNotice) => void;
 }) {
   const [config, setConfig] = useState<Resource<DocumentAppConfig>>({ status: 'loading' });
@@ -253,7 +253,10 @@ export function useNewMeetingForm({
     try {
       await onSubmit(entry.attempt, {
         templateName: availableTemplates.find((item) => item.id === entry.attempt.templateId)?.name,
-        participantNames: entry.attempt.participantIds.map((id) => roster.find((item) => item.id === id)?.name ?? '').filter(Boolean),
+        participants: entry.attempt.participantIds.flatMap((id) => {
+          const found = roster.find((item) => item.id === id);
+          return found ? [{ name: found.name, email: found.email }] : [];
+        }),
       });
       attemptRef.current = null;
     } catch (error) {

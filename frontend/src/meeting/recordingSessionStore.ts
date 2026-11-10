@@ -6,7 +6,7 @@ import type { MeetingDraft, MeetingSession } from '../newMeetingApi';
  * 저장소를 쓸 수 없는 브라우저에서도 같은 탭 안에서는 넘어가도록 메모리에도 둔다.
  */
 /** 녹음 화면 회의 정보(태블릿 가로)에 보일 이름. 새 회의에서 만들 때 함께 저장한다 */
-export type RecordingDraft = MeetingDraft & { templateName?: string; participantNames?: string[] };
+export type RecordingDraft = MeetingDraft & { templateName?: string; participants?: Array<{ name: string; email: string }> };
 export type RecordingSession = MeetingSession & { title: string; draft?: RecordingDraft };
 
 const KEY = 'meeting-automation.recording-session';

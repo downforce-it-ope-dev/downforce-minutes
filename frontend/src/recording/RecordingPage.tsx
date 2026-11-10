@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router';
-import { CalendarDays, CircleStop, FileText, Mic, MicOff, Pause, Play, Plus, RefreshCw, Users } from 'lucide-react';
+import { CalendarDays, CircleStop, CloudCheck, FileText, Mic, MicOff, Pause, Play, Plus, RefreshCw, Users } from 'lucide-react';
 import { useReportSessionWork } from '../auth/sessionWork';
 import { browserMediaAdapter } from '../browserMediaAdapter';
 import { NavigationLeaveGuard } from '../components/NavigationLeaveGuard';
@@ -17,6 +17,7 @@ import {
   Icon,
   IconButton,
   parseDateValue,
+  Pill,
   ProgressBar,
   RoundActionButton,
   useToast,
@@ -141,11 +142,21 @@ function RecordingBody({
           {formatElapsedTime(snapshot.state === 'Ready' && !snapshot.completed ? 0 : snapshot.elapsedMs)}
         </p>
 
-        {!snapshot.completed && <MicrophoneBar snapshot={snapshot} onRetry={actions.retryMicrophone} />}
-
-        {/* 저장·업로드 상태: 녹음 중에는 짧게, 문제가 있을 때만 다시 시도 */}
-        {active && uploadSnapshot.status !== 'retryable' && uploadSnapshot.confirmedCount > 0 && (
-          <p className="text-caption text-text-muted tabular-nums">자동 저장됨 · {uploadSnapshot.confirmedCount}조각</p>
+        {!snapshot.completed && (
+          <>
+            <LevelWaveform level={snapshot.microphoneLevel} state={snapshot.state} />
+            {/* 마이크 상태 + 자동 저장: 같은 크기의 알약으로 나란히 */}
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <MicrophoneChip snapshot={snapshot} onRetry={actions.retryMicrophone} />
+              {active && uploadSnapshot.status !== 'retryable' && uploadSnapshot.confirmedCount > 0 && (
+                <Pill tone="neutral" icon={CloudCheck} className="tablet:h-12 tablet:px-5 tablet:text-body-lg">
+                  <span>
+                    자동 저장됨 · <Pill.Strong>{uploadSnapshot.confirmedCount}</Pill.Strong>조각
+                  </span>
+                </Pill>
+              )}
+            </div>
+          </>
         )}
         {uploadSnapshot.status === 'retryable' && (
           <div className="flex items-center gap-3">
@@ -189,7 +200,7 @@ function RecordingBody({
           {snapshot.state === 'Recording' && <RoundActionButton icon={Pause} label="일시정지" onClick={actions.pause} />}
           {snapshot.state === 'Paused' && <RoundActionButton icon={Play} label="녹음 재개" onClick={actions.resume} />}
           {active && (
-            <RoundActionButton ref={endTrigger} icon={CircleStop} label="회의 종료" tone="danger" size="md" onClick={() => setConfirmOpen(true)} />
+            <RoundActionButton ref={endTrigger} icon={CircleStop} label="회의 종료" tone="danger" onClick={() => setConfirmOpen(true)} />
           )}
           {snapshot.state === 'Ready' && recovering && (
             <div className="flex flex-wrap justify-center gap-3">
@@ -219,16 +230,17 @@ function RecordingBody({
             {draft.templateName}
           </p>
         )}
-        {draft?.participantNames && draft.participantNames.length > 0 && (
+        {draft?.participants && draft.participants.length > 0 && (
           <div className="flex flex-col gap-2">
             <p className="flex items-center gap-2 text-label text-text">
               <Icon icon={Users} size="md" className="text-text-muted" />
-              참석자 <span className="tabular-nums">{draft.participantNames.length}명</span>
+              참석자 <span className="tabular-nums">{draft.participants.length}명</span>
             </p>
-            <ul className="flex flex-col">
-              {draft.participantNames.map((name, index) => (
-                <li key={`${name}-${index}`} className="flex h-12 items-center border-b border-border text-body text-text last:border-b-0">
-                  {name}
+            <ul aria-label="참석자" className="flex flex-col">
+              {draft.participants.map(({ name, email }, index) => (
+                <li key={`${email}-${index}`} className="flex min-h-15 flex-col justify-center border-b border-border py-2 last:border-b-0">
+                  <span className="text-body font-semibold text-text">{name}</span>
+                  <span className="truncate text-caption text-text-muted">{email}</span>
                 </li>
               ))}
             </ul>
@@ -296,10 +308,51 @@ function StatusBadge({ snapshot }: { snapshot: RecordingSnapshot }) {
   );
 }
 
-const BARS = 21;
+const BARS = 40;
+/** 휴대폰은 앞쪽 막대를 줄인다 */
+const PHONE_HIDDEN = 14;
 
-function MicrophoneBar({ snapshot, onRetry }: { snapshot: RecordingSnapshot; onRetry: () => void }) {
-  const { microphoneStatus, microphoneInputDetected, microphoneLevel, state } = snapshot;
+/**
+ * 입력 파형 (MTG-02-F03). 최근 약 3초의 입력 레벨을 오른쪽에서 왼쪽으로 흘려 보이는 막대 그래프.
+ * 가운데 선을 기준으로 위아래로 자라고, 분홍→보라 그라데이션이다. 녹음 중이 아니면 흐리게 보인다(장식이라 화면 읽기 제외).
+ */
+function LevelWaveform({ level, state }: { level: number; state: RecordingSnapshot['state'] }) {
+  const [previous, setPrevious] = useState(level);
+  const [history, setHistory] = useState<number[]>(() => Array.from({ length: BARS }, () => 0));
+  // 레벨이 바뀔 때마다 기록을 한 칸 민다 (렌더 중 이전 값 비교: 효과 없이 상태를 맞추는 React 권장 방식)
+  if (level !== previous) {
+    setPrevious(level);
+    setHistory((current) => [...current.slice(1), level]);
+  }
+  return (
+    <div
+      aria-hidden="true"
+      className={cn(
+        'flex h-20 w-full max-w-form items-center justify-center gap-1 tablet:h-28 tablet:gap-1.5',
+        state !== 'Recording' && 'opacity-50',
+      )}
+    >
+      {history.map((value, index) => {
+        // 작은 소리도 보이게 키우고, 끝으로 갈수록 살짝 낮춘다
+        const edge = 1 - Math.abs(index - (BARS - 1) / 2) / BARS;
+        const ratio = Math.min(1, 0.08 + Math.sqrt(value) * 1.1 * (0.7 + 0.3 * edge));
+        return (
+          <i
+            key={index}
+            className={cn(
+              'w-1.5 shrink-0 rounded-full bg-linear-to-t from-primary to-lavender-500 transition-all duration-100 motion-reduce:transition-none tablet:w-2',
+              index < PHONE_HIDDEN && 'hidden tablet:block',
+            )}
+            style={{ height: `${Math.round(ratio * 100)}%` }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+function MicrophoneChip({ snapshot, onRetry }: { snapshot: RecordingSnapshot; onRetry: () => void }) {
+  const { microphoneStatus, microphoneInputDetected } = snapshot;
   const view =
     microphoneStatus === 'checking'
       ? { label: '마이크를 확인하고 있습니다', short: '확인 중', lamp: 'bg-neutral-400', tone: 'bg-bg-subtle' }
@@ -309,25 +362,19 @@ function MicrophoneBar({ snapshot, onRetry }: { snapshot: RecordingSnapshot; onR
           ? { label: '마이크 입력이 감지되었습니다', short: '입력 감지', lamp: 'bg-success-text', tone: 'bg-success-soft' }
           : { label: '마이크 입력 대기 중', short: '입력 대기', lamp: 'bg-warning-text', tone: 'bg-warning-soft' };
   const canRetry = microphoneStatus === 'error' || (microphoneStatus === 'ready' && !microphoneInputDetected);
-  const tall = state === 'Recording' || state === 'Paused';
   return (
-    <div className={cn('flex w-full max-w-form items-center gap-3 rounded-full py-1 pr-1 pl-4', view.tone)}>
-      <div role="status" aria-live="polite" aria-label={view.label} className="flex min-w-0 flex-1 items-center gap-3">
-        <span className="relative shrink-0 text-text">
-          <Icon icon={microphoneStatus === 'error' ? MicOff : Mic} size="lg" />
+    <div className="flex items-center gap-2">
+      <div
+        role="status"
+        aria-live="polite"
+        aria-label={view.label}
+        className={cn('inline-flex h-10 items-center gap-2 rounded-full px-4 text-body text-text tablet:h-12 tablet:px-5 tablet:text-body-lg', view.tone)}
+      >
+        <span className="relative shrink-0">
+          <Icon icon={microphoneStatus === 'error' ? MicOff : Mic} size="md" />
           <span aria-hidden="true" className={cn('absolute -right-0.5 -bottom-0.5 size-2.5 rounded-full ring-2 ring-bg', view.lamp)} />
         </span>
-        <span aria-label={`마이크 입력 레벨 ${Math.round(microphoneLevel * 100)}%`} role="img" className="flex h-12 shrink-0 items-center gap-0.5">
-          {Array.from({ length: BARS }, (_, index) => {
-            const position = Math.abs(index - (BARS - 1) / 2) / ((BARS - 1) / 2);
-            const wave = 0.18 + microphoneLevel * (1 - position * 0.72) * (0.45 + 0.55 * Math.abs(Math.sin(index * 1.7)));
-            const height = Math.max(4, Math.round(wave * (tall ? 44 : 28)));
-            return <i key={index} className="w-1 rounded-full bg-brand-text" style={{ height }} />;
-          })}
-        </span>
-        <span aria-hidden="true" className="min-w-0 truncate text-left text-body text-text">
-          {view.short}
-        </span>
+        <span aria-hidden="true">{view.short}</span>
       </div>
       {canRetry && (
         <IconButton

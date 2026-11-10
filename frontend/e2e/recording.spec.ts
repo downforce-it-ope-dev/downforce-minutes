@@ -27,7 +27,11 @@ const session = {
     templateId: 'default.md',
     participantIds: ['p1', 'p2', 'p3'],
     templateName: '기본 회의록',
-    participantNames: ['홍길동', '김철수', '이영희'],
+    participants: [
+      { name: '홍길동', email: 'hong@miinit.com' },
+      { name: '김철수', email: 'kim@miinit.com' },
+      { name: '이영희', email: 'lee@miinit.com' },
+    ],
   },
 };
 
@@ -64,7 +68,7 @@ for (const size of SIZES) {
   });
 }
 
-test('태블릿: 녹음 버튼 지름 96·64, 사이 24 이상, 경과 시간은 화면 위쪽 절반', async ({ page }) => {
+test('태블릿: 녹음 버튼 둘 다 지름 96, 사이 24 이상, 경과 시간은 화면 위쪽 절반', async ({ page }) => {
   await mock(page);
   await page.setViewportSize({ width: 820, height: 1180 });
   await page.goto('/meetings/s-e2e/recording');
@@ -73,20 +77,20 @@ test('태블릿: 녹음 버튼 지름 96·64, 사이 24 이상, 경과 시간은
   const circle = (name: string) => page.getByRole('button', { name }).locator('span').first().boundingBox();
   const [primary, end] = [(await circle('일시정지'))!, (await circle('회의 종료'))!];
   expect(Math.round(primary.width)).toBe(96);
-  expect(Math.round(end.width)).toBe(64);
+  expect(Math.round(end.width)).toBe(96);
   expect(end.x - (primary.x + primary.width)).toBeGreaterThanOrEqual(24);
   const timer = (await page.getByLabel('경과 시간').boundingBox())!;
   expect(timer.y + timer.height).toBeLessThan(1180 / 2);
 });
 
-test('태블릿 가로: 오른쪽 회의 정보에 날짜·템플릿·참석자', async ({ page }) => {
+test('태블릿 가로: 오른쪽 회의 정보에 날짜·템플릿·참석자(이름·이메일)', async ({ page }) => {
   await mock(page);
   await page.setViewportSize({ width: 1180, height: 820 });
   await page.goto('/meetings/s-e2e/recording');
   const info = page.getByRole('region', { name: '회의 정보' });
   await expect(info).toBeVisible();
   await expect(info.getByText('기본 회의록')).toBeVisible();
-  await expect(info.getByRole('listitem')).toHaveText(['홍길동', '김철수', '이영희']);
+  await expect(info.getByRole('listitem')).toHaveText(['홍길동hong@miinit.com', '김철수kim@miinit.com', '이영희lee@miinit.com']);
   const panel = (await page.getByRole('region', { name: '녹음' }).boundingBox())!;
   expect((await info.boundingBox())!.x).toBeGreaterThan(panel.x + panel.width);
 });

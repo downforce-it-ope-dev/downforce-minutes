@@ -19,7 +19,10 @@ const session: RecordingSession = {
     templateId: 'default.md',
     participantIds: ['p1', 'p2'],
     templateName: '기본 회의록',
-    participantNames: ['홍길동', '김철수'],
+    participants: [
+      { name: '홍길동', email: 'hong@miinit.com' },
+      { name: '김철수', email: 'kim@miinit.com' },
+    ],
   },
 };
 
@@ -96,7 +99,7 @@ describe('회의 녹음 (MTG-02)', () => {
     const info = screen.getByRole('region', { name: '회의 정보' });
     expect(within(info).getByText('기본 회의록')).toBeTruthy();
     expect(within(info).getByText('참석자')).toBeTruthy();
-    expect(within(info).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['홍길동', '김철수']);
+    expect(within(info).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['홍길동hong@miinit.com', '김철수kim@miinit.com']);
   });
 
   it('녹음을 시작하면 뒤로 가기가 사라지고 일시정지·재개·회의 종료 확인이 동작한다', async () => {
