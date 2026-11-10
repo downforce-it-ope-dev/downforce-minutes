@@ -149,3 +149,21 @@ test('태블릿 세로: 큰 달력에서 날짜를 고른다 (axe 심각 위반 
   await expect(dialog).toHaveCount(0);
   await expect(page.getByRole('button', { name: '회의 날짜' })).not.toContainText('오늘');
 });
+
+for (const size of SIZES.slice(0, 3)) {
+  test(`${size.label}: 회의 제목·날짜·템플릿·참석자 검색의 높이가 같다`, async ({ page }) => {
+    await mock(page);
+    await page.setViewportSize(size);
+    await page.goto('/meetings/new');
+    await expect(page.getByRole('checkbox').first()).toBeVisible();
+    const heights = await Promise.all(
+      [
+        page.getByRole('textbox', { name: '회의 제목' }),
+        page.getByRole('button', { name: '회의 날짜' }),
+        page.getByRole('radio', { name: '기본 회의록' }),
+        page.getByRole('searchbox', { name: '참석자 검색' }),
+      ].map(async (locator) => Math.round((await locator.boundingBox())!.height)),
+    );
+    expect(new Set(heights).size, heights.join(', ')).toBe(1);
+  });
+}

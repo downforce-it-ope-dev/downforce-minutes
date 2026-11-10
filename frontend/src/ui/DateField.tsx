@@ -23,7 +23,7 @@ export interface DateFieldProps {
 
 /**
  * 날짜 선택 (MTG-01 회의 날짜). 기기 기본 날짜 입력은 태블릿에서 달력이 작아, 큰 달력 대화상자로 고른다.
- * - 입력란 모양 버튼(높이 56): "2026년 11월 10일 (화)" + 오늘이면 "오늘" 표시
+ * - 입력란 모양 버튼(높이 48, 태블릿 52 — 입력란과 같음): "2026년 11월 10일 (화)" + 오늘이면 "오늘" 표시
  * - 달력: 날짜 칸 48(태블릿 56), 이전·다음 달 48, 오늘 테두리, 고른 날 주 색 면
  * - 키보드: 방향키 하루·한 주 이동, PageUp/PageDown 한 달, Enter로 고름
  */
@@ -47,7 +47,7 @@ export function DateField({ label, value, onChange, invalid = false, disabled = 
         disabled={disabled}
         onClick={() => setOpen(true)}
         className={cn(
-          'flex h-14 w-full cursor-pointer items-center gap-3 rounded-md border bg-bg px-4 text-left text-body-lg text-text',
+          'flex h-12 w-full cursor-pointer items-center gap-3 rounded-md border bg-bg px-4 tablet:h-13 text-left text-body-lg text-text',
           'disabled:cursor-not-allowed disabled:bg-neutral-100 disabled:text-neutral-500',
           invalid ? 'border-danger' : 'border-border-input',
         )}

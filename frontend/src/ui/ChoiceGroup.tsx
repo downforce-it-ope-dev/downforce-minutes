@@ -22,7 +22,7 @@ export interface ChoiceGroupProps<T extends string> {
 
 /**
  * 버튼으로 하나를 고르는 선택 (MTG-01 회의록 템플릿). 선택 상자 대신 눌러서 바로 고른다.
- * 높이 56(누르는 영역 48 이상). 고른 버튼은 주 색 테두리 + 선택 면 + 체크 아이콘으로, 색만으로 구분하지 않는다.
+ * 높이는 입력란과 같다(48, 태블릿 52). 고른 버튼은 주 색 테두리 + 선택 면 + 체크 아이콘으로, 색만으로 구분하지 않는다.
  * radiogroup: 방향키로 이동하며 고르고, Tab은 고른 버튼 하나에만 멈춘다.
  */
 export function ChoiceGroup<T extends string>({ label, options, value, onChange, disabled = false, invalid = false, className }: ChoiceGroupProps<T>) {
@@ -61,7 +61,7 @@ export function ChoiceGroup<T extends string>({ label, options, value, onChange,
               onClick={() => onChange(option.value)}
               onKeyDown={(event) => handleKeyDown(event, index)}
               className={cn(
-                'inline-flex h-14 min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 rounded-md border px-4 text-label whitespace-nowrap',
+                'inline-flex h-12 min-w-0 flex-1 tablet:h-13 cursor-pointer items-center justify-center gap-2 rounded-md border px-4 text-label whitespace-nowrap',
                 'disabled:cursor-not-allowed disabled:bg-neutral-100 disabled:text-neutral-500',
                 selected ? 'border-2 border-primary bg-selected text-selected-text' : 'border-border-input bg-bg text-text active:bg-bg-subtle',
                 invalid && !selected && 'border-danger',
