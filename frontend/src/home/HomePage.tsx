@@ -177,11 +177,27 @@ function FailureBanner() {
   );
 }
 
+/**
+ * 화면 확인용 샘플 (Preview·개발 서버 전용, 운영 빌드에서는 빠진다). 홈 주소에 ?sample 을 붙이면 최근 회의록에 3건을 보인다.
+ * 실제 API는 부르지 않는다.
+ */
+const SAMPLE_MEETINGS: MeetingSummary[] = [
+  { documentId: 'sample-1', title: 'AX 개발 미팅', meetingAt: '2026-11-05T10:00:00+09:00', participants: [{ id: 's1', name: '김가나' }, { id: 's2', name: '이다라' }], documentUrl: null },
+  { documentId: 'sample-2', title: 'IAM 설계 리뷰', meetingAt: '2026-11-04T14:00:00+09:00', participants: [{ id: 's3', name: '박마바' }], documentUrl: null },
+  { documentId: 'sample-3', title: 'GCP 인프라 논의', meetingAt: '2026-11-03T09:30:00+09:00', participants: [{ id: 's4', name: '최사아' }, { id: 's5', name: '정자차' }, { id: 's6', name: '강카타' }, { id: 's7', name: '조파하' }], documentUrl: null },
+] as MeetingSummary[];
+
+function useSample() {
+  return __UI_PREVIEW__ && typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('sample');
+}
+
 /** 최근 회의 3건 (HOME-01-F02·F03) */
 function RecentMeetings() {
-  const [meetings, setMeetings] = useState<Load<MeetingSummary[]>>({ status: 'loading' });
+  const sample = useSample();
+  const [meetings, setMeetings] = useState<Load<MeetingSummary[]>>(sample ? { status: 'ready', data: SAMPLE_MEETINGS } : { status: 'loading' });
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
+    if (sample) return;
     let live = true;
     listMeetings(3)
       .then((items) => live && setMeetings({ status: 'ready', data: items }))
@@ -189,7 +205,7 @@ function RecentMeetings() {
     return () => {
       live = false;
     };
-  }, [attempt]);
+  }, [attempt, sample]);
 
   const tones = ['text-blue-500', 'text-pink-500', 'text-lavender-500'];
   return (
