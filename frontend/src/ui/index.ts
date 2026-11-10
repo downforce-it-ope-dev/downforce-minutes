@@ -2,7 +2,7 @@
 // 근거: docs/renewal/시안_적용_기준.md 4.1, CLAUDE.md
 export { cn } from './cn';
 export { Icon, type IconProps, type IconSize } from './Icon';
-export { Button, ButtonLink, type ButtonLinkProps, type ButtonProps, type ButtonSize, type ButtonVariant } from './Button';
+export { Button, ButtonAnchor, ButtonLink, type ButtonAnchorProps, type ButtonLinkProps, type ButtonProps, type ButtonSize, type ButtonVariant } from './Button';
 export { IconButton, type IconButtonProps, type IconButtonVariant } from './IconButton';
 export { TextField, type TextFieldProps } from './TextField';
 export { OtpInput, type OtpInputProps } from './OtpInput';

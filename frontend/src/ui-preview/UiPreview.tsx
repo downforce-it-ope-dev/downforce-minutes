@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router';
 import {
   ArrowRight,
   Bell,
+  Download,
   CircleStop,
   FileText,
   Mail,
@@ -22,6 +23,7 @@ import {
   LeaveConfirmDialog,
   Banner,
   Button,
+  ButtonAnchor,
   Card,
   cn,
   Dialog,
@@ -164,6 +166,11 @@ function ButtonsSection() {
         <Button variant="secondary" disabled icon={RefreshCw}>
           코드 다시 받기 (52초)
         </Button>
+      </Row>
+      <Row label="앱 밖 링크 (ButtonAnchor, 파일 다운로드)">
+        <ButtonAnchor href="#" variant="secondary" icon={Download} download>
+          오디오 다운로드
+        </ButtonAnchor>
       </Row>
       <Row label="대표 동작 (hero, 휴대폰 56 · 태블릿 72)">
         <Button variant="hero" icon={Mic}>

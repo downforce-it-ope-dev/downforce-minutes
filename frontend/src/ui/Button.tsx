@@ -130,3 +130,31 @@ export function ButtonLink({ to, variant = 'primary', size = 'md', icon, fullWid
     </Link>
   );
 }
+
+export interface ButtonAnchorProps extends Omit<ButtonLinkProps, 'to'> {
+  /** 앱 밖 주소 (파일 다운로드 등) */
+  href: string;
+  /** 파일로 받기 (a download) */
+  download?: boolean;
+  /** 새 탭에서 열기. rel="noopener"를 함께 붙인다 */
+  newTab?: boolean;
+  ref?: Ref<HTMLAnchorElement>;
+}
+
+/** 버튼 모양의 앱 밖 링크 (MTG-03 원본 오디오 다운로드). 앱 안 이동은 ButtonLink를 쓴다 */
+export function ButtonAnchor({ href, download, newTab, ref, variant = 'primary', size = 'md', icon, fullWidth = false, shape = 'default', className, onClick, children }: ButtonAnchorProps) {
+  return (
+    <a
+      ref={ref}
+      href={href}
+      download={download || undefined}
+      target={newTab ? '_blank' : undefined}
+      rel={newTab ? 'noopener' : undefined}
+      onClick={onClick}
+      className={cn(BASE, SIZE[size], shape === 'pill' ? 'rounded-full' : 'rounded-md', VARIANT[variant], fullWidth && 'w-full', className)}
+    >
+      {icon && <Icon icon={icon} size={size === 'lg' ? 'lg' : 'md'} />}
+      {children}
+    </a>
+  );
+}

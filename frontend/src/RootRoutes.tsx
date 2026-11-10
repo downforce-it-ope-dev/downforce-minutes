@@ -10,6 +10,7 @@ import { HomePage } from './home/HomePage';
 import { LEGACY_PATHS } from './legacyRoutes';
 import { NewMeetingPage } from './newMeeting/NewMeetingPage';
 import { NotFoundPage } from './notFound/NotFoundPage';
+import { ProcessingRoute } from './processing/ProcessingPage';
 import { RecordingRoute } from './recording/RecordingPage';
 import { ServerRecoveryOverlay } from './recovery/ServerRecoveryOverlay';
 import { ToastProvider } from './ui';
@@ -84,6 +85,15 @@ function AppRoutes() {
         element={
           <RequireAuth>
             <RecordingRoute />
+          </RequireAuth>
+        }
+      />
+      {/* 회의 처리 (MTG-03, #28). 집중 모드. 처리 완료(REVIEW)면 검토 화면(기존 App)으로 간다 */}
+      <Route
+        path="/meetings/:sessionId/processing"
+        element={
+          <RequireAuth>
+            <ProcessingRoute />
           </RequireAuth>
         }
       />

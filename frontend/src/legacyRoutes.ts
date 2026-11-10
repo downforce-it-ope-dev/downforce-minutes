@@ -7,7 +7,6 @@ export const LEGACY_PATHS = [
   '/settings',
   '/meetings',
   '/meetings/:documentId',
-  '/meetings/:sessionId/processing',
   '/meetings/:sessionId/review',
   '/meetings/:sessionId/complete',
   '/participants',
