@@ -132,12 +132,13 @@ export function ParticipantPicker({
             )}
           </div>
         ) : (
-          <ul aria-label="참석자 목록" className="flex flex-col gap-1 p-2">
+          <ul aria-label="참석자 목록" className="flex flex-col gap-1 p-2 tablet-lg:block tablet-lg:columns-2 tablet-lg:gap-x-2">
+            {/* 큰 태블릿: 가나다순을 위에서 아래로 두 단에 나눠 한 번에 두 배를 보인다 */}
             {visible.map((item) => {
               const checked = selectedIds.includes(item.id);
               const self = item.id === selfId;
               return (
-                <li key={item.id}>
+                <li key={item.id} className="tablet-lg:mb-1 tablet-lg:break-inside-avoid">
                   <label
                     className={cn(
                       'flex min-h-17 items-center gap-3 rounded-md px-3 tablet:min-h-14',

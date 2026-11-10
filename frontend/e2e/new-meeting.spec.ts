@@ -167,3 +167,29 @@ for (const size of SIZES.slice(0, 3)) {
     expect(new Set(heights).size, heights.join(', ')).toBe(1);
   });
 }
+
+test('집중 모드: 메뉴가 없고, 태블릿 가로는 참석자를 두 단으로 보여 한 번에 8명 이상 보인다', async ({ page }) => {
+  await mock(page);
+  await page.setViewportSize({ width: 1180, height: 820 });
+  await page.goto('/meetings/new');
+  await expect(page.getByRole('navigation', { name: '주 메뉴' })).toHaveCount(0);
+  const list = page.getByRole('list', { name: '참석자 목록' });
+  const boxes = list.getByRole('checkbox');
+  await expect(boxes.first()).toBeVisible();
+  // 두 단: 첫 사람과 다른 단의 사람이 같은 높이에서 시작한다
+  const xs = new Set<number>();
+  for (const box of await boxes.all()) xs.add(Math.round((await box.boundingBox())!.x));
+  expect(xs.size).toBe(2);
+  let visible = 0;
+  for (const box of await boxes.all()) if (await box.isVisible() && (await box.boundingBox())!.y + 24 < (await list.locator('..').boundingBox())!.y + (await list.locator('..').boundingBox())!.height) visible += 1;
+  expect(visible).toBeGreaterThanOrEqual(8);
+});
+
+test('휴대폰: 집중 모드라 탭 바 없이 회의 시작이 화면 아래에 있다', async ({ page }) => {
+  await mock(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/meetings/new');
+  await expect(page.getByRole('navigation', { name: '주 메뉴' })).toHaveCount(0);
+  const start = (await page.getByRole('button', { name: '회의 시작' }).boundingBox())!;
+  expect(start.y + start.height).toBeGreaterThan(844 - 120);
+});

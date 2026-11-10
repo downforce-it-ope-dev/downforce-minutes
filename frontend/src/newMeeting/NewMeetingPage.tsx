@@ -1,7 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { FileText, Mic, UserPlus, X } from 'lucide-react';
-import { AccountButton, SidebarAccount } from '../auth/AccountMenu';
 import { loadAccountEmail } from '../auth/accountEmail';
 import { saveRecordingSession, type RecordingDraft } from '../meeting/recordingSessionStore';
 import { createMeetingSession, type MeetingDraft, type MeetingSessionAttempt } from '../newMeetingApi';
@@ -27,9 +26,10 @@ import { configReady, useNewMeetingForm, type NewMeetingNotice } from './useNewM
 /*
  * MTG-01 새 회의 (GitHub #26, docs/renewal/화면기획/MTG-01_새회의.md).
  * 정보 위계(사용자 결정 2026-11-10): 회의 제목(가로 가득, 큰 글자) → 날짜·템플릿(좌우) → 참석자.
+ * 집중 모드(2026-11-11): 메뉴 없이 제목과 뒤로 가기(홈)만. 큰 태블릿에서는 넓어진 폭으로 참석자 목록을 두 단으로 보인다.
  * - 태블릿: 참석자 영역은 남은 높이를 가로 가득 쓰고 목록만 스크롤한다. 머리의 등록 아이콘을 누르면 오른쪽에서 새 참석자 패널이
  *   밀려 나와 참석자 영역과 같은 높이로 나란히 선다(사용자 결정 2026-11-10). 회의 시작은 맨 아래 가운데
- * - 휴대폰: 1단 페이지 스크롤, 새 참석자는 대화상자, 회의 시작은 탭 바 위에 고정
+ * - 휴대폰: 1단 페이지 스크롤, 새 참석자는 대화상자, 회의 시작은 화면 아래에 고정
  * - 날짜는 큰 달력 대화상자, 템플릿은 버튼으로 고른다
  * - 오류·상태 알림은 토스트, 입력 오류는 테두리로만 표시한다(S-13)
  */
@@ -54,17 +54,8 @@ export function NewMeetingPage() {
   }
 
   return (
-    <AppShell
-      title="새 회의"
-      back={{ to: '/', label: '홈' }}
-      account={<SidebarAccount />}
-      actions={
-        <span className="tablet-lg:hidden">
-          <AccountButton />
-        </span>
-      }
-      fillHeight
-    >
+    // 집중 모드 (사용자 결정 2026-11-11): 새 회의 → 녹음 → 처리 → 검토가 메뉴 없이 이어진다. 넓어진 폭은 참석자 목록이 쓴다
+    <AppShell title="새 회의" focus back={{ to: '/', label: '홈' }} fillHeight toastPlacement="action">
       <NewMeetingForm initialDraft={initialDraft} onSubmit={submit} />
     </AppShell>
   );
@@ -230,10 +221,10 @@ function NewMeetingForm({
 
       {!tablet && (
         <>
-          {/* 휴대폰: 회의 시작을 탭 바 위에 고정 (낮은 화면은 본문 끝) */}
+          {/* 휴대폰: 회의 시작을 화면 아래에 고정 (집중 모드라 탭 바 없음, 낮은 화면은 본문 끝) */}
           <div className="h-20 short:hidden" aria-hidden="true" />
           <div className="fixed inset-x-0 bottom-0 z-30 px-4 pb-safe short:static short:px-0 short:pb-0">
-            <div className="mb-20 short:mb-0">{startButton}</div>
+            <div className="mb-4 short:mb-0">{startButton}</div>
           </div>
           <Dialog open={addOpen} onOpenChange={setAddOpen} title="새 참석자">
             <NewParticipantForm
