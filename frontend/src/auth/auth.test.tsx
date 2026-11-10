@@ -185,7 +185,7 @@ describe('AUTH-02 인증 코드', () => {
     renderAt({ pathname: '/login/verify', state: verifyState });
     const resend = () => screen.getByRole('button', { name: /코드 다시 받기/ });
     expect(resend().getAttribute('aria-disabled')).toBe('true');
-    expect(resend().textContent).toContain('(60초)');
+    expect(resend().textContent).not.toContain('초');
 
     act(() => {
       vi.advanceTimersByTime(61_000);
