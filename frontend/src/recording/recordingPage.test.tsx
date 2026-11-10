@@ -123,6 +123,25 @@ describe('회의 녹음 (MTG-02)', () => {
     expect(screen.getByText('녹음 중')).toBeTruthy();
   });
 
+  it('화면이 다시 그려져도 마이크·녹음기를 다시 만들지 않는다 (녹음이 끊기지 않음)', async () => {
+    const adapter = renderRoute();
+    await screen.findByRole('status', { name: '마이크 입력이 감지되었습니다' });
+    fireEvent.click(screen.getByRole('button', { name: '녹음 시작' }));
+    await screen.findByText('녹음 중');
+    // 일시정지·재개로 여러 번 다시 그린다
+    fireEvent.click(screen.getByRole('button', { name: '일시정지' }));
+    fireEvent.click(screen.getByRole('button', { name: '녹음 재개' }));
+    fireEvent.click(screen.getByRole('button', { name: '일시정지' }));
+    fireEvent.click(screen.getByRole('button', { name: '녹음 재개' }));
+    expect(screen.getByText('녹음 중')).toBeTruthy();
+    expect(adapter.createRecorder).toHaveBeenCalledTimes(1);
+    // 마이크 확인 때 받은 입력을 녹음에도 쓴다
+    expect(adapter.getUserMedia).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('img', { name: '자동 저장 중' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '일시정지' }));
+    expect(screen.queryByRole('img', { name: '자동 저장 중' })).toBeNull();
+  });
+
   it('녹음 시작 전 뒤로 가기는 세션을 취소하고 입력값을 들고 새 회의로 돌아간다', async () => {
     renderRoute();
     await screen.findByRole('status', { name: '마이크 입력이 감지되었습니다' });

@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router';
-import { CalendarDays, CircleStop, CloudCheck, FileText, Mic, MicOff, Pause, Play, Plus, RefreshCw, Users } from 'lucide-react';
+import { CalendarDays, CircleStop, CloudUpload, FileText, Mic, MicOff, Pause, Play, Plus, RefreshCw, Users } from 'lucide-react';
 import { useReportSessionWork } from '../auth/sessionWork';
 import { browserMediaAdapter } from '../browserMediaAdapter';
 import { NavigationLeaveGuard } from '../components/NavigationLeaveGuard';
@@ -17,7 +17,6 @@ import {
   Icon,
   IconButton,
   parseDateValue,
-  Pill,
   ProgressBar,
   RoundActionButton,
   useToast,
@@ -35,7 +34,8 @@ import { useWakeLock } from './useWakeLock';
 
 export function RecordingRoute({ mediaAdapter = browserMediaAdapter }: { mediaAdapter?: MediaRecorderAdapter }) {
   const { sessionId } = useParams();
-  const session = restoreRecordingSession();
+  // 다시 그릴 때마다 저장소에서 새 객체를 만들면 녹음기가 다시 만들어지므로 경로가 바뀔 때만 읽는다
+  const session = useMemo(() => restoreRecordingSession(), [sessionId]);
   if (!session || session.sessionId !== sessionId) return <SessionMissing />;
   return <RecordingScreen key={session.sessionId} session={session} mediaAdapter={mediaAdapter} />;
 }
@@ -120,14 +120,11 @@ function RecordingBody({
 
   useWakeLock(active, () => toast({ message: '이 기기에서는 화면 꺼짐 방지를 쓸 수 없습니다.' }));
 
-  // 오류·실패 문구는 토스트로 알린다 (같은 문구는 한 번만)
-  const error = storageError || snapshot.errorMessage || '';
-  useNotice(error, (message) => toast({ message, tone: 'danger', duration: 8000 }));
-  useNotice(['retryable', 'failed', 'session-not-found'].includes(uploadSnapshot.status) ? (uploadSnapshot.message ?? '') : '', (message) =>
-    toast({ message, tone: 'danger', duration: 8000 }),
-  );
-  // 종료 처리 실패가 가장 중요하므로 마지막에 띄운다(토스트는 하나만 보임)
-  useNotice(endFailed ? (endSnapshot.message ?? '') : '', (message) => toast({ message, tone: 'danger', duration: 8000 }));
+  // 오류·실패 문구는 토스트로 알린다. 토스트는 하나만 보이므로 가장 중요한 것 하나만 고른다
+  // (종료 처리 실패 > 업로드 실패 > 마이크·저장 오류). 같은 문구는 한 번만 띄운다
+  const uploadProblem = ['retryable', 'failed', 'session-not-found'].includes(uploadSnapshot.status) ? (uploadSnapshot.message ?? '') : '';
+  const notice = (endFailed ? endSnapshot.message : '') || uploadProblem || storageError || snapshot.errorMessage || '';
+  useNotice(notice, (message) => toast({ message, tone: 'danger', duration: 8000 }));
 
   const draft = session.draft;
   const parsedDate = draft?.meetingDate ? parseDateValue(draft.meetingDate) : null;
@@ -145,15 +142,18 @@ function RecordingBody({
         {!snapshot.completed && (
           <>
             <LevelWaveform level={snapshot.microphoneLevel} state={snapshot.state} />
-            {/* 마이크 상태 + 자동 저장: 같은 크기의 알약으로 나란히 */}
+            {/* 마이크 상태 + 자동 저장 표시 */}
             <div className="flex flex-wrap items-center justify-center gap-3">
               <MicrophoneChip snapshot={snapshot} onRetry={actions.retryMicrophone} />
-              {active && uploadSnapshot.status !== 'retryable' && uploadSnapshot.confirmedCount > 0 && (
-                <Pill tone="neutral" icon={CloudCheck} className="tablet:h-12 tablet:px-5 tablet:text-body-lg">
-                  <span>
-                    자동 저장됨 · <Pill.Strong>{uploadSnapshot.confirmedCount}</Pill.Strong>조각
-                  </span>
-                </Pill>
+              {/* 자동 저장: 조각 수는 업로드 묶음마다 다시 세어 의미가 없어, 녹음 중 깜빡이는 저장 아이콘만 보인다 */}
+              {snapshot.state === 'Recording' && !['retryable', 'failed', 'session-not-found'].includes(uploadSnapshot.status) && (
+                <span
+                  role="img"
+                  aria-label="자동 저장 중"
+                  className="inline-flex size-10 items-center justify-center rounded-full bg-bg-subtle text-brand-text tablet:size-12"
+                >
+                  <Icon icon={CloudUpload} size="lg" className="animate-pulse motion-reduce:animate-none" />
+                </span>
               )}
             </div>
           </>

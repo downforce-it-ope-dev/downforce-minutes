@@ -106,8 +106,7 @@ test('녹음 → 일시정지 → 재개 → 종료 확인(계속 녹음이 기�
   await page.goto('/meetings/s-e2e/recording');
   await page.getByRole('button', { name: '녹음 시작' }).click();
   await expect(page.getByRole('button', { name: '회의 준비로 돌아가기' })).toHaveCount(0);
-  await page.waitForTimeout(2500);
-  await expect(page.getByText(/자동 저장됨 · \d+조각/)).toBeVisible();
+  await expect(page.getByRole('img', { name: '자동 저장 중' })).toBeVisible();
   await page.getByRole('button', { name: '일시정지' }).click();
   await expect(page.getByText('일시정지됨')).toBeVisible();
   await page.getByRole('button', { name: '녹음 재개' }).click();
