@@ -17,7 +17,6 @@ for (const screen of screens.filter(({ id }) => !['SCR-001', 'SCR-003', 'SCR-007
         }
         await installSyntheticApi(page, screen);
         await page.goto(screen.route);
-        if (screen.id === 'SCR-002') await page.getByLabel('회의 제목').fill(longKoreanTitle);
 
         const main = page.locator('main').first();
         await expect(main).toBeVisible();
@@ -75,7 +74,7 @@ for (const screen of screens.filter(({ id }) => !['SCR-001', 'SCR-003', 'SCR-007
 
 test('SCR-009 filters synthetic meetings by title and date and reports an invalid date range', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 800 });
-  await installSyntheticApi(page, screens[7], { meetings: meetingFixtures });
+  await installSyntheticApi(page, screens.find((screen) => screen.id === 'SCR-009')!, { meetings: meetingFixtures });
   await page.goto('/meetings');
 
   const productMeeting = page.locator('.meeting-summary-row').filter({ hasText: '제품 전략 회의' });

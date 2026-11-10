@@ -1,11 +1,12 @@
 import { withHealthyBackend } from './testUtils/withHealthyBackend';
 import 'fake-indexeddb/auto';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { StrictMode } from 'react';
+import { StrictMode, type ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router';
 import { App } from './App';
 import { HomePage } from './home/HomePage';
+import { NewMeetingPage } from './newMeeting/NewMeetingPage';
 import type { MediaRecorderAdapter, RecorderLike } from './recordingController';
 import { ChunkRepository } from './chunkRepository';
 // @ts-expect-error Node's Blob exercises browser-style IndexedDB structured cloning in jsdom.
@@ -102,6 +103,20 @@ function renderHomeWithDestinationFixture() {
   );
 }
 
+/** 새 회의(리뉴얼, App 밖)에서 시작해 녹음 이후(기존 App)로 이어지는 흐름. 실제 RootRoutes처럼 두 라우트를 나란히 둔다 */
+function renderNewMeetingFlow({ mediaAdapter, strict = false, extra }: { mediaAdapter?: MediaRecorderAdapter; strict?: boolean; extra?: ReactNode } = {}) {
+  const tree = (
+    <MemoryRouter initialEntries={['/meetings/new']}>
+      <Routes>
+        <Route path="/meetings/new" element={<NewMeetingPage />} />
+        <Route path="*" element={<App mediaAdapter={mediaAdapter} />} />
+      </Routes>
+      {extra}
+    </MemoryRouter>
+  );
+  return render(strict ? <StrictMode>{tree}</StrictMode> : tree);
+}
+
 function renderParticipantsApp() {
   return render(<MemoryRouter initialEntries={['/settings/participants']}><App /></MemoryRouter>);
 }
@@ -132,12 +147,11 @@ describe('Participants settings', () => {
       return Promise.reject(new Error(`Unexpected request: ${path} ${init?.method ?? 'GET'}`));
     });
     installFetchMock(fetchMock);
-    render(<MemoryRouter initialEntries={['/meetings/new']}><App /></MemoryRouter>);
+    renderNewMeetingFlow();
 
-    await screen.findByRole('button', { name: '참석자 선택' });
+    await screen.findByRole('list', { name: '참석자 목록' });
     fireEvent.change(screen.getByLabelText('회의 제목'), { target: { value: 'Planning' } });
-    fireEvent.click(screen.getByRole('button', { name: '참석자 선택' }));
-    fireEvent.click(within(screen.getByRole('group', { name: '참석자 목록' })).getByRole('checkbox', { name: 'Ada Lovelace ada@example.com' }));
+    fireEvent.click(within(screen.getByRole('list', { name: '참석자 목록' })).getByRole('checkbox', { name: 'Ada Lovelace ada@example.com' }));
     fireEvent.click(screen.getByRole('button', { name: '회의 시작' }));
 
     expect(await screen.findByRole('heading', { name: '회의 녹음', level: 1 })).toBeTruthy();
@@ -170,18 +184,17 @@ describe('Participants settings', () => {
       return Promise.reject(new Error(`Unexpected request: ${path} ${init?.method ?? 'GET'}`));
     });
     installFetchMock(fetchMock);
-    render(<MemoryRouter initialEntries={['/meetings/new']}><App /></MemoryRouter>);
-    await screen.findByRole('button', { name: '참석자 선택' });
+    renderNewMeetingFlow();
+    await screen.findByRole('list', { name: '참석자 목록' });
     fireEvent.change(screen.getByLabelText('회의 제목'), { target: { value: 'Retry safely' } });
-    fireEvent.click(screen.getByRole('button', { name: '참석자 선택' }));
-    fireEvent.click(within(screen.getByRole('group', { name: '참석자 목록' })).getByRole('checkbox', { name: 'Ada Lovelace ada@example.com' }));
+    fireEvent.click(within(screen.getByRole('list', { name: '참석자 목록' })).getByRole('checkbox', { name: 'Ada Lovelace ada@example.com' }));
     fireEvent.click(screen.getByRole('button', { name: '회의 시작' }));
     await waitFor(() => expect(fetchMock.mock.calls.filter(([url]) => new URL(String(url)).pathname.endsWith('/meeting-sessions'))).toHaveLength(1));
-    expect(screen.getByRole('button', { name: '회의 시작 중…' })).toHaveProperty('disabled', true);
+    expect(screen.getByRole('button', { name: '회의 시작 중…' }).getAttribute('aria-disabled')).toBe('true');
     fireEvent.click(screen.getByRole('button', { name: '회의 시작 중…' }));
     expect(fetchMock.mock.calls.filter(([url]) => new URL(String(url)).pathname.endsWith('/meeting-sessions'))).toHaveLength(1);
     rejectFirst(new Error('connection dropped before response'));
-    expect((await screen.findByRole('alert')).textContent).toContain('회의를 시작하지 못했습니다.');
+    expect(await screen.findByText(/회의를 시작하지 못했습니다/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '회의 시작' }));
     await waitFor(() => expect(resolveSecond).toBeTypeOf('function'));
     const posts = fetchMock.mock.calls.filter(([url]) => new URL(String(url)).pathname.endsWith('/meeting-sessions'));
@@ -215,13 +228,12 @@ describe('Participants settings', () => {
       return Promise.reject(new Error(`Unexpected request: ${path} ${init?.method ?? 'GET'}`));
     });
     installFetchMock(fetchMock);
-    render(<MemoryRouter initialEntries={['/meetings/new']}><App /></MemoryRouter>);
-    await screen.findByRole('button', { name: '참석자 선택' });
+    renderNewMeetingFlow();
+    await screen.findByRole('list', { name: '참석자 목록' });
     fireEvent.change(screen.getByLabelText('회의 제목'), { target: { value: 'Retry after gateway response' } });
-    fireEvent.click(screen.getByRole('button', { name: '참석자 선택' }));
-    fireEvent.click(within(screen.getByRole('group', { name: '참석자 목록' })).getByRole('checkbox', { name: 'Ada Lovelace ada@example.com' }));
+    fireEvent.click(within(screen.getByRole('list', { name: '참석자 목록' })).getByRole('checkbox', { name: 'Ada Lovelace ada@example.com' }));
     fireEvent.click(screen.getByRole('button', { name: '회의 시작' }));
-    expect((await screen.findByRole('alert')).textContent).toContain('요청을 완료하지 못했습니다.');
+    expect(await screen.findByText(/회의를 시작하지 못했습니다/)).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: '회의 시작' }));
     expect(await screen.findByRole('heading', { name: 'Retry after gateway response' })).toBeTruthy();
@@ -254,21 +266,19 @@ describe('Participants settings', () => {
       return Promise.reject(new Error(`Unexpected request: ${path} ${init?.method ?? 'GET'}`));
     });
     installFetchMock(fetchMock);
-    render(<MemoryRouter initialEntries={['/meetings/new']}><App /></MemoryRouter>);
-    await screen.findByRole('button', { name: '참석자 선택' });
+    renderNewMeetingFlow();
+    await screen.findByRole('list', { name: '참석자 목록' });
     fireEvent.change(screen.getByLabelText('회의 제목'), { target: { value: 'Connection changes during retry' } });
-    fireEvent.click(screen.getByRole('button', { name: '참석자 선택' }));
-    fireEvent.click(within(screen.getByRole('group', { name: '참석자 목록' })).getByRole('checkbox', { name: 'Ada Lovelace ada@example.com' }));
+    fireEvent.click(within(screen.getByRole('list', { name: '참석자 목록' })).getByRole('checkbox', { name: 'Ada Lovelace ada@example.com' }));
     fireEvent.click(screen.getByRole('button', { name: '회의 시작' }));
-    await screen.findByRole('alert');
+    await screen.findByText(/회의를 시작하지 못했습니다/);
     fireEvent.click(screen.getByRole('button', { name: '회의 시작' }));
 
-    expect(await screen.findByText(/문서 연결이 바뀌었습니다/)).toBeTruthy();
+    expect(await screen.findByText(/문서 연결이 바뀌어/)).toBeTruthy();
     expect(configReads).toBe(2);
     expect(fetchMock.mock.calls.filter(([url]) => new URL(String(url)).pathname.endsWith('/meeting-sessions'))).toHaveLength(1);
     expect(screen.queryByRole('list', { name: '선택한 참석자' })).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: '참석자 선택' }));
-    fireEvent.click(within(screen.getByRole('group', { name: '참석자 목록' })).getByRole('checkbox', { name: 'Ada Lovelace ada@example.com' }));
+    fireEvent.click(within(screen.getByRole('list', { name: '참석자 목록' })).getByRole('checkbox', { name: 'Ada Lovelace ada@example.com' }));
     fireEvent.click(screen.getByRole('button', { name: '회의 시작' }));
     expect(await screen.findByRole('heading', { name: 'Connection changes during retry' })).toBeTruthy();
     const posts = fetchMock.mock.calls.filter(([url]) => new URL(String(url)).pathname.endsWith('/meeting-sessions'));
@@ -298,13 +308,12 @@ describe('Participants settings', () => {
       return Promise.reject(new Error(`Unexpected request: ${path} ${init?.method ?? 'GET'}`));
     });
     installFetchMock(fetchMock);
-    render(<MemoryRouter initialEntries={['/meetings/new']}><App /></MemoryRouter>);
-    await screen.findByRole('button', { name: '참석자 선택' });
+    renderNewMeetingFlow();
+    await screen.findByRole('list', { name: '참석자 목록' });
     fireEvent.change(screen.getByLabelText('회의 제목'), { target: { value: 'Before edit' } });
-    fireEvent.click(screen.getByRole('button', { name: '참석자 선택' }));
-    fireEvent.click(within(screen.getByRole('group', { name: '참석자 목록' })).getByRole('checkbox', { name: 'Ada Lovelace ada@example.com' }));
+    fireEvent.click(within(screen.getByRole('list', { name: '참석자 목록' })).getByRole('checkbox', { name: 'Ada Lovelace ada@example.com' }));
     fireEvent.click(screen.getByRole('button', { name: '회의 시작' }));
-    expect((await screen.findByRole('alert')).textContent).toContain('요청을 완료하지 못했습니다.');
+    expect(await screen.findByText(/회의를 시작하지 못했습니다/)).toBeTruthy();
     expect(screen.queryByText(/private-secret|provider token/)).toBeNull();
     fireEvent.change(screen.getByLabelText('회의 제목'), { target: { value: 'After edit' } });
     fireEvent.click(screen.getByRole('button', { name: '회의 시작' }));
@@ -344,19 +353,17 @@ describe('Participants settings', () => {
       return Promise.reject(new Error(`Unexpected request: ${path} ${init?.method ?? 'GET'}`));
     });
     installFetchMock(fetchMock);
-    render(<MemoryRouter initialEntries={['/meetings/new']}><App /></MemoryRouter>);
-    await screen.findByRole('button', { name: '참석자 선택' });
+    renderNewMeetingFlow();
+    await screen.findByRole('list', { name: '참석자 목록' });
     fireEvent.change(screen.getByLabelText('회의 제목'), { target: { value: 'Current connection' } });
-    fireEvent.click(screen.getByRole('button', { name: '참석자 선택' }));
-    fireEvent.click(within(screen.getByRole('group', { name: '참석자 목록' })).getByRole('checkbox', { name: 'Ada Lovelace ada@example.com' }));
+    fireEvent.click(within(screen.getByRole('list', { name: '참석자 목록' })).getByRole('checkbox', { name: 'Ada Lovelace ada@example.com' }));
     fireEvent.click(screen.getByRole('button', { name: '회의 시작' }));
 
-    expect(await screen.findByText(/문서 연결이 바뀌었습니다/)).toBeTruthy();
+    expect(await screen.findByText(/문서 연결이 바뀌어/)).toBeTruthy();
     expect(configReads).toBe(2);
     expect(rosterReads).toBe(2);
     expect(screen.queryByRole('list', { name: '선택한 참석자' })).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: '참석자 선택' }));
-    fireEvent.click(within(screen.getByRole('group', { name: '참석자 목록' })).getByRole('checkbox', { name: 'Grace Hopper grace@new-provider.example' }));
+    fireEvent.click(within(screen.getByRole('list', { name: '참석자 목록' })).getByRole('checkbox', { name: 'Grace Hopper grace@new-provider.example' }));
     fireEvent.click(screen.getByRole('button', { name: '회의 시작' }));
     expect(await screen.findByRole('heading', { name: 'Current connection' })).toBeTruthy();
     const posts = fetchMock.mock.calls.filter(([url]) => new URL(String(url)).pathname.endsWith('/meeting-sessions'));
@@ -389,17 +396,14 @@ describe('Participants settings', () => {
       return Promise.reject(new Error(`Unexpected request: ${path} ${init?.method ?? 'GET'}`));
     });
     installFetchMock(fetchMock);
-    render(<MemoryRouter initialEntries={['/meetings/new']}><App /></MemoryRouter>);
-    await screen.findByRole('button', { name: '참석자 선택' });
+    renderNewMeetingFlow();
+    await screen.findByRole('list', { name: '참석자 목록' });
     fireEvent.change(screen.getByLabelText('회의 제목'), { target: { value: 'Roster refresh retry' } });
-    fireEvent.click(screen.getByRole('button', { name: '참석자 선택' }));
-    fireEvent.click(within(screen.getByRole('group', { name: '참석자 목록' })).getByRole('checkbox', { name: 'Ada Lovelace ada@example.com' }));
+    fireEvent.click(within(screen.getByRole('list', { name: '참석자 목록' })).getByRole('checkbox', { name: 'Ada Lovelace ada@example.com' }));
     fireEvent.click(screen.getByRole('button', { name: '회의 시작' }));
 
-    expect(await screen.findByText(/문서 연결이 바뀌었습니다/)).toBeTruthy();
-    expect(await screen.findByRole('button', { name: '참석자 목록 다시 시도' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: '참석자 목록 다시 시도' }));
-    fireEvent.click(await screen.findByRole('button', { name: '참석자 선택' }));
+    expect(await screen.findByText('참석자 목록을 불러오지 못했습니다.')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '다시 시도' }));
     const newProviderCheckbox = await screen.findByRole('checkbox', { name: 'Grace Hopper grace@new-provider.example' });
     expect(newProviderCheckbox).toHaveProperty('checked', false);
     expect(screen.queryByRole('list', { name: '선택한 참석자' })).toBeNull();
@@ -420,9 +424,9 @@ describe('Participants settings', () => {
       return Promise.reject(new Error(`Unexpected request: ${path} ${init?.method ?? 'GET'}`));
     });
     installFetchMock(fetchMock);
-    render(<MemoryRouter initialEntries={['/meetings/new']}><App /></MemoryRouter>);
-    expect(await screen.findByRole('alert')).toHaveProperty('textContent', '문서 서비스 연결 설정을 완료한 뒤 회의를 시작할 수 있습니다.');
-    expect(screen.getByRole('button', { name: '회의 시작' })).toHaveProperty('disabled', true);
+    renderNewMeetingFlow();
+    expect(await screen.findByText('문서 서비스 연결을 완료한 뒤 회의를 시작할 수 있습니다.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: '회의 시작' }).getAttribute('aria-disabled')).toBe('true');
     expect(fetchMock.mock.calls.some(([url]) => new URL(String(url)).pathname.endsWith('/meeting-sessions'))).toBe(false);
   });
 
@@ -458,10 +462,10 @@ describe('Participants settings', () => {
       return Promise.resolve(response({ data: { items: participants } }));
     });
     installFetchMock(fetchMock);
-    render(<MemoryRouter initialEntries={['/meetings/new']}><App onNewMeetingSubmit={vi.fn()} /></MemoryRouter>);
+    renderNewMeetingFlow();
 
     expect(await screen.findByRole('heading', { level: 1, name: '새 회의' })).toBeTruthy();
-    expect(await screen.findByRole('button', { name: '참석자 선택' })).toBeTruthy();
+    expect(await screen.findByRole('list', { name: '참석자 목록' })).toBeTruthy();
     expect(fetchMock.mock.calls.map(([url]) => new URL(String(url)).pathname)).toEqual([
       '/api/v1/app-config', '/api/v1/templates', '/api/v1/participants',
     ]);
@@ -802,12 +806,11 @@ describe('Recording route', () => {
       deletion.onblocked = () => reject(new Error('Chunk test database is still open'));
     });
     installFetchMock(fetchMock);
-    render(<StrictMode><MemoryRouter initialEntries={['/meetings/new']}><App mediaAdapter={mediaAdapter} /><NavigateToMismatchedRecordingSession /></MemoryRouter></StrictMode>);
+    renderNewMeetingFlow({ mediaAdapter, strict: true, extra: <NavigateToMismatchedRecordingSession /> });
 
-    await screen.findByRole('button', { name: '참석자 선택' });
+    await screen.findByRole('list', { name: '참석자 목록' });
     fireEvent.change(screen.getByLabelText('회의 제목'), { target: { value: 'Planning' } });
-    fireEvent.click(screen.getByRole('button', { name: '참석자 선택' }));
-    fireEvent.click(within(screen.getByRole('group', { name: '참석자 목록' })).getByRole('checkbox', { name: 'Ada Lovelace ada@example.com' }));
+    fireEvent.click(within(screen.getByRole('list', { name: '참석자 목록' })).getByRole('checkbox', { name: 'Ada Lovelace ada@example.com' }));
     fireEvent.click(screen.getByRole('button', { name: '회의 시작' }));
 
     expect(await screen.findByRole('heading', { name: 'Planning' })).toBeTruthy();

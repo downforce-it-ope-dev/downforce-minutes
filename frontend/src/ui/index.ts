@@ -6,6 +6,9 @@ export { Button, ButtonLink, type ButtonLinkProps, type ButtonProps, type Button
 export { IconButton, type IconButtonProps, type IconButtonVariant } from './IconButton';
 export { TextField, type TextFieldProps } from './TextField';
 export { OtpInput, type OtpInputProps } from './OtpInput';
+export { SelectField, type SelectFieldProps } from './SelectField';
+export { Checkbox, type CheckboxProps } from './Checkbox';
+export { FilterChips, type FilterChipOption, type FilterChipsProps } from './FilterChips';
 export { Card, type CardProps } from './Card';
 export { Pill, type PillProps, type PillTone } from './Pill';
 export { ProgressBar, type ProgressBarProps } from './ProgressBar';

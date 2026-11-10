@@ -93,13 +93,14 @@ async function documentSetup(page: Page, mode: { fail: boolean }) {
       : route.fulfill({ json: { data: { status: 'READY', version: 1, draft: null, operation: null, canCreateMeeting: true } } }),
   );
   await page.route('**/api/v1/meetings**', (route) => route.fulfill({ json: { data: [] } }));
+  await page.route('**/api/v1/participants', (route) => route.fulfill({ json: { data: { items: [] } } }));
 }
 
 for (const size of SIZES) {
   test(`CMN-04 실패 · ${size.label}: axe 심각 위반 0건, 가로 넘침 없음, 기존 메뉴 숨김`, async ({ page }) => {
     await documentSetup(page, { fail: true });
     await page.setViewportSize(size);
-    await page.goto('/meetings/new');
+    await page.goto('/participants');
     await expect(page.getByRole('heading', { level: 1, name: '문서 연결 상태를 확인할 수 없습니다' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Windsoft Minutes 홈' })).toHaveCount(0);
     await expectAccessibleWithoutOverflow(page);
@@ -109,11 +110,11 @@ for (const size of SIZES) {
 test('문서 연결 확인이 다시 확인으로 통과하면 요청한 화면과 기존 메뉴가 보인다', async ({ page }) => {
   const mode = { fail: true };
   await documentSetup(page, mode);
-  await page.goto('/meetings/new');
+  await page.goto('/participants');
   await expect(page.getByRole('heading', { level: 1, name: '문서 연결 상태를 확인할 수 없습니다' })).toBeVisible();
   mode.fail = false;
   await page.getByRole('button', { name: '다시 확인' }).click();
   await expect(page.getByRole('heading', { level: 1, name: '문서 연결 상태를 확인할 수 없습니다' })).toHaveCount(0);
   await expect(page.getByRole('link', { name: 'Windsoft Minutes 홈' })).toBeVisible();
-  await expect(page).toHaveURL(/\/meetings\/new$/);
+  await expect(page).toHaveURL(/\/participants$/);
 });

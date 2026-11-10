@@ -8,6 +8,7 @@ import { DocumentGate } from './documentGate/DocumentGate';
 import { DocumentSetupPage } from './documentSetup/DocumentSetupPage';
 import { HomePage } from './home/HomePage';
 import { LEGACY_PATHS } from './legacyRoutes';
+import { NewMeetingPage } from './newMeeting/NewMeetingPage';
 import { NotFoundPage } from './notFound/NotFoundPage';
 import { ServerRecoveryOverlay } from './recovery/ServerRecoveryOverlay';
 import { ToastProvider } from './ui';
@@ -61,6 +62,17 @@ function AppRoutes() {
           <RequireAuth>
             <DocumentGate>
               <HomePage />
+            </DocumentGate>
+          </RequireAuth>
+        }
+      />
+      {/* 새 회의 (MTG-01, #26). 회의 생성 후 녹음 화면(기존 App)으로 세션을 넘긴다 */}
+      <Route
+        path="/meetings/new"
+        element={
+          <RequireAuth>
+            <DocumentGate>
+              <NewMeetingPage />
             </DocumentGate>
           </RequireAuth>
         }

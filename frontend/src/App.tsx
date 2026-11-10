@@ -10,8 +10,8 @@ import {
 } from './participantsApi';
 import './tailwind.css';
 import { Link, NavLink, Route, Routes, useLocation, useNavigate, useParams } from 'react-router';
-import { NewMeetingPage, type NewMeetingPayload } from './NewMeetingPage';
-import { cancelMeetingSession, createMeetingSession, type MeetingDraft, type MeetingSession, type MeetingSessionAttempt } from './newMeetingApi';
+import { cancelMeetingSession } from './newMeetingApi';
+import { clearRecordingSession, restoreRecordingSession, type RecordingSession } from './meeting/recordingSessionStore';
 import { RecordingPage, type RecordingViewState } from './RecordingPage';
 import { CompletePage } from './CompletePage';
 import { restoreSlackWebhookSettings } from './slackSettingsApi';
@@ -341,49 +341,6 @@ function ParticipantsPage() {
   );
 }
 
-type RecordingSession = MeetingSession & { title: string; draft?: MeetingDraft };
-const RECORDING_SESSION_STORAGE_KEY = 'meeting-automation.recording-session';
-
-function restoreRecordingSession(): RecordingSession | null {
-  try {
-    const value = sessionStorage.getItem(RECORDING_SESSION_STORAGE_KEY);
-    if (!value) return null;
-    const parsed = JSON.parse(value) as RecordingSession;
-    if (!parsed.sessionId || !parsed.title || !parsed.uploadPolicy || !Number.isFinite(parsed.uploadPolicy.maxChunkBytes)) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-function saveRecordingSession(session: RecordingSession): void {
-  try { sessionStorage.setItem(RECORDING_SESSION_STORAGE_KEY, JSON.stringify(session)); } catch { /* reload recovery is unavailable if browser storage is disabled */ }
-}
-
-function NewMeetingRoute({ onCreated, onSubmitted }: {
-  onCreated: (session: RecordingSession) => void;
-  onSubmitted?: (payload: NewMeetingPayload) => void;
-}) {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const initialDraft = (location.state as { draft?: MeetingDraft } | null)?.draft;
-  async function submit(attempt: MeetingSessionAttempt) {
-    const session = await createMeetingSession(attempt);
-    const draft = { title: attempt.title, meetingDate: attempt.meetingDate, templateId: attempt.templateId, participantIds: [...attempt.participantIds] };
-    onCreated({ ...session, title: attempt.title, draft });
-    onSubmitted?.({
-      title: attempt.title,
-      meetingDate: attempt.meetingDate,
-      templateId: attempt.templateId,
-      participantIds: [...attempt.participantIds],
-      timezone: attempt.timezone,
-      documentConnectionVersion: attempt.documentConnectionVersion,
-    });
-    navigate(`/meetings/${encodeURIComponent(session.sessionId)}/recording`);
-  }
-  return <NewMeetingPage onSubmit={submit} initialDraft={initialDraft} />;
-}
-
 function MeetingRecordingRoute({ session, setState, setNavigationLocked, clearSession, mediaAdapter }: {
   session: RecordingSession | null;
   setState: (state: RecordingViewState) => void;
@@ -562,7 +519,7 @@ function ActiveMeetingRecordingRoute({ session, setState, setNavigationLocked, c
       setNavigationLocked(false);
       setState('Ready');
       clearSession();
-      try { sessionStorage.removeItem(RECORDING_SESSION_STORAGE_KEY); } catch { /* session restoration is unavailable */ }
+      clearRecordingSession();
       navigate('/meetings/new', { state: session.draft ? { draft: session.draft } : null });
     }}
     onStart={async () => {
@@ -592,8 +549,7 @@ function BottomNavigation() {
   );
 }
 
-export function App({ onNewMeetingSubmit = () => undefined, onMinutesSave, minutesSaveState, mediaAdapter = browserMediaAdapter }: {
-  onNewMeetingSubmit?: (payload: NewMeetingPayload) => void;
+export function App({ onMinutesSave, minutesSaveState, mediaAdapter = browserMediaAdapter }: {
   onMinutesSave?: (sessionId: string, minutes: StructuredMinutes) => void;
   minutesSaveState?: MinutesSaveState;
   mediaAdapter?: MediaRecorderAdapter;
@@ -654,7 +610,6 @@ export function App({ onNewMeetingSubmit = () => undefined, onMinutesSave, minut
         <Routes>
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/meetings" element={<MeetingsPage />} />
-          <Route path="/meetings/new" element={<DocumentGate><NewMeetingRoute onCreated={(session) => { setCreatedSession(session); saveRecordingSession(session); setRecordingState('Ready'); setRecordingNavigationLocked(false); }} onSubmitted={onNewMeetingSubmit} /></DocumentGate>} />
           <Route path="/meetings/:documentId" element={<MeetingDetailPage />} />
           <Route path="/meetings/:sessionId/recording" element={<MeetingRecordingRoute session={createdSession} setState={setRecordingState} setNavigationLocked={setRecordingNavigationLocked} clearSession={() => setCreatedSession(null)} mediaAdapter={mediaAdapter} />} />
           <Route path="/meetings/:sessionId/processing" element={<ProcessingPage onNavigationGuardChange={setProcessingNavigationGuard} />} />

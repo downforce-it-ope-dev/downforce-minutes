@@ -1,0 +1,170 @@
+import { useMemo, useState } from 'react';
+import { Search, UserPlus, X } from 'lucide-react';
+import type { Participant } from '../participantsApi';
+import { Button, ButtonLink, Card, Checkbox, cn, FilterChips, IconButton, TextField } from '../ui';
+
+type View = 'all' | 'selected';
+
+export interface ParticipantPickerProps {
+  participants: readonly Participant[];
+  selectedIds: readonly string[];
+  /** 로그인한 사람. 늘 선택돼 있고 해제할 수 없다 */
+  selfId: string | null;
+  status: 'loading' | 'ready' | 'error';
+  invalid?: boolean;
+  onToggle: (id: string) => void;
+  onSetMany: (ids: string[], select: boolean) => void;
+  className?: string;
+}
+
+const collator = new Intl.Collator('ko');
+
+/**
+ * 참석자 선택 영역 (MTG-01-F04, 기획 3.1 표).
+ * 머리(제목·선택 수·검색·보기 필터)와 바닥(새 참석자)은 고정하고 태블릿에서는 목록만 따로 스크롤한다. 휴대폰은 페이지 스크롤.
+ * 검색어를 바꿔도 선택은 유지하고, 선택해도 행 순서는 바뀌지 않는다(이름 가나다순).
+ * 팀 배지·팀 거르기·CSV 일괄 등록은 Backend 팀 확장(#35)과 #37 뒤에 붙인다.
+ */
+export function ParticipantPicker({
+  participants,
+  selectedIds,
+  selfId,
+  status,
+  invalid = false,
+  onToggle,
+  onSetMany,
+  className,
+}: ParticipantPickerProps) {
+  const [query, setQuery] = useState('');
+  const [view, setView] = useState<View>('all');
+
+  const sorted = useMemo(() => [...participants].sort((a, b) => collator.compare(a.name, b.name)), [participants]);
+  const keyword = query.trim().toLowerCase();
+  const visible = sorted.filter(
+    (item) =>
+      (view === 'all' || selectedIds.includes(item.id)) &&
+      (!keyword || item.name.toLowerCase().includes(keyword) || item.email.toLowerCase().includes(keyword)),
+  );
+  const visibleIds = visible.map(({ id }) => id);
+  const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
+  const selectedCount = selectedIds.length;
+
+  return (
+    <Card
+      as="section"
+      padding="none"
+      aria-labelledby="participant-picker-title"
+      className={cn('flex flex-col', invalid && 'outline-2 outline-danger', className)}
+    >
+      <div className="flex flex-col gap-3 px-4 pt-4 tablet:px-5">
+        <div className="flex items-center justify-between gap-3">
+          <h2 id="participant-picker-title" className="text-title text-text">
+            참석자
+          </h2>
+          <p aria-live="polite" className="text-label text-brand-text tabular-nums">
+            {selectedCount}명 선택됨
+          </p>
+        </div>
+        <TextField
+          label="참석자 검색"
+          hideLabel
+          type="search"
+          icon={Search}
+          placeholder="이름·이메일"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          disabled={status !== 'ready'}
+          trailing={
+            query && <IconButton icon={X} label="검색어 지우기" variant="surface" onClick={() => setQuery('')} />
+          }
+        />
+        <div className="flex min-h-12 flex-wrap items-center justify-between gap-2">
+          <FilterChips
+            label="보기"
+            value={view}
+            onChange={setView}
+            options={[
+              { value: 'all', label: '전체', count: participants.length },
+              { value: 'selected', label: '선택됨', count: selectedCount },
+            ]}
+          />
+          <div className="flex items-center gap-2">
+            {/* 검색어가 있을 때만: 전체 명단을 한 번에 고르는 실수를 막는다 */}
+            {keyword && visibleIds.length > 0 && (
+              <Button size="sm" variant="ghost" onClick={() => onSetMany(visibleIds, !allVisibleSelected)}>
+                {allVisibleSelected ? '선택 해제' : '전체 선택'}
+              </Button>
+            )}
+            {participants.length > 0 && (
+              <ButtonLink to="/participants" size="sm" variant="secondary" icon={UserPlus} shape="pill">
+                새 참석자
+              </ButtonLink>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-3 rounded-b-xl border-t border-border tablet:min-h-75 tablet:flex-1 tablet:overflow-y-auto">
+        {status === 'loading' && participants.length === 0 ? (
+          <ul aria-label="참석자 목록" aria-busy="true" className="flex flex-col gap-1 p-2">
+            {[0, 1, 2, 3, 4].map((row) => (
+              <li key={row} className="flex h-15 items-center gap-3 px-3">
+                <span className="size-6 rounded-sm bg-bg-subtle" />
+                <span className="h-3 w-1/3 rounded-full bg-bg-subtle" />
+              </li>
+            ))}
+          </ul>
+        ) : status === 'ready' && participants.length === 0 ? (
+          <div className="flex flex-col items-center gap-4 px-4 py-10">
+            <p className="text-body text-text-muted">등록된 참석자가 없습니다.</p>
+            <ButtonLink to="/participants" icon={UserPlus} size="lg" shape="pill">
+              참석자 관리
+            </ButtonLink>
+          </div>
+        ) : visible.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 px-4 py-10">
+            <p className="text-body text-text-muted">검색 결과 없음</p>
+            {query && (
+              <Button size="sm" variant="secondary" shape="pill" onClick={() => setQuery('')}>
+                검색어 지우기
+              </Button>
+            )}
+          </div>
+        ) : (
+          <ul aria-label="참석자 목록" className="flex flex-col p-2">
+            {visible.map((item) => {
+              const checked = selectedIds.includes(item.id);
+              const self = item.id === selfId;
+              return (
+                <li key={item.id}>
+                  <label
+                    className={cn(
+                      'flex min-h-18 items-center gap-3 rounded-md px-3 tablet:min-h-15',
+                      self ? 'cursor-default' : 'cursor-pointer active:bg-bg-subtle',
+                      checked && 'bg-selected',
+                    )}
+                  >
+                    <Checkbox
+                      aria-label={`${item.name}${self ? ' (나)' : ''} ${item.email}`}
+                      checked={checked}
+                      disabled={self || status !== 'ready'}
+                      onChange={() => onToggle(item.id)}
+                    />
+                    <span className="flex min-w-0 flex-1 flex-col tablet:flex-row tablet:items-center tablet:gap-3">
+                      <span className="flex items-center gap-2 text-body font-semibold text-text">
+                        {item.name}
+                        {self && <span className="rounded-full bg-brand-soft px-2 text-caption text-brand-soft-text">나</span>}
+                      </span>
+                      <span className="truncate text-caption text-text-muted">{item.email}</span>
+                    </span>
+                  </label>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+
+    </Card>
+  );
+}

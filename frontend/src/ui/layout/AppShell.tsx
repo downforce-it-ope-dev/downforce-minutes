@@ -39,6 +39,8 @@ export interface AppShellProps {
   focus?: boolean;
   /** 사이드바 아래 계정 영역 (HOME 묶음에서 채운다, CMN-01-F05) */
   account?: ReactNode;
+  /** 태블릿 이상에서 본문 높이를 화면에 맞춘다. 화면 안 영역(예: 참석자 목록)이 따로 스크롤할 때 쓴다. 낮은 화면(short)은 페이지 스크롤 */
+  fillHeight?: boolean;
   children: ReactNode;
 }
 
@@ -49,7 +51,7 @@ export interface AppShellProps {
  * - tablet-lg(960 이상): 왼쪽 사이드바 240(글자 로고 + Minutes, 아이콘·이름 가로, 아래 계정)
  * - 메뉴와 상단 바는 고정이고 본문만 스크롤한다. short(높이 560 이하)에서는 상단 바를 줄인다
  */
-export function AppShell({ title, hideTitle = false, back, actions, focus = false, account, children }: AppShellProps) {
+export function AppShell({ title, hideTitle = false, back, actions, focus = false, account, fillHeight = false, children }: AppShellProps) {
   return (
     <AppCanvas>
       <ToastProvider placement={focus ? 'base' : 'tabbar'}>
@@ -64,7 +66,14 @@ export function AppShell({ title, hideTitle = false, back, actions, focus = fals
           <TopBar title={title} hideTitle={hideTitle} back={back} actions={focus ? undefined : actions} />
           {/* 본문만 스크롤하므로, 안에 누를 요소가 없어도 키보드로 스크롤할 수 있게 초점을 받는다 */}
           <main id="main-content" tabIndex={0} aria-label="본문" className="min-h-0 flex-1 overflow-y-auto">
-            <div className="mx-auto flex min-h-full w-full max-w-content flex-col px-4 pt-2 pb-8 tablet:px-6 tablet-lg:px-8 short:pb-4">{children}</div>
+            <div
+              className={cn(
+                'mx-auto flex min-h-full w-full max-w-content flex-col px-4 pt-2 pb-8 tablet:px-6 tablet-lg:px-8 short:pb-4',
+                fillHeight && 'tablet:h-full short:h-auto',
+              )}
+            >
+              {children}
+            </div>
           </main>
           {/* 휴대폰 하단 탭 바 자리 */}
           {!focus && <div className="h-16 shrink-0 pb-safe tablet:hidden" aria-hidden="true" />}
