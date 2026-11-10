@@ -269,20 +269,6 @@ function Wizard({
         </aside>
 
         <div className="flex flex-col gap-4 tablet-lg:col-span-2">
-        {provider && showChooser && (
-          <Button
-            aria-label="서비스 선택으로 돌아가기"
-            size="lg"
-            shape="pill"
-            variant="secondary"
-            icon={ArrowLeft}
-            className="self-start"
-            onClick={() => setup.chooseProvider(null)}
-          >
-            서비스 선택
-          </Button>
-        )}
-
         {setup.consumerRefreshFailed && (
           <Button size="lg" shape="pill" variant="secondary" icon={RefreshCw} className="self-start" onClick={setup.retryConsumerRefresh}>
             연결 데이터 다시 확인
@@ -354,12 +340,13 @@ function ConnectionForm({ setup, provider, formRef }: { setup: Setup; provider: 
   return (
     <section aria-label={`${providerLabel(provider)} 연결 정보`} className="flex flex-col gap-4">
       <div className="flex items-center gap-3">
+        <IconButton icon={ArrowLeft} label="서비스 선택으로 돌아가기" variant="surface" onClick={() => setup.chooseProvider(null)} />
         <ProviderIcon provider={provider} />
         <h2 className="flex-1 text-title text-text">{providerLabel(provider)}에 연결</h2>
         <IconButton icon={Info} label="연결 방법 안내" variant="surface" aria-haspopup="dialog" onClick={() => setGuideOpen(true)} />
       </div>
       <Card>
-        <form ref={formRef} className="grid gap-4 tablet:grid-cols-2" onSubmit={(event) => void setup.handleTest(event)} noValidate>
+        <form ref={formRef} className="flex flex-col gap-4" onSubmit={(event) => void setup.handleTest(event)} noValidate>
           {provider === 'NOTION' ? (
             <>
               <SecretField
@@ -427,7 +414,7 @@ function ConnectionForm({ setup, provider, formRef }: { setup: Setup; provider: 
             loading={busy}
             disabled={Boolean(tested)}
             shape="pill"
-            className="mt-2 w-full tablet:col-span-2 tablet:w-auto tablet:min-w-60 tablet:justify-self-end"
+            className="mt-2 w-full tablet:w-auto tablet:min-w-60 tablet:self-end"
           >
             {busy ? '연결 확인 중…' : tested ? '연결 확인 완료' : '연결 확인'}
           </Button>
