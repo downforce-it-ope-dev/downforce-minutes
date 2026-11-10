@@ -100,7 +100,8 @@ describe('document setup wizard', () => {
 
     await screen.findByRole('heading', { name: '문서 연결' });
 
-    expect(screen.getByRole('link', { name: /연결된 문서 열기/ }).getAttribute('target')).toBe('_blank');
+    // 공용 설정이라 연결된 문서 열기는 두지 않는다(사용자 결정 2026-11-10)
+    expect(screen.queryByRole('link', { name: /연결된 문서 열기/ })).toBeNull();
     expect(screen.getByRole('button', { name: '설정으로 돌아가기' })).toBeTruthy();
     expect(screen.queryByRole('link', { name: '참석자 관리' })).toBeNull();
   });

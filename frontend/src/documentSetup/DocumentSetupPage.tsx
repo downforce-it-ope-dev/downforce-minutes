@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { useNavigate } from 'react-router';
 import { ArrowLeft, ArrowRight, CircleCheck, Eye, EyeOff, Info, LoaderCircle, RefreshCw, Repeat, TriangleAlert } from 'lucide-react';
 import {
   AppShell,
   Button,
+  ButtonLink,
   Card,
   cn,
   Dialog,
@@ -129,7 +130,7 @@ function DocumentSetupScreens({ settings }: { settings: boolean }) {
         <Column>
           {error ? (
             <StatusCard tone="danger" title="문서 연결 상태를 확인할 수 없습니다">
-              <Button size="lg" icon={RefreshCw} fullWidth onClick={() => void setup.safeRefresh()}>
+              <Button size="lg" shape="pill" icon={RefreshCw} fullWidth onClick={() => void setup.safeRefresh()}>
                 다시 불러오기
               </Button>
             </StatusCard>
@@ -146,7 +147,7 @@ function DocumentSetupScreens({ settings }: { settings: boolean }) {
       <AppShell title="문서 서비스 연결" focus>
         <Column>
           <StatusCard tone="danger" title="저장소 설정을 확인할 수 없습니다">
-            <Button size="lg" icon={RefreshCw} fullWidth onClick={() => void setup.safeRefresh()}>
+            <Button size="lg" shape="pill" icon={RefreshCw} fullWidth onClick={() => void setup.safeRefresh()}>
               다시 확인
             </Button>
           </StatusCard>
@@ -171,37 +172,20 @@ function DocumentSetupScreens({ settings }: { settings: boolean }) {
                   연결됨
                 </span>
               </div>
-              <div className="flex flex-col gap-2 tablet:flex-row">
-                <a
-                  href={active.rootUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex h-12 items-center justify-center gap-2 rounded-md border border-border bg-bg px-5 text-label text-text active:bg-bg-subtle"
-                >
-                  연결된 문서 열기
-                  <Icon icon={ArrowRight} size="md" />
-                  <span className="sr-only">(새 탭)</span>
-                </a>
-                <Button variant="secondary" icon={Repeat} onClick={setup.beginChange}>
-                  문서 서비스 변경
-                </Button>
-              </div>
+              <Button size="lg" shape="pill" variant="secondary" icon={Repeat} onClick={setup.beginChange}>
+                문서 서비스 변경
+              </Button>
             </Card>
           )}
           {setup.consumerRefreshFailed && (
-            <Button variant="secondary" icon={RefreshCw} onClick={setup.retryConsumerRefresh} className="self-start">
+            <Button size="lg" shape="pill" variant="secondary" icon={RefreshCw} onClick={setup.retryConsumerRefresh} className="self-start">
               연결 데이터 다시 확인
             </Button>
           )}
           {setup.returnTo && (
-            <Link
-              to={setup.returnTo}
-              state={setup.returnState?.returnState}
-              className="inline-flex h-12 items-center gap-2 self-start text-label text-link"
-            >
-              <Icon icon={ArrowLeft} size="md" />
+            <ButtonLink to={setup.returnTo} size="lg" shape="pill" variant="secondary" icon={ArrowLeft} className="self-start">
               이전 화면으로
-            </Link>
+            </ButtonLink>
           )}
         </div>
       </AppShell>
@@ -228,10 +212,19 @@ function Wizard({
   const { provider, operation } = setup;
   const changing = setup.changing || Boolean(snapshot.active);
   const steps = changing ? CHANGE_STEPS : FIRST_RUN_STEPS;
-  const switchRunning = operation?.type === 'SWITCH' || snapshot.operation?.type === 'SWITCH';
-  const stepIndex = switchRunning ? 3 : setup.preparedTarget || setup.initializationInProgress || snapshot.operation ? 2 : provider ? 1 : 0;
   const showChooser = !setup.hasBlockingOperation && !setup.preparedTarget && !setup.initializationUncertain && !setup.setupProgressStarted;
+  // 끝난 전환(완료·취소)은 진행 중이 아니다. 서비스를 고르는 중이면 단계는 선택·입력이다
+  const switchRunning =
+    (operation?.type === 'SWITCH' || snapshot.operation?.type === 'SWITCH') && !['SUCCEEDED', 'CANCELLED'].includes(setup.operationStatus);
+  const stepIndex = showChooser
+    ? provider ? 1 : 0
+    : switchRunning ? 3 : setup.preparedTarget || setup.initializationInProgress || snapshot.operation ? 2 : provider ? 1 : 0;
   const title = setup.preparedTarget || switchRunning ? '문서 서비스 변경' : changing && !provider ? '문서 서비스 선택' : '문서 서비스 연결';
+  // 끝난 작업(완료)은 오른쪽에 따로 카드로 두지 않고 왼쪽 현재 연결에 함께 보인다
+  const lastDone =
+    setup.operationStatus === 'SUCCEEDED' && snapshot.operation
+      ? snapshot.operation.type === 'SWITCH' ? '문서 서비스 변경 완료' : '문서 구조 준비 완료'
+      : null;
   const goHome = () =>
     navigate('/', { state: { documentSetupCompleted: { provider: snapshot.active!.provider, rootUrl: snapshot.active!.rootUrl } } });
 
@@ -244,12 +237,20 @@ function Wizard({
 
           {/* 변경·전환 중에도 어느 연결이 살아 있는지 보인다(원본 연결은 전환 완료 전까지 유지) */}
           {snapshot.active && !setup.initializationSucceeded && (
-            <div aria-label="현재 활성 문서 연결" className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg bg-primary-soft px-4 py-3">
-              <ProviderIcon provider={snapshot.active.provider} />
-              <span className="text-label text-primary-soft-text">
-                현재 연결: {snapshot.active.provider === 'CONFLUENCE' ? 'Confluence Cloud' : 'Notion'}
-              </span>
-              <span className="text-caption text-primary-soft-text tabular-nums">연결 버전: {snapshot.active.connectionVersion}</span>
+            <div aria-label="현재 활성 문서 연결" className="flex items-center gap-3 rounded-lg bg-primary-soft p-4">
+              <ProviderIcon provider={snapshot.active.provider} size="lg" />
+              <div className="flex min-w-0 flex-col gap-1">
+                <span className="text-label text-primary-soft-text">
+                  현재 연결: {snapshot.active.provider === 'CONFLUENCE' ? 'Confluence Cloud' : 'Notion'}
+                </span>
+                <span className="text-caption text-primary-soft-text tabular-nums">연결 버전: {snapshot.active.connectionVersion}</span>
+                {lastDone && (
+                  <span className="inline-flex items-center gap-1 text-caption text-success-text">
+                    <Icon icon={CircleCheck} size="sm" />
+                    {lastDone}
+                  </span>
+                )}
+              </div>
             </div>
           )}
 
@@ -262,19 +263,21 @@ function Wizard({
 
         <div className="flex flex-col gap-4 tablet-lg:col-span-2">
         {provider && showChooser && (
-          <button
-            type="button"
+          <Button
             aria-label="서비스 선택으로 돌아가기"
+            size="lg"
+            shape="pill"
+            variant="secondary"
+            icon={ArrowLeft}
+            className="self-start"
             onClick={() => setup.chooseProvider(null)}
-            className="-ml-2 inline-flex h-12 items-center gap-2 self-start px-2 text-label text-link"
           >
-            <Icon icon={ArrowLeft} size="md" />
             서비스 선택
-          </button>
+          </Button>
         )}
 
         {setup.consumerRefreshFailed && (
-          <Button variant="secondary" icon={RefreshCw} onClick={setup.retryConsumerRefresh}>
+          <Button size="lg" shape="pill" variant="secondary" icon={RefreshCw} className="self-start" onClick={setup.retryConsumerRefresh}>
             연결 데이터 다시 확인
           </Button>
         )}
@@ -285,7 +288,9 @@ function Wizard({
           !setup.initializationInProgress &&
           !(operation?.type === 'INITIALIZE' && operation.status === 'CANCELLED') &&
           // 전환 준비(자료 이전 선택) 단계에서는 끝난 준비 작업 카드를 숨긴다
-          !(setup.preparedTarget && snapshot.operation.type === 'INITIALIZE' && setup.operationStatus === 'SUCCEEDED') && (
+          !(setup.preparedTarget && snapshot.operation.type === 'INITIALIZE' && setup.operationStatus === 'SUCCEEDED') &&
+          // 서비스를 고르는 중이면 끝난 작업은 왼쪽 현재 연결에만 보인다
+          !(showChooser && setup.operationStatus === 'SUCCEEDED') && (
           <OperationCard setup={setup} onDone={goHome} refreshRef={progressRefreshRef} />
         )}
 
@@ -295,7 +300,7 @@ function Wizard({
 
         {setup.initializationUncertain && (
           <StatusCard tone="warning" title="요청 상태 확인">
-            <Button size="lg" icon={RefreshCw} fullWidth loading={setup.busy} onClick={() => void setup.recheckUncertainInitialization()}>
+            <Button size="lg" shape="pill" icon={RefreshCw} fullWidth loading={setup.busy} onClick={() => void setup.recheckUncertainInitialization()}>
               {setup.busy ? '확인 중…' : '다시 확인'}
             </Button>
           </StatusCard>
@@ -315,17 +320,20 @@ function Wizard({
 /** 문서 서비스 설정(SET-02)으로 돌아가기. 변경을 그만두고 입력한 자격 증명을 지운다 */
 function BackToSettings({ setup }: { setup: Setup }) {
   return (
-    <Link
+    <ButtonLink
       to="/settings/document"
+      size="lg"
+      shape="pill"
+      variant="secondary"
+      icon={ArrowLeft}
+      fullWidth
       onClick={() => {
         setup.setChanging(false);
         setup.clearCredentials();
       }}
-      className="inline-flex h-12 items-center gap-2 text-label text-link"
     >
-      <Icon icon={ArrowLeft} size="md" />
       문서 서비스 설정으로
-    </Link>
+    </ButtonLink>
   );
 }
 
@@ -333,16 +341,16 @@ function BackToSettings({ setup }: { setup: Setup }) {
 function ServiceChooser({ setup }: { setup: Setup }) {
   const current = setup.snapshot?.active?.provider;
   return (
-    <ul aria-label="연결할 문서 서비스" className="grid gap-3 tablet:grid-cols-2">
+    <ul aria-label="연결할 문서 서비스" className="flex flex-col gap-3">
       {(['NOTION', 'CONFLUENCE'] as const).map((item) => (
         <li key={item}>
           <button
             type="button"
             aria-label={`${item === 'CONFLUENCE' ? 'Confluence Cloud' : 'Notion'} 선택`}
             onClick={() => setup.chooseProvider(item)}
-            className="flex min-h-18 w-full cursor-pointer items-center gap-4 rounded-lg border border-border bg-bg px-4 text-left shadow-card active:bg-bg-subtle tablet:min-h-28 tablet:px-6"
+            className="flex min-h-20 w-full cursor-pointer items-center gap-4 rounded-xl border border-border bg-bg px-4 text-left shadow-card active:bg-bg-subtle tablet:min-h-24 tablet:gap-6 tablet:px-6"
           >
-            <ProviderIcon provider={item} />
+            <ProviderIcon provider={item} size="lg" />
             {/* 카드 폭이 좁아도 겹치지 않게 배지는 이름 아래에 둔다 */}
             <span className="flex min-w-0 flex-1 flex-col items-start gap-1">
               <span className="text-title text-text">{providerLabel(item)}</span>
@@ -436,6 +444,7 @@ function ConnectionForm({ setup, provider, formRef }: { setup: Setup; provider: 
             size="lg"
             loading={busy}
             disabled={Boolean(tested)}
+            shape="pill"
             className="mt-2 w-full tablet:col-span-2 tablet:w-auto tablet:min-w-60 tablet:justify-self-end"
           >
             {busy ? '연결 확인 중…' : tested ? '연결 확인 완료' : '연결 확인'}
@@ -590,7 +599,7 @@ function ProgressCard({ setup, onDone }: { setup: Setup; onDone: () => void }) {
         })}
       </ol>
       {done ? (
-        <Button size="lg" fullWidth onClick={onDone}>
+        <Button size="lg" shape="pill" fullWidth onClick={onDone}>
           확인
         </Button>
       ) : (
@@ -609,11 +618,13 @@ function ProgressCard({ setup, onDone }: { setup: Setup; onDone: () => void }) {
 function ReadRecovery({ setup }: { setup: Setup }) {
   return (
     <div role="group" aria-label="진행 상태 복구" className="flex flex-col gap-2 tablet:flex-row">
-      <Button variant="secondary" icon={RefreshCw} loading={setup.busy} onClick={() => void setup.retryOperationStatus()} className="tablet:flex-1">
+      <Button size="lg" shape="pill" variant="secondary" icon={RefreshCw} loading={setup.busy} onClick={() => void setup.retryOperationStatus()} className="tablet:flex-1">
         {setup.busy ? '상태 확인 중…' : '진행 상태 다시 불러오기'}
       </Button>
       {setup.snapshot?.operation?.type === 'INITIALIZE' && (
         <Button
+          size="lg"
+          shape="pill"
           variant="secondary"
           disabled={setup.busy || setup.snapshot.version == null}
           onClick={() => void setup.closeUnresolvedInitialization()}
@@ -678,21 +689,21 @@ function OperationCard({ setup, onDone, refreshRef }: { setup: Setup; onDone: ()
       {setup.operationReadFailed && <ReadRecovery setup={setup} />}
       <div className="flex flex-col gap-2 tablet:flex-row-reverse tablet:flex-wrap">
         {isSwitch && operation?.status === 'SUCCEEDED' && snapshot?.status === 'READY' && snapshot.active && (
-          <Button size="lg" onClick={onDone}>
+          <Button size="lg" shape="pill" onClick={onDone}>
             확인
           </Button>
         )}
         {operation?.allowedActions.includes('RETRY') && operation.status !== 'RECONCILIATION_REQUIRED' && (
-          <Button size="lg" icon={RefreshCw} disabled={busy} onClick={() => void setup.runOperationAction('RETRY')}>
+          <Button size="lg" shape="pill" icon={RefreshCw} disabled={busy} onClick={() => void setup.runOperationAction('RETRY')}>
             작업 재개
           </Button>
         )}
         {operation?.allowedActions.includes('CANCEL') && (
-          <Button variant="secondary" disabled={busy} onClick={() => void setup.runOperationAction('CANCEL')}>
+          <Button size="lg" shape="pill" variant="secondary" disabled={busy} onClick={() => void setup.runOperationAction('CANCEL')}>
             {isSwitch ? '작업 취소' : '중단된 연결 작업 종료'}
           </Button>
         )}
-        <Button ref={refreshRef} variant="secondary" icon={RefreshCw} disabled={busy} onClick={() => void setup.safeRefresh()}>
+        <Button ref={refreshRef} size="lg" shape="pill" variant="secondary" icon={RefreshCw} disabled={busy} onClick={() => void setup.safeRefresh()}>
           진행 상태 새로고침
         </Button>
       </div>
@@ -781,6 +792,7 @@ function SwitchCard({ setup }: { setup: Setup }) {
       )}
       <Button
         size="lg"
+        shape="pill"
         fullWidth
         loading={busy}
         disabled={mode === 'START_EMPTY' && !confirmEmpty}

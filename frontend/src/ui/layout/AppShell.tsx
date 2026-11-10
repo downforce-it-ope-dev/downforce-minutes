@@ -140,10 +140,12 @@ function TopBar({ title, back, actions }: Pick<AppShellProps, 'title' | 'back' |
     <header className="shrink-0 pt-safe">
       <div className="mx-auto flex h-14 w-full max-w-content items-center gap-2 px-4 tablet:h-20 tablet:px-6 tablet-lg:px-8 short:h-12 short:tablet:h-14">
         {back && (
+          // 뒤로 가기는 흰 원형 버튼(시안의 상단 바 보조 동작과 같은 모양)
           <IconButton
             icon={ArrowLeft}
             label={back.label ?? '뒤로 가기'}
-            className="-ml-3"
+            variant="surface"
+            className="mr-2"
             onClick={() => (back.to ? navigate(back.to) : navigate(-1))}
           />
         )}
