@@ -15,7 +15,11 @@ export function saveAccountEmail(email: string) {
 
 export function loadAccountEmail(): string | null {
   try {
-    return localStorage.getItem(KEY);
+    const saved = localStorage.getItem(KEY);
+    if (saved) return saved;
+    // 이메일 저장 전(2026-11-10 이전)에 로그인한 브라우저: 이전 로그인 기록(목업 세션)에 남은 이메일을 쓴다
+    const legacy = JSON.parse(localStorage.getItem('ma-auth-mock-session') ?? 'null') as { email?: unknown } | null;
+    return typeof legacy?.email === 'string' ? legacy.email : null;
   } catch {
     return null;
   }
@@ -24,6 +28,7 @@ export function loadAccountEmail(): string | null {
 export function clearAccountEmail() {
   try {
     localStorage.removeItem(KEY);
+    localStorage.removeItem('ma-auth-mock-session');
   } catch {
     // 무시
   }

@@ -13,7 +13,7 @@ import {
   Dialog,
   DocumentStatusChip,
   Icon,
-  RecordToMinutesIllustration,
+  MeetingFlowVisual,
   Waveform,
   type DocumentStatus,
 } from '../ui';
@@ -78,23 +78,30 @@ export function HomePage() {
   return (
     <AppShell
       title="홈"
+      hideTitle
       account={<SidebarAccount />}
       actions={
         <>
-          <DocumentStatusChip status={chip.status} label={chip.label} compact onClick={() => setConnectionOpen(true)} />
+          {/* 연결된 서비스 로고 + 상태 점만 보인다. 상태 문구는 화면 읽기 프로그램용 */}
+          <DocumentStatusChip
+            status={chip.status}
+            label={chip.label}
+            provider={connection.status === 'ready' ? connection.data.active?.provider : null}
+            iconOnly
+            onClick={() => setConnectionOpen(true)}
+          />
           <span className="tablet-lg:hidden">
             <AccountButton />
           </span>
         </>
       }
     >
-      <div className="flex flex-col gap-6 tablet:gap-8">
+      <div className="flex flex-1 flex-col gap-6 tablet:gap-8">
         <FailureBanner />
 
         {/* 안내 패널 + 새 회의 (태블릿 이상) */}
-        <Card variant="panel" as="section" aria-label="새 회의" className="hidden flex-col items-center gap-6 tablet:flex tablet-lg:flex-row tablet-lg:justify-center tablet-lg:gap-12">
-          {/* 패널은 낮게 둬 최근 회의록이 한 화면에 들어오게 한다(태블릿 가로: 일러스트 왼쪽, 단계 칩 오른쪽 한 줄) */}
-          <RecordToMinutesIllustration className="w-44 shrink-0 tablet-lg:w-52" />
+        <Card variant="panel" as="section" aria-label="새 회의" className="hidden flex-col items-center gap-8 py-8 tablet:flex">
+          <MeetingFlowVisual />
           <ol aria-label="회의록 만드는 순서" className="flex flex-wrap items-center justify-center gap-2">
             {[
               { icon: Mic, label: '음성 녹음' },
@@ -112,7 +119,8 @@ export function HomePage() {
             ))}
           </ol>
         </Card>
-        <div className="hidden justify-center tablet:flex">
+        {/* 시안처럼 새 회의 버튼 위아래 여백을 넉넉히 둔다 */}
+        <div className="hidden justify-center py-4 tablet:flex">
           <Button variant="hero" icon={Mic} className="w-full max-w-form" onClick={() => navigate('/meetings/new')}>
             새 회의
           </Button>
@@ -185,7 +193,8 @@ function RecentMeetings() {
 
   const tones = ['text-blue-500', 'text-pink-500', 'text-lavender-500'];
   return (
-    <section aria-labelledby="recent-title" className="flex flex-col gap-4">
+    // 최근 회의록은 별도 카드 구역으로, 태블릿에서는 화면 아래쪽에 붙인다
+    <section aria-labelledby="recent-title" className="flex flex-col gap-4 rounded-2xl bg-bg/60 p-4 shadow-card tablet:mt-auto tablet:p-6">
       <div className="flex items-center justify-between gap-4">
         <h2 id="recent-title" className="flex items-center gap-2 text-title text-text">
           <Icon icon={Clock} size="lg" className="text-text-muted" />

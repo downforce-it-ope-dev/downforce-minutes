@@ -49,9 +49,15 @@ export function SidebarAccount() {
         <Icon icon={CircleUserRound} size="lg" className="shrink-0 text-text-muted" />
         <span className="truncate">{email ?? '로그인됨'}</span>
       </p>
-      <Button variant="ghost" icon={LogOut} className="justify-start px-2" onClick={open}>
+      {/* 이메일 줄과 아이콘·글자 위치를 맞춰 왼쪽 정렬한다 */}
+      <button
+        type="button"
+        onClick={open}
+        className="flex h-12 cursor-pointer items-center gap-2 self-start rounded-md text-label text-link active:bg-accent-soft"
+      >
+        <Icon icon={LogOut} size="lg" className="shrink-0" />
         로그아웃
-      </Button>
+      </button>
       {dialog}
     </div>
   );
