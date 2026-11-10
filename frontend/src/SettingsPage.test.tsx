@@ -2,7 +2,7 @@ import { withHealthyBackend } from './testUtils/withHealthyBackend';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router';
-import { App } from './App';
+import { SetupTestRoutes } from './testUtils/SetupTestRoutes';
 import { SettingsPage } from './SettingsPage';
 
 function response(data: unknown, status = 200) {
@@ -205,11 +205,11 @@ describe('Settings page', () => {
       throw new Error(`Unexpected request: ${path}`);
     });
     vi.stubGlobal('fetch', withHealthyBackend(fetchMock));
-    render(<MemoryRouter initialEntries={['/settings']}><App /></MemoryRouter>);
+    render(<MemoryRouter initialEntries={['/settings']}><SetupTestRoutes /></MemoryRouter>);
 
     fireEvent.click(await screen.findByRole('link', { name: '문서 연결 설정' }));
     expect(await screen.findByRole('button', { name: '문서 서비스 변경' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('link', { name: '설정으로 돌아가기' }));
+    fireEvent.click(screen.getByRole('button', { name: '설정으로 돌아가기' }));
     expect(screen.queryByRole('link', { name: '참석자 관리' })).toBeNull();
     expect(await screen.findByLabelText('발신 이메일 주소')).toBeTruthy();
     expect(await screen.findByLabelText('Slack 알림 주소')).toBeTruthy();

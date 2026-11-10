@@ -2,7 +2,7 @@ import { withHealthyBackend } from './testUtils/withHealthyBackend';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { App } from './App';
+import { SetupTestRoutes } from './testUtils/SetupTestRoutes';
 import type { SetupOperation, SetupSnapshot } from './documentSetupApi';
 
 const source = { provider: 'NOTION' as const, connectionVersion: 4, rootId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', rootUrl: 'https://notion.example/source' };
@@ -52,7 +52,7 @@ function harness(initial: SetupSnapshot = ready, initialOperation = op('RUNNING'
   vi.stubGlobal('fetch', withHealthyBackend(fetchMock));
   return { fetchMock, setSnapshot: (value: SetupSnapshot) => { snapshot = value; }, failSwitch: () => { switchFailure = failure('DOCUMENT_SETTINGS_VERSION_CONFLICT', 412); }, loseSwitch: () => { switchLost = true; }, configUnavailable: (value: boolean) => { configUnavailable = value; }, failAction: () => { actionFailure = failure('DOCUMENT_CHANGE_BUSY', 409); } };
 }
-function settings() { return render(<MemoryRouter initialEntries={['/settings/document']}><App /></MemoryRouter>); }
+function settings() { return render(<MemoryRouter initialEntries={['/settings/document']}><SetupTestRoutes /></MemoryRouter>); }
 async function connectTarget() {
   fireEvent.click(await screen.findByRole('button', { name: '문서 서비스 변경' }));
   fireEvent.click(screen.getByRole('button', { name: 'Confluence Cloud 선택' }));
@@ -69,8 +69,8 @@ describe('document service change', () => {
   it('CHANGE-CHOICE defaults to COPY_ALL and sends one confirmed switch with the prepared revision', async () => {
     const { fetchMock } = harness(); settings(); await connectTarget();
     expect((screen.getByRole('radio', { name: '전체 복사' }) as HTMLInputElement).checked).toBe(true);
-    expect(screen.getByText(/참석자와 회의록.*Transcript.*Minutes/)).toBeTruthy();
-    expect(screen.getByText(/원본.*보존/)).toBeTruthy();
+    expect(screen.getByText(/참석자·회의록 복사/)).toBeTruthy();
+    expect(screen.getByText(/원본 서비스에만 남습니다/)).toBeTruthy();
     const button = screen.getByRole('button', { name: '문서 서비스 전환' }); fireEvent.click(button); fireEvent.click(button);
     await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/operations/switch-1'))).toBe(true));
     const calls = writes(fetchMock, '/switch'); expect(calls).toHaveLength(1);
@@ -80,7 +80,7 @@ describe('document service change', () => {
   it('CHANGE-CHOICE requires explicit START_EMPTY confirmation before sending its mode', async () => {
     const { fetchMock } = harness(prepared); settings(); fireEvent.click(await screen.findByRole('button', { name: '문서 서비스 변경' }));
     fireEvent.click(screen.getByRole('radio', { name: '빈 구조로 새 시작' }));
-    expect((screen.getByRole('button', { name: '문서 서비스 전환' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByRole('button', { name: '문서 서비스 전환' }).getAttribute('aria-disabled')).toBe('true');
     expect(writes(fetchMock, '/switch')).toHaveLength(0);
     fireEvent.click(screen.getByRole('checkbox', { name: /기존 자료가 새 서비스 목록에 나타나지 않음/ }));
     fireEvent.click(screen.getByRole('button', { name: '문서 서비스 전환' })); await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/operations/switch-1'))).toBe(true));
@@ -113,7 +113,7 @@ describe('document service change', () => {
   it('CHANGE-REFRESH a switch 412 shows the reloaded revision and invalidates the prepared action', async () => {
     const { fetchMock, failSwitch } = harness(prepared); failSwitch(); settings(); fireEvent.click(await screen.findByRole('button', { name: '문서 서비스 변경' }));
     fireEvent.click(screen.getByRole('button', { name: '문서 서비스 전환' }));
-    expect((await screen.findByRole('alert')).textContent).toMatch(/설정 버전.*19.*draft revision.*3/);
+    expect(await screen.findByText(/설정 버전.*19.*draft revision.*3/)).toBeTruthy();
     expect(screen.queryByRole('button', { name: '문서 서비스 전환' })).toBeNull(); expect(writes(fetchMock, '/switch')).toHaveLength(1);
   });
   it('CHANGE-INTEGRATION successful switching refreshes the new connection and target roster', async () => {
@@ -128,7 +128,7 @@ describe('document service change', () => {
     } finally { window.removeEventListener('document-connection-changed', listener); }
   });
   it('CHANGE-GATE reports a switch lock from an already open participant write form', async () => {
-    const { fetchMock } = harness(); render(<MemoryRouter initialEntries={['/settings/participants']}><App /></MemoryRouter>);
+    const { fetchMock } = harness(); render(<MemoryRouter initialEntries={['/settings/participants']}><SetupTestRoutes /></MemoryRouter>);
     fireEvent.click(await screen.findByRole('button', { name: '참석자 추가' })); fireEvent.change(screen.getByLabelText('이름'), { target: { value: 'Synthetic Grace' } }); fireEvent.change(screen.getByLabelText('이메일'), { target: { value: 'grace@example.test' } }); fireEvent.click(screen.getByRole('button', { name: '저장' }));
     expect((await screen.findByRole('alert')).textContent).toMatch(/문서 서비스 변경 중.*쓰기.*다시/);
     expect(writes(fetchMock, '/participants')).toHaveLength(1); expect(screen.getByRole('dialog')).toBeTruthy();
@@ -136,7 +136,7 @@ describe('document service change', () => {
   it('CHANGE-ACCESSIBILITY retry failure is announced and leaves a keyboard reachable recovery action', async () => {
     const snapshot: SetupSnapshot = { ...prepared, version: 15, status: 'ATTENTION_REQUIRED', operation: { operationId: 'switch-1', type: 'SWITCH', status: 'FAILED' }, canCreateMeeting: false };
     const { fetchMock, failAction } = harness(snapshot, op('FAILED', ['RETRY', 'CANCEL'])); failAction(); settings(); const retry = await screen.findByRole('button', { name: '작업 재개' }); retry.focus(); fireEvent.click(retry);
-    expect((await screen.findByRole('alert')).textContent).toMatch(/작업.*확인/); await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('button', { name: '진행 상태 새로고침' })));
+    expect(await screen.findByText(/작업.*확인/)).toBeTruthy(); await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('button', { name: '진행 상태 새로고침' })));
     expect(writes(fetchMock, '/operations/switch-1/retry')).toHaveLength(1); expect(screen.queryByLabelText('Atlassian API token')).toBeNull();
   });
   it('CHANGE-REFRESH reconciles a terminal operation returned during reentry before refreshing consumers', async () => {
@@ -145,7 +145,7 @@ describe('document service change', () => {
     expect(await screen.findByRole('heading', { name: 'Confluence' }, { timeout: 3500 })).toBeTruthy(); await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/participants'))).toBe(true));
   });
   it('CHANGE-REFRESH after a 412 retesting and preparing the latest draft permits a new confirmed switch', async () => {
-    const { fetchMock, failSwitch, setSnapshot } = harness(prepared); failSwitch(); settings(); fireEvent.click(await screen.findByRole('button', { name: '문서 서비스 변경' })); fireEvent.click(screen.getByRole('button', { name: '문서 서비스 전환' })); await screen.findByRole('alert');
+    const { fetchMock, failSwitch, setSnapshot } = harness(prepared); failSwitch(); settings(); fireEvent.click(await screen.findByRole('button', { name: '문서 서비스 변경' })); fireEvent.click(screen.getByRole('button', { name: '문서 서비스 전환' })); await screen.findAllByText(/오류:/);
     setSnapshot(ready); fireEvent.click(screen.getByRole('button', { name: 'Confluence Cloud 선택' }));
     for (const [label, value] of [['Confluence 사이트 URL', 'https://example.atlassian.net'], ['Atlassian 계정 이메일', 'synthetic@example.test'], ['Atlassian API token', 'synthetic-secret'], ['Space ID', '42']]) fireEvent.change(screen.getByLabelText(label), { target: { value } });
     fireEvent.click(screen.getByRole('button', { name: '연결 확인' }));
@@ -161,7 +161,7 @@ describe('document service change', () => {
   it('CHANGE-INTEGRATION an unavailable consumer refresh is announced and can be retried without switching again', async () => {
     const snapshot: SetupSnapshot = { ...ready, active: target, version: 18, operation: { operationId: 'switch-1', type: 'SWITCH', status: 'SUCCEEDED' } };
     const { fetchMock, configUnavailable } = harness(snapshot, op('SUCCEEDED')); configUnavailable(true); settings();
-    expect((await screen.findByRole('alert')).textContent).toMatch(/새 연결.*불러오지 못했습니다/);
+    expect(await screen.findByText(/새 연결.*불러오지 못했습니다/)).toBeTruthy();
     configUnavailable(false); fireEvent.click(screen.getByRole('button', { name: '연결 데이터 다시 확인' }));
     expect(await screen.findByText('문서 서비스 연결이 준비되었습니다.')).toBeTruthy(); expect(writes(fetchMock, '/switch')).toHaveLength(0);
     expect(fetchMock.mock.calls.filter(([url]) => String(url).endsWith('/app-config'))).toHaveLength(2);
@@ -178,7 +178,7 @@ describe('document service change', () => {
       throw new Error(`Unexpected request ${path} ${init?.method}`);
     });
     vi.stubGlobal('fetch', withHealthyBackend(fetchMock)); settings(); fireEvent.click(await screen.findByRole('button', { name: '문서 서비스 변경' }));
-    expect(screen.getByText('대상 연결: Notion')).toBeTruthy(); fireEvent.click(screen.getByRole('button', { name: '문서 서비스 전환' })); await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/operations/switch-1'))).toBe(true));
+    expect(screen.getByRole('heading', { name: '자료 이전 방식' }).closest('section')!.textContent).toContain('Notion새 연결'); fireEvent.click(screen.getByRole('button', { name: '문서 서비스 전환' })); await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/operations/switch-1'))).toBe(true));
     expect(screen.getByText('현재 연결: Confluence Cloud')).toBeTruthy(); expect(screen.getByText('연결 버전: 8')).toBeTruthy();
     expect(JSON.parse(String(writes(fetchMock, '/switch')[0][1]?.body))).toEqual({ draftId: 'notion-target', draftRevision: 4, mode: 'COPY_ALL', confirmSourcePreserved: true });
   });

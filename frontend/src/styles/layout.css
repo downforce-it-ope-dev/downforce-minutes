@@ -9,8 +9,6 @@
 .product-header-company span:last-child { color: #3b82f6; }
 .product-header-divider { width: 1px; height: 22px; margin: 0 12px; background: #14b8a6; }
 .product-header-product { color: #253044; font-size: 15px; font-weight: 650; letter-spacing: -.02em; }
-.setup-gate-actions { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; width: 100%; }
-.setup-gate-actions .button { width: 100%; min-height: 48px; justify-content: center; text-decoration: none; }
 .bottom-navigation { position: fixed; z-index: 5; right: 0; bottom: 0; left: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); min-height: calc(68px + env(safe-area-inset-bottom)); padding: 4px 12px env(safe-area-inset-bottom); border-top: 1px solid #e8ebef; background: #fff; }
 .bottom-navigation a { display: flex; min-width: 0; min-height: 60px; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: 10px; color: #737f90; text-decoration: none; font-size: 11px; font-weight: 600; }
 .bottom-navigation a svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }

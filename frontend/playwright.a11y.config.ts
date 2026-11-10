@@ -3,7 +3,7 @@ import { mockSessionState } from './e2e/authSession';
 
 export default defineConfig({
   testDir: './e2e',
-  testMatch: ['**/accessibility.spec.ts', '**/ui-preview.spec.ts', '**/auth.spec.ts', '**/common-screens.spec.ts'],
+  testMatch: ['**/accessibility.spec.ts', '**/ui-preview.spec.ts', '**/auth.spec.ts', '**/common-screens.spec.ts', '**/document-setup.spec.ts'],
   fullyParallel: true,
   timeout: 30_000,
   reporter: 'list',

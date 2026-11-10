@@ -153,10 +153,11 @@ test('all app routes keep the brand and page heading visible during scrolling', 
   for (const route of ['/setup/document', '/settings/document']) {
     await installSyntheticApi(page, screens.find((screen) => screen.id === 'SCR-011')!);
     await page.goto(route);
-    const heading = page.locator('main h1').first();
+    // 문서 연결은 리뉴얼 앱 틀(#20~#22): 제목은 상단 바(h1), 스크롤은 본문(#main-content)만
+    const heading = page.getByRole('heading', { level: 1 }).first();
     await expect(heading).toBeVisible();
     const initialTop = await heading.evaluate((element) => element.getBoundingClientRect().top);
-    await page.locator('.page-scroll-content').evaluate((element) => { element.scrollTop = element.scrollHeight; });
+    await page.locator('#main-content').evaluate((element) => { element.scrollTop = element.scrollHeight; });
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     expect(await heading.evaluate((element) => element.getBoundingClientRect().top), `${route} page heading moved`).toBe(initialTop);
     expect(await page.evaluate(() => document.documentElement.scrollTop), `${route} should not scroll the document`).toBe(0);

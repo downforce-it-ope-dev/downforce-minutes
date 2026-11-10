@@ -59,7 +59,8 @@ export function AppShell({ title, back, actions, focus = false, account, childre
         {!focus && <MainNav account={account} />}
         <div className={cn('flex h-dvh flex-col', !focus && 'tablet:pl-rail tablet-lg:pl-sidebar')}>
           <TopBar title={title} back={back} actions={focus ? undefined : actions} />
-          <main id="main-content" tabIndex={-1} className="min-h-0 flex-1 overflow-y-auto outline-none">
+          {/* 본문만 스크롤하므로, 안에 누를 요소가 없어도 키보드로 스크롤할 수 있게 초점을 받는다 */}
+          <main id="main-content" tabIndex={0} aria-label="본문" className="min-h-0 flex-1 overflow-y-auto">
             <div className="mx-auto w-full max-w-content px-4 pt-2 pb-8 tablet:px-6 tablet-lg:px-8 short:pb-4">{children}</div>
           </main>
           {/* 휴대폰 하단 탭 바 자리 */}

@@ -9,6 +9,7 @@ export { OtpInput, type OtpInputProps } from './OtpInput';
 export { Card, type CardProps } from './Card';
 export { Pill, type PillProps, type PillTone } from './Pill';
 export { ProgressBar, type ProgressBarProps } from './ProgressBar';
+export { StepIndicator, type StepIndicatorProps } from './StepIndicator';
 export { Banner, type BannerProps, type BannerTone } from './Banner';
 export { Dialog, type DialogProps } from './Dialog';
 export { LeaveConfirmDialog, type LeaveConfirmDialogProps } from './LeaveConfirmDialog';

@@ -11,6 +11,8 @@
 | 사용 API | API-027 작업 상태(반복 조회), API-023 상태, API-029 작업 재개, API-030 작업 취소, API-001·API-003 완료 후 데이터 확인 |
 | 현행 캡처 | [문서 연결 진행](<../현_UI/문서 연결 진행.png>), [문서 연결 성공](<../현_UI/뮨서 연결 성공.png>), [문서 연결 실패](<../현_UI/문서 연결 실패.png>) |
 
+> **구현 (2026-11-10, #20~#22):** 진행 카드(세로 단계 + 페이지별 생성 목록 + 진행 문구)와 작업 상태 카드(제목·단계·상태, 작업 ID·오류 코드, 허용된 동작만)로 그린다. 상태별 안내 문단은 두지 않는다. 전환 진행은 건수 + 진행 막대로 보인다. 구현: `frontend/src/documentSetup/` (`useDocumentSetup` = 기존 마법사 로직을 동작 변경 없이 옮긴 훅, `DocumentSetupPage` = 화면). 기존 `DocumentSetupWizard.tsx`와 `pages/setup.css`는 삭제했다. S-13에 따라 설명 문장·도움말은 두지 않고 오류·안내는 토스트로 보낸다.
+
 ## 1. 화면 개요
 
 문서 서비스에 Meeting Automation 문서 구조(Meetings, Participants, Meeting Data, Templates)를 만드는 작업, 또는 서비스 전환 작업의 진행과 결과를 보여 준다. 실패하면 재개하거나 종료할 수 있다.
