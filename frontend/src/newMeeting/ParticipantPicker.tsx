@@ -14,7 +14,7 @@ export interface ParticipantPickerProps {
   invalid?: boolean;
   onToggle: (id: string) => void;
   onSetMany: (ids: string[], select: boolean) => void;
-  /** 도구 줄 오른쪽 동작 (휴대폰: 새 참석자 대화상자 열기) */
+  /** 머리 오른쪽 동작 (새 참석자 등록 열기) */
   action?: ReactNode;
   className?: string;
 }
@@ -57,16 +57,19 @@ export function ParticipantPicker({
       as="section"
       padding="none"
       aria-labelledby="participant-picker-title"
-      className={cn('flex flex-col', invalid && 'outline-2 outline-danger', className)}
+      className={cn('flex flex-col overflow-hidden', invalid && 'outline-2 outline-danger', className)}
     >
       <div className="flex flex-col gap-3 px-4 pt-4 tablet:px-5">
         <div className="flex items-center justify-between gap-3">
           <h2 id="participant-picker-title" className="text-title text-text">
             참석자
           </h2>
-          <p aria-live="polite" className="text-label text-brand-text tabular-nums">
-            {selectedCount}명 선택됨
-          </p>
+          <div className="flex items-center gap-3">
+            <p aria-live="polite" className="text-label text-brand-text tabular-nums">
+              {selectedCount}명 선택됨
+            </p>
+            {action}
+          </div>
         </div>
         <div className="flex flex-col gap-3 tablet-lg:flex-row tablet-lg:items-center">
           <TextField
@@ -100,13 +103,12 @@ export function ParticipantPicker({
                   {allVisibleSelected ? '선택 해제' : '전체 선택'}
                 </Button>
               )}
-              {action}
             </div>
           </div>
         </div>
       </div>
 
-      <div className="mt-3 rounded-b-xl border-t border-border tablet:min-h-75 tablet:flex-1 tablet:overflow-y-auto">
+      <div className="mt-3 rounded-b-xl border-t border-border tablet:min-h-0 tablet:flex-1 tablet:overflow-y-auto">
         {status === 'loading' && participants.length === 0 ? (
           <ul aria-label="참석자 목록" aria-busy="true" className="flex flex-col gap-1 p-2">
             {[0, 1, 2, 3, 4].map((row) => (

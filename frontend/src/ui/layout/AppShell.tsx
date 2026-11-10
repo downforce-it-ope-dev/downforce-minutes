@@ -69,7 +69,7 @@ export function AppShell({ title, hideTitle = false, back, actions, focus = fals
             <div
               className={cn(
                 'mx-auto flex min-h-full w-full max-w-content flex-col px-4 pt-2 pb-8 tablet:px-6 tablet-lg:px-8 short:pb-4',
-                fillHeight && 'tablet:h-full short:h-auto',
+                fillHeight && 'tablet:h-full tablet:pb-4 short:h-auto',
               )}
             >
               {children}

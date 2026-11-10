@@ -44,7 +44,7 @@ for (const size of SIZES) {
   });
 }
 
-for (const [size, minRows] of [[SIZES[1], 8], [SIZES[2], 5]] as const) {
+for (const [size, minRows] of [[SIZES[1], 8], [SIZES[2], 4]] as const) {
   test(`${size.label}: 참석자 ${minRows}행 이상 보이고 목록만 스크롤되며 회의 시작이 늘 보인다`, async ({ page }) => {
     await mock(page);
     await page.setViewportSize(size);
@@ -88,7 +88,7 @@ test('휴대폰: 검색 → 체크 → 검색 지우기 후에도 선택 유지,
   expect(body.participantIds?.sort()).toEqual(['p3', 'p6']);
 });
 
-test('태블릿 가로: 오른쪽 패널에서 새 참석자를 등록하면 목록에 선택된 상태로 들어간다', async ({ page }) => {
+test('태블릿 가로: 등록 아이콘으로 왼쪽 새 참석자 패널을 열어 등록하면 선택된 상태로 들어가고, 닫으면 참석자가 다시 가로 가득', async ({ page }) => {
   await mock(page);
   await page.route('**/api/v1/participants', (route) =>
     route.request().method() === 'POST'
@@ -97,12 +97,35 @@ test('태블릿 가로: 오른쪽 패널에서 새 참석자를 등록하면 목
   );
   await page.setViewportSize({ width: 1180, height: 820 });
   await page.goto('/meetings/new');
+  const picker = page.getByRole('region', { name: '참석자', exact: true });
+  const fullWidth = (await picker.boundingBox())!.width;
+  await expect(page.getByRole('region', { name: '새 참석자' })).toHaveCount(0);
+  await page.getByRole('button', { name: '새 참석자' }).click();
   const panel = page.getByRole('region', { name: '새 참석자' });
+  await expect(panel.getByRole('textbox', { name: '이름' })).toBeFocused();
+  // 패널과 참석자 영역은 같은 높이로 나란히 선다
+  const [a, b] = [(await panel.boundingBox())!, (await picker.boundingBox())!];
+  expect(a.x).toBeLessThan(b.x);
+  expect(Math.round(a.height)).toBe(Math.round(b.height));
   await panel.getByRole('textbox', { name: '이름' }).fill('가나다');
   await panel.getByRole('textbox', { name: '이메일' }).fill('new@miinit.com');
   await panel.getByRole('button', { name: '등록' }).click();
   await expect(page.getByRole('checkbox', { name: '가나다 new@miinit.com' })).toBeChecked();
   await expect(page.getByText('2명 선택됨')).toBeVisible();
+  await panel.getByRole('button', { name: '새 참석자 닫기' }).click();
+  await expect(panel).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '새 참석자' })).toBeFocused();
+  expect(Math.round((await picker.boundingBox())!.width)).toBe(Math.round(fullWidth));
+});
+
+test('회의 시작은 맨 아래 가운데에 있다 (태블릿 가로)', async ({ page }) => {
+  await mock(page);
+  await page.setViewportSize({ width: 1180, height: 820 });
+  await page.goto('/meetings/new');
+  const start = (await page.getByRole('button', { name: '회의 시작' }).boundingBox())!;
+  const picker = (await page.getByRole('region', { name: '참석자', exact: true }).boundingBox())!;
+  expect(Math.abs(start.x + start.width / 2 - (picker.x + picker.width / 2))).toBeLessThanOrEqual(1);
+  expect(start.y).toBeGreaterThan(picker.y + picker.height);
 });
 
 test('태블릿 세로: 큰 달력에서 날짜를 고른다 (axe 심각 위반 0건, 날짜 칸 48 이상)', async ({ page }) => {

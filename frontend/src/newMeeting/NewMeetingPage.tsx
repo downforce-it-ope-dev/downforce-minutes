@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
-import { FileText, Mic, UserPlus } from 'lucide-react';
+import { FileText, Mic, UserPlus, X } from 'lucide-react';
 import { AccountButton, SidebarAccount } from '../auth/AccountMenu';
 import { loadAccountEmail } from '../auth/accountEmail';
 import { saveRecordingSession } from '../meeting/recordingSessionStore';
@@ -12,6 +12,7 @@ import {
   ChoiceGroup,
   DateField,
   Dialog,
+  IconButton,
   TABLET_QUERY,
   TextField,
   useMediaQuery,
@@ -25,7 +26,8 @@ import { configReady, useNewMeetingForm, type NewMeetingNotice } from './useNewM
 /*
  * MTG-01 새 회의 (GitHub #26, docs/renewal/화면기획/MTG-01_새회의.md).
  * 정보 위계(사용자 결정 2026-11-10): 회의 제목(가로 가득, 큰 글자) → 날짜·템플릿(좌우) → 참석자.
- * - 태블릿: 참석자 영역은 남은 높이를 쓰고 목록만 스크롤한다. 오른쪽 패널에서 새 참석자를 바로 등록하고, 그 아래에 회의 시작
+ * - 태블릿: 참석자 영역은 남은 높이를 가로 가득 쓰고 목록만 스크롤한다. 머리의 등록 아이콘을 누르면 왼쪽에서 새 참석자 패널이 나와
+ *   참석자 영역과 같은 높이로 나란히 선다(사용자 결정 2026-11-10). 회의 시작은 맨 아래 가운데
  * - 휴대폰: 1단 페이지 스크롤, 새 참석자는 대화상자, 회의 시작은 탭 바 위에 고정
  * - 날짜는 큰 달력 대화상자, 템플릿은 버튼으로 고른다
  * - 오류·상태 알림은 토스트, 입력 오류는 테두리로만 표시한다(S-13)
@@ -76,6 +78,11 @@ function NewMeetingForm({
   const toast = useToast();
   const tablet = useMediaQuery(TABLET_QUERY);
   const [addOpen, setAddOpen] = useState(false);
+  const addButtonRef = useRef<HTMLButtonElement>(null);
+  function closeAdd() {
+    setAddOpen(false);
+    addButtonRef.current?.focus();
+  }
   const retryRef = useRef<Record<'config' | 'templates' | 'participants', () => Promise<void>> | null>(null);
 
   function notify(notice: NewMeetingNotice) {
@@ -132,7 +139,7 @@ function NewMeetingForm({
 
   return (
     <div className="flex flex-1 flex-col gap-4 tablet:min-h-0">
-      <Card as="section" aria-label="회의 정보" className="flex shrink-0 flex-col gap-4">
+      <Card as="section" aria-label="회의 정보" padding="none" className="flex shrink-0 flex-col gap-3 p-4 tablet:p-5">
         <TextField
           label="회의 제목"
           inputSize="lg"
@@ -141,7 +148,7 @@ function NewMeetingForm({
           invalid={form.errors.title}
           required
         />
-        <div className="grid gap-4 tablet:grid-cols-2">
+        <div className="grid gap-3 tablet:grid-cols-2 tablet:gap-4">
           <DateField label="회의 날짜" value={form.meetingDate} onChange={form.setMeetingDate} invalid={form.errors.meetingDate} />
           <ChoiceGroup
             label="회의록 템플릿"
@@ -155,6 +162,21 @@ function NewMeetingForm({
       </Card>
 
       <div className="flex flex-col gap-4 tablet:min-h-0 tablet:flex-1 tablet:flex-row">
+        {tablet && addOpen && (
+          <Card
+            as="section"
+            aria-labelledby="new-participant-title"
+            className="flex w-72 shrink-0 flex-col gap-4 overflow-y-auto transition duration-200 ease-out starting:-translate-x-6 starting:opacity-0 motion-reduce:transition-none"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <h2 id="new-participant-title" className="text-title text-text">
+                새 참석자
+              </h2>
+              <IconButton icon={X} label="새 참석자 닫기" variant="surface" onClick={closeAdd} />
+            </div>
+            <NewParticipantForm autoFocus onCreated={form.addParticipant} />
+          </Card>
+        )}
         <ParticipantPicker
           participants={form.roster}
           selectedIds={form.participantIds}
@@ -165,25 +187,25 @@ function NewMeetingForm({
           onSetMany={form.setMany}
           className="tablet:min-h-0 tablet:flex-1"
           action={
-            !tablet && (
-              <Button size="sm" variant="secondary" shape="pill" icon={UserPlus} aria-haspopup="dialog" onClick={() => setAddOpen(true)}>
-                새 참석자
-              </Button>
-            )
+            <IconButton
+              ref={addButtonRef}
+              icon={UserPlus}
+              label="새 참석자"
+              variant="surface"
+              aria-haspopup={tablet ? undefined : 'dialog'}
+              aria-expanded={tablet ? addOpen : undefined}
+              onClick={() => (tablet && addOpen ? closeAdd() : setAddOpen(true))}
+            />
           }
         />
-        {tablet && (
-          <div className="flex w-72 shrink-0 flex-col gap-4">
-            <Card as="section" aria-labelledby="new-participant-title" className="flex flex-col gap-4">
-              <h2 id="new-participant-title" className="text-title text-text">
-                새 참석자
-              </h2>
-              <NewParticipantForm onCreated={form.addParticipant} />
-            </Card>
-            <div className="mt-auto">{startButton}</div>
-          </div>
-        )}
       </div>
+
+      {/* 태블릿: 회의 시작은 맨 아래 가운데 */}
+      {tablet && (
+        <div className="flex shrink-0 justify-center">
+          <div className="w-full max-w-form">{startButton}</div>
+        </div>
+      )}
 
       {!tablet && (
         <>
