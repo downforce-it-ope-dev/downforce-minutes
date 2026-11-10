@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useParams } from 'react-router';
+import { useParams, useSearchParams } from 'react-router';
 import { CalendarDays, CircleStop, CloudUpload, FileText, Mic, MicOff, Pause, Play, Plus, RefreshCw, Users } from 'lucide-react';
 import { useReportSessionWork } from '../auth/sessionWork';
 import { browserMediaAdapter } from '../browserMediaAdapter';
@@ -35,7 +35,7 @@ import { useWakeLock } from './useWakeLock';
 export function RecordingRoute({ mediaAdapter = browserMediaAdapter }: { mediaAdapter?: MediaRecorderAdapter }) {
   const { sessionId } = useParams();
   // 다시 그릴 때마다 저장소에서 새 객체를 만들면 녹음기가 다시 만들어지므로 경로가 바뀔 때만 읽는다
-  const session = useMemo(() => restoreRecordingSession(), [sessionId]);
+  const session = useMemo(() => (sessionId ? restoreRecordingSession() : null), [sessionId]);
   if (!session || session.sessionId !== sessionId) return <SessionMissing />;
   return <RecordingScreen key={session.sessionId} session={session} mediaAdapter={mediaAdapter} />;
 }
@@ -213,6 +213,7 @@ function RecordingBody({
             </div>
           )}
         </div>
+        {__UI_PREVIEW__ && <DiagnosticsPanel recording={recording} />}
       </Card>
 
       {/* 태블릿 가로: 회의 정보 (읽기 전용) */}
@@ -313,17 +314,20 @@ const BARS = 40;
 const PHONE_HIDDEN = 14;
 
 /**
- * 입력 파형 (MTG-02-F03). 최근 약 3초의 입력 레벨을 오른쪽에서 왼쪽으로 흘려 보이는 막대 그래프.
+ * 입력 파형 (MTG-02-F03). 최근 약 3.6초의 입력 레벨을 오른쪽에서 왼쪽으로 흘려 보이는 막대 그래프.
  * 가운데 선을 기준으로 위아래로 자라고, 분홍→보라 그라데이션이다. 녹음 중이 아니면 흐리게 보인다(장식이라 화면 읽기 제외).
  */
 function LevelWaveform({ level, state }: { level: number; state: RecordingSnapshot['state'] }) {
-  const [previous, setPrevious] = useState(level);
   const [history, setHistory] = useState<number[]>(() => Array.from({ length: BARS }, () => 0));
-  // 레벨이 바뀔 때마다 기록을 한 칸 민다 (렌더 중 이전 값 비교: 효과 없이 상태를 맞추는 React 권장 방식)
-  if (level !== previous) {
-    setPrevious(level);
-    setHistory((current) => [...current.slice(1), level]);
-  }
+  const levelRef = useRef(level);
+  useEffect(() => {
+    levelRef.current = level;
+  }, [level]);
+  // 레벨 값이 같아도(조용할 때 0이 이어져도) 일정한 간격으로 한 칸씩 흘려 보낸다
+  useEffect(() => {
+    const timer = window.setInterval(() => setHistory((current) => [...current.slice(1), levelRef.current]), 90);
+    return () => window.clearInterval(timer);
+  }, []);
   return (
     <div
       aria-hidden="true"
@@ -385,5 +389,37 @@ function MicrophoneChip({ snapshot, onRetry }: { snapshot: RecordingSnapshot; on
         />
       )}
     </div>
+  );
+}
+
+/**
+ * 녹음 진단 (Preview·개발 서버에서 주소에 ?debug를 붙였을 때만, 운영 빌드에는 없음).
+ * 실제 기기에서 마이크 레벨이 들어오는지, 녹음기가 조각을 넘기는지, 업로드 상태가 어떤지 숫자로 본다.
+ */
+function DiagnosticsPanel({ recording }: { recording: ReturnType<typeof useRecordingSession> }) {
+  const [searchParams] = useSearchParams();
+  if (!searchParams.has('debug')) return null;
+  const { snapshot, uploadSnapshot, endSnapshot, diagnostics } = recording;
+  const rows: Array<[string, string]> = [
+    ['state', `${snapshot.state}${snapshot.completed ? ' (completed)' : ''}`],
+    ['mic', `${snapshot.microphoneStatus} / detected=${snapshot.microphoneInputDetected}`],
+    ['level', `${snapshot.microphoneLevel.toFixed(3)} (updates ${diagnostics.levelUpdates})`],
+    ['elapsedMs', String(snapshot.elapsedMs)],
+    ['chunks', `${diagnostics.chunks} (${diagnostics.chunkBytes} bytes)`],
+    ['upload', `${uploadSnapshot.status} ${uploadSnapshot.confirmedCount}/${uploadSnapshot.totalCount} pending=${uploadSnapshot.pendingCount}`],
+    ['end', endSnapshot.status],
+    ['error', recording.storageError || snapshot.errorMessage || uploadSnapshot.message || endSnapshot.message || '-'],
+    ['audioContext', typeof AudioContext === 'undefined' ? 'unsupported' : 'available'],
+    ['mediaRecorder', typeof MediaRecorder === 'undefined' ? 'unsupported' : 'available'],
+  ];
+  return (
+    <dl aria-label="녹음 진단" className="grid w-full max-w-form grid-cols-3 gap-x-3 gap-y-1 rounded-md bg-bg-subtle p-3 text-left text-caption text-text">
+      {rows.map(([key, value]) => (
+        <div key={key} className="col-span-3 grid grid-cols-3 gap-x-3">
+          <dt className="font-semibold">{key}</dt>
+          <dd className="col-span-2 break-all tabular-nums">{value}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }

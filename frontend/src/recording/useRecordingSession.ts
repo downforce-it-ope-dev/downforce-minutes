@@ -26,7 +26,10 @@ export function useRecordingSession(session: RecordingSession, mediaAdapter: Med
   const [endSnapshot, setEndSnapshot] = useState<RecordingEndSnapshot>({ status: 'idle' });
   /** 녹음 중·일시정지·종료 처리 중에는 화면을 벗어나지 못하게 한다 (이탈 경고, 세션 유지) */
   const [navigationLocked, setNavigationLocked] = useState(false);
+  /** 진단용(?debug, Preview·개발 서버): 녹음기가 넘긴 조각 수와 마이크 레벨 갱신 횟수 */
+  const [diagnostics, setDiagnostics] = useState({ chunks: 0, chunkBytes: 0, levelUpdates: 0 });
   const controllerRef = useRef<RecordingController | null>(null);
+  const lastLevel = useRef(0);
   const persistenceTail = useRef<Promise<unknown>>(Promise.resolve());
   const persistenceError = useRef<unknown>(null);
   const finalDurationMs = useRef<number | null>(null);
@@ -118,6 +121,10 @@ export function useRecordingSession(session: RecordingSession, mediaAdapter: Med
       uploadPolicy: session.uploadPolicy,
       adapter: mediaAdapter,
       onChange: (next) => {
+        if (lastLevel.current !== next.microphoneLevel) {
+          lastLevel.current = next.microphoneLevel;
+          setDiagnostics((d) => ({ ...d, levelUpdates: d.levelUpdates + 1 }));
+        }
         setSnapshot(next);
         if (next.completed) setNavigationLocked(false);
         else if (next.state === 'Recording' || next.state === 'Paused') setNavigationLocked(true);
@@ -128,6 +135,7 @@ export function useRecordingSession(session: RecordingSession, mediaAdapter: Med
         }
       },
       onChunk: (chunk) => {
+        setDiagnostics((d) => ({ ...d, chunks: d.chunks + 1, chunkBytes: d.chunkBytes + chunk.blob.size }));
         const persisted = persistenceTail.current.catch(() => undefined).then(() => chunkAdapter.accept(chunk));
         persistenceTail.current = persisted;
         void persisted
@@ -192,5 +200,5 @@ export function useRecordingSession(session: RecordingSession, mediaAdapter: Med
     },
   };
 
-  return { snapshot, storageError, uploadSnapshot, endSnapshot, navigationLocked, actions };
+  return { snapshot, storageError, uploadSnapshot, endSnapshot, navigationLocked, diagnostics, actions };
 }

@@ -1045,7 +1045,8 @@ describe('Recording route', () => {
       recorder.onerror?.({ error: { name: 'UnknownError' } });
 
       await waitFor(() => expect(screen.getByLabelText('처리 시작 상태').textContent).toContain('처리 시작 실패'), { timeout: 1_000 });
-      expect(screen.getByText(/처리를 시작하지 못했습니다/)).toBeTruthy();
+      // 실패 문구는 토스트로 뜬다 (종료 처리 단계가 끝난 뒤라 조금 늦을 수 있다)
+      expect(await screen.findByText(/처리를 시작하지 못했습니다/, undefined, { timeout: 3_000 })).toBeTruthy();
       expect(screen.queryByRole('button', { name: '녹음 시작' })).toBeNull();
       expect(screen.getByRole('link', { name: '새 회의 시작' }).getAttribute('href')).toBe('/meetings/new');
       expect(fetchMock.mock.calls.filter(([url]) => new URL(String(url)).pathname.endsWith('/process'))).toHaveLength(0);
