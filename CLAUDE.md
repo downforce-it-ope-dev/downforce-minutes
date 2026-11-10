@@ -80,6 +80,12 @@
   - 공통 부품은 `frontend/src/ui/`에 있고 `../ui`(index)에서 불러온다. 같은 부품을 화면에 새로 만들지 않는다.
   - 리뉴얼 화면 라우트는 `frontend/src/RootRoutes.tsx`에 추가한다. 여기 라우트는 기존 `App` 레이아웃(헤더·하단 탭 바·기존 CSS) 밖에서 그려진다.
   - 부품 확인 화면 `/__ui`는 개발 서버와 Vercel Preview에서만 열린다(운영 빌드 제외). 새 부품을 만들면 여기에도 추가한다.
+  - R5에서 추가한 부품: `SelectField`(선택 상자), `Checkbox`, `FilterChips`(보기 칩), `ChoiceGroup`(버튼으로 하나 고르기), `DateField`(큰 달력 대화상자), `RoundActionButton`(원형 녹음 버튼), `useMediaQuery`·`TABLET_QUERY`(크기마다 다른 방식으로 그릴 때만). `TextField`의 `inputSize="lg"`는 글자만 키우고 높이는 같다.
+  - `AppShell`: `fillHeight`(태블릿에서 본문 높이를 화면에 맞추고 영역 안만 스크롤), `toastPlacement="top"`(아래쪽에 큰 동작 버튼이 있는 화면).
+- **회의 진행 흐름 (R5)**
+  - 새 회의(`/meetings/new`)·회의 녹음(`/meetings/:sessionId/recording`)은 리뉴얼 라우트다. 처리 이후 화면은 아직 기존 `App`이 그린다.
+  - 새 회의가 만든 녹음 세션은 `src/meeting/recordingSessionStore.ts`(브라우저 탭 저장소 + 메모리)로 녹음 화면에 넘긴다.
+  - 녹음 로직은 `src/recording/useRecordingSession.ts`(기존 처리 그대로). 녹음 화면 진단 패널은 Preview·개발 서버에서 `?debug`로 연다.
 - **로그인과 인증 목업 (#15)**
   - `/login`·`/__ui`를 뺀 모든 경로는 `RequireAuth`(`src/auth/AuthGate.tsx`)를 거친다. 로그인하지 않았으면 로그인 화면으로 보낸다.
   - 개발 서버와 Vercel Preview는 인증 목업(`src/auth/authMock.ts`)을 쓴다. 메일을 보내지 않고, 인증 코드는 `123456`이다. Backend가 Preview 출처를 허용하면 Vercel Preview 환경 변수 `AUTH_MOCK=0`으로 끈다. Vercel Production에서는 값과 관계없이 꺼진다.
