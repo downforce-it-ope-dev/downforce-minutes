@@ -10,6 +10,7 @@ import {
   Button,
   Card,
   ChoiceGroup,
+  cn,
   DateField,
   Dialog,
   IconButton,
@@ -26,8 +27,8 @@ import { configReady, useNewMeetingForm, type NewMeetingNotice } from './useNewM
 /*
  * MTG-01 새 회의 (GitHub #26, docs/renewal/화면기획/MTG-01_새회의.md).
  * 정보 위계(사용자 결정 2026-11-10): 회의 제목(가로 가득, 큰 글자) → 날짜·템플릿(좌우) → 참석자.
- * - 태블릿: 참석자 영역은 남은 높이를 가로 가득 쓰고 목록만 스크롤한다. 머리의 등록 아이콘을 누르면 왼쪽에서 새 참석자 패널이 나와
- *   참석자 영역과 같은 높이로 나란히 선다(사용자 결정 2026-11-10). 회의 시작은 맨 아래 가운데
+ * - 태블릿: 참석자 영역은 남은 높이를 가로 가득 쓰고 목록만 스크롤한다. 머리의 등록 아이콘을 누르면 오른쪽에서 새 참석자 패널이
+ *   밀려 나와 참석자 영역과 같은 높이로 나란히 선다(사용자 결정 2026-11-10). 회의 시작은 맨 아래 가운데
  * - 휴대폰: 1단 페이지 스크롤, 새 참석자는 대화상자, 회의 시작은 탭 바 위에 고정
  * - 날짜는 큰 달력 대화상자, 템플릿은 버튼으로 고른다
  * - 오류·상태 알림은 토스트, 입력 오류는 테두리로만 표시한다(S-13)
@@ -79,6 +80,11 @@ function NewMeetingForm({
   const tablet = useMediaQuery(TABLET_QUERY);
   const [addOpen, setAddOpen] = useState(false);
   const addButtonRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  // 태블릿 패널이 열리면 이름 칸으로 초점을 옮긴다
+  useEffect(() => {
+    if (tablet && addOpen) panelRef.current?.querySelector('input')?.focus({ preventScroll: true });
+  }, [tablet, addOpen]);
   function closeAdd() {
     setAddOpen(false);
     addButtonRef.current?.focus();
@@ -161,22 +167,7 @@ function NewMeetingForm({
         </div>
       </Card>
 
-      <div className="flex flex-col gap-4 tablet:min-h-0 tablet:flex-1 tablet:flex-row">
-        {tablet && addOpen && (
-          <Card
-            as="section"
-            aria-labelledby="new-participant-title"
-            className="flex w-72 shrink-0 flex-col gap-4 overflow-y-auto transition duration-200 ease-out starting:-translate-x-6 starting:opacity-0 motion-reduce:transition-none"
-          >
-            <div className="flex items-center justify-between gap-2">
-              <h2 id="new-participant-title" className="text-title text-text">
-                새 참석자
-              </h2>
-              <IconButton icon={X} label="새 참석자 닫기" variant="surface" onClick={closeAdd} />
-            </div>
-            <NewParticipantForm autoFocus onCreated={form.addParticipant} />
-          </Card>
-        )}
+      <div className="flex flex-col gap-4 tablet:min-h-0 tablet:flex-1 tablet:flex-row tablet:gap-0">
         <ParticipantPicker
           participants={form.roster}
           selectedIds={form.participantIds}
@@ -198,6 +189,35 @@ function NewMeetingForm({
             />
           }
         />
+        {/* 태블릿: 새 참석자 패널은 오른쪽에서 왼쪽으로 밀려 나오고, 참석자 영역은 그만큼 자연스럽게 줄어든다(닫을 때는 반대로) */}
+        {tablet && (
+          <div
+            ref={panelRef}
+            inert={!addOpen}
+            aria-hidden={!addOpen || undefined}
+            className={cn(
+              'flex shrink-0 overflow-hidden transition-all duration-300 ease-out motion-reduce:transition-none',
+              addOpen ? 'ml-4 w-72 opacity-100' : 'ml-0 w-0 opacity-0',
+            )}
+          >
+            <Card
+              as="section"
+              aria-labelledby="new-participant-title"
+              className={cn(
+                'flex w-72 shrink-0 flex-col gap-4 overflow-y-auto transition-transform duration-300 ease-out motion-reduce:transition-none',
+                addOpen ? 'translate-x-0' : 'translate-x-full',
+              )}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <h2 id="new-participant-title" className="text-title text-text">
+                  새 참석자
+                </h2>
+                <IconButton icon={X} label="새 참석자 닫기" variant="surface" onClick={closeAdd} />
+              </div>
+              <NewParticipantForm onCreated={form.addParticipant} />
+            </Card>
+          </div>
+        )}
       </div>
 
       {/* 태블릿: 회의 시작은 맨 아래 가운데 */}

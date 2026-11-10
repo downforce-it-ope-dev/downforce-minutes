@@ -88,7 +88,7 @@ test('휴대폰: 검색 → 체크 → 검색 지우기 후에도 선택 유지,
   expect(body.participantIds?.sort()).toEqual(['p3', 'p6']);
 });
 
-test('태블릿 가로: 등록 아이콘으로 왼쪽 새 참석자 패널을 열어 등록하면 선택된 상태로 들어가고, 닫으면 참석자가 다시 가로 가득', async ({ page }) => {
+test('태블릿 가로: 등록 아이콘으로 오른쪽에서 밀려 나오는 새 참석자 패널을 열어 등록하면 선택된 상태로 들어가고, 닫으면 참석자가 다시 가로 가득', async ({ page }) => {
   await mock(page);
   await page.route('**/api/v1/participants', (route) =>
     route.request().method() === 'POST'
@@ -103,9 +103,10 @@ test('태블릿 가로: 등록 아이콘으로 왼쪽 새 참석자 패널을 �
   await page.getByRole('button', { name: '새 참석자' }).click();
   const panel = page.getByRole('region', { name: '새 참석자' });
   await expect(panel.getByRole('textbox', { name: '이름' })).toBeFocused();
-  // 패널과 참석자 영역은 같은 높이로 나란히 선다
+  // 밀려 나오기가 끝나면 패널은 참석자 영역 오른쪽에 같은 높이로 선다
+  await expect.poll(async () => Math.round((await panel.boundingBox())!.width)).toBe(288);
   const [a, b] = [(await panel.boundingBox())!, (await picker.boundingBox())!];
-  expect(a.x).toBeLessThan(b.x);
+  expect(a.x).toBeGreaterThan(b.x + b.width);
   expect(Math.round(a.height)).toBe(Math.round(b.height));
   await panel.getByRole('textbox', { name: '이름' }).fill('가나다');
   await panel.getByRole('textbox', { name: '이메일' }).fill('new@miinit.com');
@@ -115,7 +116,7 @@ test('태블릿 가로: 등록 아이콘으로 왼쪽 새 참석자 패널을 �
   await panel.getByRole('button', { name: '새 참석자 닫기' }).click();
   await expect(panel).toHaveCount(0);
   await expect(page.getByRole('button', { name: '새 참석자' })).toBeFocused();
-  expect(Math.round((await picker.boundingBox())!.width)).toBe(Math.round(fullWidth));
+  await expect.poll(async () => Math.round((await picker.boundingBox())!.width)).toBe(Math.round(fullWidth));
 });
 
 test('회의 시작은 맨 아래 가운데에 있다 (태블릿 가로)', async ({ page }) => {
