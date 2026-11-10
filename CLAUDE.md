@@ -138,3 +138,9 @@
 - **리뉴얼 완료 시 삭제**
   - 화면을 리뉴얼하면 그 화면 전용 파일(`frontend/src/styles/pages/*.css`)을 같은 작업에서 삭제한다.
   - 공통 파일(`base`·`layout`·`components.css`)의 규칙은 그 클래스를 쓰는 기존 화면이 하나도 없을 때 삭제한다.
+- **기존 화면을 리뉴얼 라우트로 옮길 때 함께 고칠 곳 (MTG-02·03에서 정리)**
+  - 라우트: `RootRoutes.tsx`에 추가하고, `App.tsx`의 `<Route>`와 `legacyRoutes.ts`의 `LEGACY_PATHS`에서 지운다. `App.tsx`에서 그 화면만 쓰던 상태·import도 지운다.
+  - 기존 CSS: 화면 전용 `styles/pages/*.css` 파일을 지우고, `styles/index.css`의 `@import`와 `scripts/check-styles.mjs`의 `LEGACY_CSS_FILES` 목록에서도 지운다.
+  - 기존 화면 파일과 테스트: 기존 `*.tsx`·`*.test.tsx`를 지우고, 테스트는 새 화면 폴더로 옮긴다. `App.test.tsx`에 그 경로를 그리는 테스트가 있으면 함께 옮긴다.
+  - e2e: `e2e/fixtures.ts`의 `screens`에서 그 화면(SCR-xxx)을 빼고, 새 화면 e2e(axe·가로 넘침, 4개 크기)를 `e2e/<화면>.spec.ts`로 만든다.
+  - 확인: 기존 화면 계산 스타일 비교(`compare-legacy-styles.mjs`)를 고치기 전후로 돌린다. 차이는 뺀 화면(SCR-xxx)만 있어야 한다.
