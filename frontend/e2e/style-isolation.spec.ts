@@ -20,11 +20,13 @@ const PROBE_MARKUP = `
 `;
 
 async function mountProbes(page: Page): Promise<void> {
-  await installSyntheticApi(page, screens[0]);
-  await page.goto(screens[0].route);
+  // 기존 화면 하나 위에서 격리를 본다. 홈(SCR-001)은 리뉴얼(#24)되어 회의 기록(SCR-009)을 쓴다
+  const legacy = screens.find(({ id }) => id === 'SCR-009')!;
+  await installSyntheticApi(page, legacy);
+  await page.goto(legacy.route);
   await expect(page.locator('main').first()).toBeVisible();
   // 진입 보호(#15) 확인 뒤 화면이 그려지고 데이터를 받아 다시 그려진다. 제목이 보인 뒤에 probe를 넣어야 사라지지 않는다
-  await expect(page.getByRole('heading', { name: screens[0].heading, level: screens[0].headingLevel ?? 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: legacy.heading, level: legacy.headingLevel ?? 1 })).toBeVisible();
   await page.evaluate(({ markup, rootClass }) => {
     const legacy = document.createElement('section');
     legacy.dataset.probeArea = 'legacy';

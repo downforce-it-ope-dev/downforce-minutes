@@ -335,13 +335,12 @@ describe('document setup wizard', () => {
     expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/app-config'))).toBe(true);
     expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/participants'))).toBe(true);
     fireEvent.click(screen.getByRole('button', { name: '확인' }));
-    expect(await screen.findByRole('heading', { name: '최근 회의' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: /문서 서비스 연결 상태/ }));
+    expect(await screen.findByRole('heading', { name: '최근 회의록' })).toBeTruthy();
+    // 홈(HOME-01, #24) 상단 바 문서 연결 상태 칩 → 팝업. 문서 구조 트리는 S-13에 따라 두지 않는다
+    fireEvent.click(await screen.findByRole('button', { name: /연결됨/ }));
     expect(await screen.findByRole('dialog', { name: '문서 연결 상태' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: /연결된 문서 열기/ })).toBeNull();
-    expect(screen.getByText('Meeting Automation')).toBeTruthy();
-    expect(screen.getByText('Templates')).toBeTruthy();
-    expect(screen.getByText('기본 회의록 템플릿')).toBeTruthy();
+    expect(screen.getByText(/연결됨 · 버전/)).toBeTruthy();
   });
 
   it('rereads API-023 and resumes the accepted public operation after the initialize response is lost', async () => {

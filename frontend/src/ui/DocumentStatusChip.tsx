@@ -8,6 +8,8 @@ export interface DocumentStatusChipProps {
   status: DocumentStatus;
   /** 누르면 문서 연결 정보(HOME-01-P01)를 연다. 없으면 표시만 한다 */
   onClick?: () => void;
+  /** 상태 문구를 바꾼다 (예: "Notion 연결됨"). 없으면 상태별 기본 문구 */
+  label?: string;
   /** 휴대폰에서 문구를 숨기고 아이콘만 보인다 (상단 바) */
   compact?: boolean;
   className?: string;
@@ -23,8 +25,9 @@ const STATUS: Record<DocumentStatus, { label: string; dot: string }> = {
  * 문서 연결 상태 칩 (CMN-01-F06, 시안 적용 기준 4.3). 흰 알약 + 상태 점 + 문구.
  * 상태를 색만으로 구분하지 않도록 문구가 상태마다 다르다. 데이터 연결은 쓰는 화면에서 한다.
  */
-export function DocumentStatusChip({ status, onClick, compact = false, className }: DocumentStatusChipProps) {
-  const { label, dot } = STATUS[status];
+export function DocumentStatusChip({ status, label: customLabel, onClick, compact = false, className }: DocumentStatusChipProps) {
+  const { label: defaultLabel, dot } = STATUS[status];
+  const label = customLabel ?? defaultLabel;
   const body = (
     <>
       <span className="relative">

@@ -24,7 +24,8 @@ test('기존 화면 계산 스타일 수집', async ({ page }) => {
   const result: Record<string, Record<string, Record<string, string>>> = {};
   await page.emulateMedia({ reducedMotion: 'reduce' });
 
-  for (const screen of screens) {
+  // 홈(SCR-001)은 리뉴얼(#24)되어 기존 화면 비교에서 뺀다
+  for (const screen of screens.filter(({ id }) => id !== 'SCR-001')) {
     for (const size of sizes) {
       await page.setViewportSize(size);
       if (screen.id === 'SCR-003') {

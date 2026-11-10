@@ -5,6 +5,7 @@ import { StrictMode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router';
 import { App } from './App';
+import { HomePage } from './home/HomePage';
 import type { MediaRecorderAdapter, RecorderLike } from './recordingController';
 import { ChunkRepository } from './chunkRepository';
 // @ts-expect-error Node's Blob exercises browser-style IndexedDB structured cloning in jsdom.
@@ -93,6 +94,8 @@ function renderHomeWithDestinationFixture() {
     <MemoryRouter initialEntries={['/']}>
       <Routes>
         <Route path="/meetings/new" element={<DestinationFixture />} />
+        {/* 홈은 새 화면(HOME-01, #24)이라 App 밖에서 그린다 */}
+        <Route path="/" element={<HomePage />} />
         <Route path="*" element={<App />} />
       </Routes>
     </MemoryRouter>,
@@ -431,20 +434,19 @@ describe('Participants settings', () => {
     installFetchMock(fetchMock);
     renderHomeWithDestinationFixture();
 
-    expect(await screen.findByText('회의를 시작할까요?')).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: '홈' })).toBeTruthy();
     expect(screen.queryByText('Meeting Automation')).toBeNull();
-    expect(screen.getByRole('button', { name: /새 회의 시작/ })).toBeTruthy();
-    const navigation = within(screen.getByRole('navigation', { name: '주요 메뉴' }));
-    expect(navigation.getAllByRole('link').map((link) => link.getAttribute('aria-label'))).toEqual(['홈', '회의록', '참석자', '설정']);
-    expect(await screen.findByRole('img', { name: '회의 기록 없음' })).toBeTruthy();
-    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(screen.getAllByRole('button', { name: '새 회의' }).length).toBeGreaterThan(0);
+    const navigation = within(screen.getByRole('navigation', { name: '주 메뉴' }));
+    expect(navigation.getAllByRole('listitem').map((item) => item.textContent)).toEqual(['홈', '회의록', '참석자', '설정']);
+    expect(await screen.findByText('회의 기록이 없습니다')).toBeTruthy();
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/api/v1/meetings?limit=3'))).toBe(true);
   });
 
   it('navigates the Home CTA to the New Meeting route fixture', async () => {
     installFetchMock(vi.fn().mockResolvedValue(response({ data: { items: [] } })));
     renderHomeWithDestinationFixture();
-    fireEvent.click(await screen.findByRole('button', { name: /새 회의 시작/ }));
+    fireEvent.click((await screen.findAllByRole('button', { name: '새 회의' }))[0]);
     expect(await screen.findByText('New Meeting fixture: /meetings/new')).toBeTruthy();
   });
 

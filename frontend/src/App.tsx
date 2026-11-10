@@ -30,7 +30,7 @@ import { ProcessingPage } from './ProcessingPage';
 import { ReviewSpeakerPage } from './ReviewSpeakerPage';
 import type { ReviewSpeaker, StructuredMinutes } from './reviewApi';
 import type { MinutesSaveState } from './ReviewMinutesEditor';
-import { HomePage, MeetingsPage } from './MeetingHistory';
+import { MeetingsPage } from './MeetingHistory';
 import { MeetingDetailPage } from './MeetingDetailPage';
 import { SettingsPage } from './SettingsPage';
 import { NavigationLeaveGuard } from './components/NavigationLeaveGuard';
@@ -652,7 +652,6 @@ export function App({ onNewMeetingSubmit = () => undefined, onMinutesSave, minut
       </header>}
       <div className="app-route-viewport">
         <Routes>
-          <Route path="/" element={<DocumentGate><HomePage /></DocumentGate>} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/meetings" element={<MeetingsPage />} />
           <Route path="/meetings/new" element={<DocumentGate><NewMeetingRoute onCreated={(session) => { setCreatedSession(session); saveRecordingSession(session); setRecordingState('Ready'); setRecordingNavigationLocked(false); }} onSubmitted={onNewMeetingSubmit} /></DocumentGate>} />

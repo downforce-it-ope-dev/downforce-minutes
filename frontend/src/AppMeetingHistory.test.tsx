@@ -2,7 +2,7 @@ import { withHealthyBackend } from './testUtils/withHealthyBackend';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router';
-import { App } from './App';
+import { SetupTestRoutes } from './testUtils/SetupTestRoutes';
 
 afterEach(() => {
   cleanup();
@@ -25,16 +25,16 @@ describe('meeting history routes', () => {
       throw new Error(`Unexpected request: ${url.pathname}`);
     });
     vi.stubGlobal('fetch', withHealthyBackend(fetchMock));
-    render(<MemoryRouter initialEntries={['/meetings']}><App /></MemoryRouter>);
+    render(<MemoryRouter initialEntries={['/meetings']}><SetupTestRoutes /></MemoryRouter>);
 
     expect(await screen.findByRole('heading', { name: '회의 기록' })).toBeTruthy();
     expect(screen.getByRole('button', { name: '새 회의 시작' }).parentElement?.className).toContain('meetings-create-dock');
     expect(await screen.findByText('Completed planning')).toBeTruthy();
     fireEvent.click(screen.getByRole('link', { name: '홈' }));
 
-    expect(await screen.findByRole('button', { name: /새 회의 시작/ })).toBeTruthy();
+    expect((await screen.findAllByRole('button', { name: '새 회의' })).length).toBeGreaterThan(0);
     // 문서 연결 확인(CMN-04)을 거친 뒤 홈이 최근 회의를 불러오므로 요청이 나갈 때까지 기다린다
     await waitFor(() => expect(fetchMock.mock.calls.some(([input]) => String(input).endsWith('/meetings?limit=3'))).toBe(true));
-    expect(screen.getByRole('link', { name: '회의록' }).getAttribute('href')).toBe('/meetings');
+    expect(screen.getByRole('navigation', { name: '주 메뉴' }).querySelector('a[href="/meetings"]')).toBeTruthy();
   });
 });

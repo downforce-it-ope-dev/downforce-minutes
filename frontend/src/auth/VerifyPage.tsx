@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router';
 import { Clock, Pencil, RefreshCw, ShieldCheck } from 'lucide-react';
 import { AuthLayout, Button, cn, Icon, MailCodeIllustration, OtpInput, ProgressBar, useToast } from '../ui';
+import { saveAccountEmail } from './accountEmail';
 import { requestOtp, verifyOtp } from './authApi';
 import { safeReturnPath, type LoginLocationState, type VerifyLocationState } from './routes';
 
@@ -81,6 +82,7 @@ function VerifyForm({ initial }: { initial: VerifyLocationState }) {
     const result = await verifyOtp(email, value);
     setVerifying(false);
     if (result.ok) {
+      saveAccountEmail(email);
       navigate(safeReturnPath(from), { replace: true });
       return;
     }

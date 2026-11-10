@@ -4,7 +4,6 @@
  * App.tsx의 <Route path>와 같아야 한다(legacyRoutes.test.ts가 검사). 화면을 리뉴얼해 옮기면 여기서도 지운다.
  */
 export const LEGACY_PATHS = [
-  '/',
   '/settings',
   '/meetings',
   '/meetings/new',

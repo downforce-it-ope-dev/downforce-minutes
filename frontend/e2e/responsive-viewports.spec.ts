@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { graceParticipant, installSyntheticApi, longKoreanTitle, meetingFixtures, participant, screens, sessionId, widths } from './fixtures';
 
 // SCR-003·007·012는 현재 화면과 제목이 맞지 않아 제외했다.
-for (const screen of screens.filter(({ id }) => !['SCR-003', 'SCR-007', 'SCR-012'].includes(id))) {
+for (const screen of screens.filter(({ id }) => !['SCR-001', 'SCR-003', 'SCR-007', 'SCR-012'].includes(id))) {
   test.describe(`${screen.id} ${screen.route}`, () => {
     for (const width of widths) {
       test(`${width}px renders core content without page overflow or clipped bounds`, async ({ page }) => {
@@ -116,7 +116,7 @@ test('SCR-009 filters synthetic meetings by title and date and reports an invali
 
 test('all app routes keep the brand and page heading visible during scrolling', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 480 });
-  const routes = screens.filter((screen) => screen.id !== 'SCR-007');
+  const routes = screens.filter((screen) => !['SCR-001', 'SCR-007'].includes(screen.id));
   for (const screen of routes) {
     await installSyntheticApi(page, screen);
     if (screen.id === 'SCR-003') {

@@ -1,0 +1,337 @@
+import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router';
+import { CalendarDays, ChevronRight, Clock, Mic, RefreshCw, Share2, Sparkles, TriangleAlert, Users } from 'lucide-react';
+import { AccountButton, SidebarAccount } from '../auth/AccountMenu';
+import { getSetupSnapshot, type DocumentProvider, type SetupSnapshot } from '../documentSetupApi';
+import { listMeetings, listProcessingFailures, type MeetingSummary } from '../meetingListApi';
+import {
+  AppShell,
+  Button,
+  ButtonLink,
+  Card,
+  cn,
+  Dialog,
+  DocumentStatusChip,
+  Icon,
+  RecordToMinutesIllustration,
+  Waveform,
+  type DocumentStatus,
+} from '../ui';
+
+/*
+ * HOME-01 메인 (GitHub #24, 시안 "DOWNFORCE 회의록 대시보드", 시안 적용 기준 5.3).
+ * - 사이드바(태블릿 가로)·레일(태블릿 세로)·탭 바(휴대폰) 앱 틀, 상단 바: 제목 "홈" + 문서 연결 상태 칩 + (레일·휴대폰) 계정
+ * - 안내 패널(일러스트 + 단계 칩, 시안 그대로) + 새 회의 큰 버튼. 휴대폰은 새 회의를 탭 바 위에 고정
+ * - 처리 실패 배너(있을 때만), 최근 회의 3건(태블릿 가로: 카드 3개 / 그 밖: 목록 행). 녹음 길이는 API에 없어 넣지 않음
+ * - 설명 문구 없이 제목·버튼·데이터만 둔다(S-13)
+ */
+
+type Load<T> = { status: 'loading' } | { status: 'error' } | { status: 'ready'; data: T };
+
+function providerLabel(provider: DocumentProvider) {
+  return provider === 'NOTION' ? 'Notion' : 'Confluence';
+}
+
+function formatDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).format(date);
+}
+
+function participantSummary(meeting: MeetingSummary) {
+  const names = meeting.participants.slice(0, 3).map(({ name }) => name);
+  if (meeting.participants.length > 3) names.push(`외 ${meeting.participants.length - 3}명`);
+  return names.join(', ');
+}
+
+/** 문서 연결 상태 문구 (HOME-01 2장 표) */
+function connectionView(connection: Load<SetupSnapshot>): { status: DocumentStatus; label: string } {
+  if (connection.status === 'loading') return { status: 'attention', label: '확인 중' };
+  if (connection.status === 'error') return { status: 'attention', label: '확인 필요' };
+  const snapshot = connection.data;
+  const active = snapshot.active;
+  if (!active) return { status: 'disconnected', label: '연결 필요' };
+  if (snapshot.status === 'SWITCHING') return { status: 'attention', label: `${providerLabel(active.provider)} 전환 중` };
+  if (snapshot.status === 'ATTENTION_REQUIRED') return { status: 'attention', label: '점검 필요' };
+  if (snapshot.status === 'READY' && snapshot.canCreateMeeting) return { status: 'connected', label: `${providerLabel(active.provider)} 연결됨` };
+  return { status: 'attention', label: '설정 확인 필요' };
+}
+
+export function HomePage() {
+  const navigate = useNavigate();
+  const [connection, setConnection] = useState<Load<SetupSnapshot>>({ status: 'loading' });
+  const [connectionAttempt, setConnectionAttempt] = useState(0);
+  const [connectionOpen, setConnectionOpen] = useState(false);
+
+  useEffect(() => {
+    let live = true;
+    getSetupSnapshot()
+      .then(({ snapshot }) => live && setConnection({ status: 'ready', data: snapshot }))
+      .catch(() => live && setConnection({ status: 'error' }));
+    return () => {
+      live = false;
+    };
+  }, [connectionAttempt]);
+
+  const chip = connectionView(connection);
+
+  return (
+    <AppShell
+      title="홈"
+      account={<SidebarAccount />}
+      actions={
+        <>
+          <DocumentStatusChip status={chip.status} label={chip.label} compact onClick={() => setConnectionOpen(true)} />
+          <span className="tablet-lg:hidden">
+            <AccountButton />
+          </span>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-6 tablet:gap-8">
+        <FailureBanner />
+
+        {/* 안내 패널 + 새 회의 (태블릿 이상) */}
+        <Card variant="panel" as="section" aria-label="새 회의" className="hidden flex-col items-center gap-6 tablet:flex tablet-lg:flex-row tablet-lg:justify-center tablet-lg:gap-12">
+          {/* 패널은 낮게 둬 최근 회의록이 한 화면에 들어오게 한다(태블릿 가로: 일러스트 왼쪽, 단계 칩 오른쪽 한 줄) */}
+          <RecordToMinutesIllustration className="w-44 shrink-0 tablet-lg:w-52" />
+          <ol aria-label="회의록 만드는 순서" className="flex flex-wrap items-center justify-center gap-2">
+            {[
+              { icon: Mic, label: '음성 녹음' },
+              { icon: Sparkles, label: 'AI 회의록 생성' },
+              { icon: Share2, label: '저장 · 공유' },
+            ].map(({ icon, label }, index) => (
+              <li key={label} className="flex items-center gap-2">
+                {index > 0 && <Icon icon={ChevronRight} size="md" className="text-text-muted" />}
+                {/* 누를 수 없는 표시라 버튼처럼 보이지 않게 테두리·그림자 없이 둔다 */}
+                <span className="inline-flex h-11 items-center gap-2 rounded-full bg-bg-subtle px-4 text-label text-text">
+                  <Icon icon={icon} size="md" className="text-brand-text" />
+                  {label}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </Card>
+        <div className="hidden justify-center tablet:flex">
+          <Button variant="hero" icon={Mic} className="w-full max-w-form" onClick={() => navigate('/meetings/new')}>
+            새 회의
+          </Button>
+        </div>
+
+        <RecentMeetings />
+
+        {/* 휴대폰: 새 회의를 탭 바 위에 고정 (낮은 화면은 본문 끝) */}
+        <div className="h-20 tablet:hidden short:hidden" aria-hidden="true" />
+        <div className="fixed inset-x-0 bottom-0 z-30 px-4 pb-safe tablet:hidden short:static short:px-0 short:pb-0">
+          <div className="mb-20 short:mb-0">
+            <Button variant="hero" icon={Mic} className="w-full" onClick={() => navigate('/meetings/new')}>
+              새 회의
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <ConnectionDialog
+        open={connectionOpen}
+        onOpenChange={setConnectionOpen}
+        connection={connection}
+        onRetry={() => {
+          setConnection({ status: 'loading' });
+          setConnectionAttempt((value) => value + 1);
+        }}
+      />
+    </AppShell>
+  );
+}
+
+/** 처리 실패 배너 (HOME-01-F05). 실패 회의가 있을 때만 보인다 */
+function FailureBanner() {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    let live = true;
+    listProcessingFailures()
+      .then((items) => live && setCount(items.length))
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, []);
+  if (count === 0) return null;
+  return (
+    <Link
+      to="/meetings"
+      className="flex min-h-14 items-center gap-3 rounded-lg bg-danger-soft px-4 text-danger-text tablet:min-h-15"
+    >
+      <Icon icon={TriangleAlert} size="lg" className="shrink-0" />
+      <span className="flex-1 text-label">처리에 실패한 회의 {count}건</span>
+      <Icon icon={ChevronRight} size="lg" className="shrink-0" />
+    </Link>
+  );
+}
+
+/** 최근 회의 3건 (HOME-01-F02·F03) */
+function RecentMeetings() {
+  const [meetings, setMeetings] = useState<Load<MeetingSummary[]>>({ status: 'loading' });
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    let live = true;
+    listMeetings(3)
+      .then((items) => live && setMeetings({ status: 'ready', data: items }))
+      .catch(() => live && setMeetings({ status: 'error' }));
+    return () => {
+      live = false;
+    };
+  }, [attempt]);
+
+  const tones = ['text-blue-500', 'text-pink-500', 'text-lavender-500'];
+  return (
+    <section aria-labelledby="recent-title" className="flex flex-col gap-4">
+      <div className="flex items-center justify-between gap-4">
+        <h2 id="recent-title" className="flex items-center gap-2 text-title text-text">
+          <Icon icon={Clock} size="lg" className="text-text-muted" />
+          최근 회의록
+        </h2>
+        <ButtonLink to="/meetings" variant="ghost" shape="pill">
+          전체 보기
+          <Icon icon={ChevronRight} size="md" />
+        </ButtonLink>
+      </div>
+
+      {meetings.status === 'loading' && (
+        <ul aria-label="최근 회의록 불러오는 중" className="grid gap-3 tablet-lg:grid-cols-3">
+          {[0, 1, 2].map((index) => (
+            <li key={index} className="h-19 animate-pulse rounded-xl bg-bg/70 motion-reduce:animate-none tablet-lg:h-36" />
+          ))}
+        </ul>
+      )}
+
+      {meetings.status === 'error' && (
+        <Card className="flex flex-col items-start gap-4 tablet:flex-row tablet:items-center">
+          <p className="flex-1 text-body text-text">회의 목록을 불러오지 못했습니다</p>
+          <Button variant="secondary" shape="pill" icon={RefreshCw} onClick={() => setAttempt((value) => value + 1)}>
+            다시 시도
+          </Button>
+        </Card>
+      )}
+
+      {meetings.status === 'ready' && meetings.data.length === 0 && (
+        <Card className="text-body text-text-muted">회의 기록이 없습니다</Card>
+      )}
+
+      {meetings.status === 'ready' && meetings.data.length > 0 && (
+        <ul className="grid gap-3 tablet-lg:grid-cols-3">
+          {meetings.data.map((meeting, index) => (
+            <li key={meeting.documentId}>
+              <Link
+                to={`/meetings/${encodeURIComponent(meeting.documentId)}`}
+                aria-label={`${meeting.title} 상세 보기`}
+                className={cn(
+                  'flex min-h-19 items-center gap-4 rounded-xl bg-bg px-4 py-3 shadow-card active:bg-bg-subtle',
+                  'tablet-lg:h-full tablet-lg:flex-col tablet-lg:items-start tablet-lg:gap-3 tablet-lg:p-5',
+                )}
+              >
+                <span className={cn('flex h-10 w-14 shrink-0 items-center justify-center rounded-full bg-bg-subtle', tones[index % tones.length])}>
+                  <span className="h-6">
+                    <Waveform bars={7} />
+                  </span>
+                </span>
+                <span className="flex min-w-0 flex-1 flex-col gap-1">
+                  <span className="truncate text-label text-text">{meeting.title}</span>
+                  <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-text-muted">
+                    <span className="inline-flex items-center gap-1 tabular-nums">
+                      <Icon icon={CalendarDays} size="sm" />
+                      {formatDate(meeting.meetingAt)}
+                    </span>
+                    {meeting.participants.length > 0 && (
+                      <span className="inline-flex min-w-0 items-center gap-1">
+                        <Icon icon={Users} size="sm" className="shrink-0" />
+                        <span className="truncate">{participantSummary(meeting)}</span>
+                      </span>
+                    )}
+                  </span>
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+/** HOME-01-P01 문서 연결 상태 */
+function ConnectionDialog({
+  open,
+  onOpenChange,
+  connection,
+  onRetry,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  connection: Load<SetupSnapshot>;
+  onRetry: () => void;
+}) {
+  const navigate = useNavigate();
+  const active = connection.status === 'ready' ? connection.data.active : null;
+  const ready = connection.status === 'ready' && connection.data.status === 'READY' && connection.data.canCreateMeeting;
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange} title="문서 연결 상태">
+      <div className="flex flex-col gap-6">
+        {connection.status === 'loading' && <p role="status" className="text-body text-text-muted">확인 중</p>}
+        {connection.status === 'error' && (
+          <>
+            <p role="alert" className="flex items-center gap-2 text-body text-danger-text">
+              <Icon icon={TriangleAlert} size="lg" />
+              연결 상태를 확인할 수 없습니다
+            </p>
+            <Button size="lg" shape="pill" variant="secondary" icon={RefreshCw} fullWidth onClick={onRetry}>
+              다시 확인
+            </Button>
+          </>
+        )}
+        {connection.status === 'ready' && active && (
+          <>
+            <div className="flex items-center gap-4">
+              <span className="flex size-12 shrink-0 items-center justify-center rounded-md bg-bg shadow-card">
+                <img src={active.provider === 'NOTION' ? '/assets/notion.ico' : '/assets/confluence.svg'} alt="" className="size-7" />
+              </span>
+              <span className="flex flex-col gap-1">
+                <span className="text-title text-text">{providerLabel(active.provider)}</span>
+                <span className="text-caption text-text-muted tabular-nums">
+                  {connection.data.status === 'SWITCHING' ? '전환 중' : ready ? `연결됨 · 버전 ${active.connectionVersion}` : '연결 상태 확인 필요'}
+                </span>
+              </span>
+            </div>
+            <Button
+              size="lg"
+              shape="pill"
+              fullWidth
+              onClick={() => {
+                onOpenChange(false);
+                navigate('/settings/document');
+              }}
+            >
+              문서 연결 관리
+            </Button>
+          </>
+        )}
+        {connection.status === 'ready' && !active && (
+          <>
+            <p className="text-body text-text">연결된 문서 서비스가 없습니다</p>
+            <Button
+              size="lg"
+              shape="pill"
+              fullWidth
+              onClick={() => {
+                onOpenChange(false);
+                navigate('/setup/document');
+              }}
+            >
+              문서 서비스 연결
+            </Button>
+          </>
+        )}
+      </div>
+    </Dialog>
+  );
+}
