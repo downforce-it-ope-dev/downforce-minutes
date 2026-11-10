@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
-import { Search, UserPlus, X } from 'lucide-react';
+import { useMemo, useState, type ReactNode } from 'react';
+import { Search, X } from 'lucide-react';
 import type { Participant } from '../participantsApi';
-import { Button, ButtonLink, Card, Checkbox, cn, FilterChips, IconButton, TextField } from '../ui';
+import { Button, Card, Checkbox, cn, FilterChips, IconButton, TextField } from '../ui';
 
 type View = 'all' | 'selected';
 
@@ -14,6 +14,8 @@ export interface ParticipantPickerProps {
   invalid?: boolean;
   onToggle: (id: string) => void;
   onSetMany: (ids: string[], select: boolean) => void;
+  /** 도구 줄 오른쪽 동작 (휴대폰: 새 참석자 대화상자 열기) */
+  action?: ReactNode;
   className?: string;
 }
 
@@ -21,9 +23,9 @@ const collator = new Intl.Collator('ko');
 
 /**
  * 참석자 선택 영역 (MTG-01-F04, 기획 3.1 표).
- * 머리(제목·선택 수·검색·보기 필터)와 바닥(새 참석자)은 고정하고 태블릿에서는 목록만 따로 스크롤한다. 휴대폰은 페이지 스크롤.
+ * 머리(제목·선택 수·검색·보기 필터)는 고정하고 태블릿에서는 목록만 따로 스크롤한다. 휴대폰은 페이지 스크롤.
  * 검색어를 바꿔도 선택은 유지하고, 선택해도 행 순서는 바뀌지 않는다(이름 가나다순).
- * 팀 배지·팀 거르기·CSV 일괄 등록은 Backend 팀 확장(#35)과 #37 뒤에 붙인다.
+ * 새 참석자 등록은 화면(NewMeetingPage)이 오른쪽 패널·대화상자로 붙인다. 팀 배지·팀 거르기·CSV 일괄 등록은 Backend 팀 확장(#35)과 #37 뒤에 붙인다.
  */
 export function ParticipantPicker({
   participants,
@@ -33,6 +35,7 @@ export function ParticipantPicker({
   invalid = false,
   onToggle,
   onSetMany,
+  action,
   className,
 }: ParticipantPickerProps) {
   const [query, setQuery] = useState('');
@@ -65,41 +68,40 @@ export function ParticipantPicker({
             {selectedCount}명 선택됨
           </p>
         </div>
-        <TextField
-          label="참석자 검색"
-          hideLabel
-          type="search"
-          icon={Search}
-          placeholder="이름·이메일"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          disabled={status !== 'ready'}
-          trailing={
-            query && <IconButton icon={X} label="검색어 지우기" variant="surface" onClick={() => setQuery('')} />
-          }
-        />
-        <div className="flex min-h-12 flex-wrap items-center justify-between gap-2">
-          <FilterChips
-            label="보기"
-            value={view}
-            onChange={setView}
-            options={[
-              { value: 'all', label: '전체', count: participants.length },
-              { value: 'selected', label: '선택됨', count: selectedCount },
-            ]}
+        <div className="flex flex-col gap-3 tablet-lg:flex-row tablet-lg:items-center">
+          <TextField
+            label="참석자 검색"
+            hideLabel
+            type="search"
+            icon={Search}
+            placeholder="이름·이메일"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            disabled={status !== 'ready'}
+            className="min-w-0 flex-1"
+            trailing={
+              query && <IconButton icon={X} label="검색어 지우기" variant="surface" onClick={() => setQuery('')} />
+            }
           />
-          <div className="flex items-center gap-2">
-            {/* 검색어가 있을 때만: 전체 명단을 한 번에 고르는 실수를 막는다 */}
-            {keyword && visibleIds.length > 0 && (
-              <Button size="sm" variant="ghost" onClick={() => onSetMany(visibleIds, !allVisibleSelected)}>
-                {allVisibleSelected ? '선택 해제' : '전체 선택'}
-              </Button>
-            )}
-            {participants.length > 0 && (
-              <ButtonLink to="/participants" size="sm" variant="secondary" icon={UserPlus} shape="pill">
-                새 참석자
-              </ButtonLink>
-            )}
+          <div className="flex min-h-12 flex-wrap items-center justify-between gap-2">
+            <FilterChips
+              label="보기"
+              value={view}
+              onChange={setView}
+              options={[
+                { value: 'all', label: '전체', count: participants.length },
+                { value: 'selected', label: '선택됨', count: selectedCount },
+              ]}
+            />
+            <div className="flex items-center gap-2">
+              {/* 검색어가 있을 때만: 전체 명단을 한 번에 고르는 실수를 막는다 */}
+              {keyword && visibleIds.length > 0 && (
+                <Button size="sm" variant="ghost" onClick={() => onSetMany(visibleIds, !allVisibleSelected)}>
+                  {allVisibleSelected ? '선택 해제' : '전체 선택'}
+                </Button>
+              )}
+              {action}
+            </div>
           </div>
         </div>
       </div>
@@ -117,9 +119,6 @@ export function ParticipantPicker({
         ) : status === 'ready' && participants.length === 0 ? (
           <div className="flex flex-col items-center gap-4 px-4 py-10">
             <p className="text-body text-text-muted">등록된 참석자가 없습니다.</p>
-            <ButtonLink to="/participants" icon={UserPlus} size="lg" shape="pill">
-              참석자 관리
-            </ButtonLink>
           </div>
         ) : visible.length === 0 ? (
           <div className="flex flex-col items-center gap-3 px-4 py-10">

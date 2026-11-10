@@ -185,6 +185,15 @@ export function useNewMeetingForm({
     });
   }
 
+  /** 이 화면에서 새로 등록한 참석자를 목록에 넣고 바로 선택한다 (MTG-01-F09) */
+  function addParticipant(participant: Participant) {
+    setParticipants((current) => ({
+      status: 'ready',
+      data: [...(current.data ?? []).filter((item) => item.id !== participant.id), participant],
+    }));
+    setChosenIds((current) => (current.includes(participant.id) ? current : [...current, participant.id]));
+  }
+
   async function submit() {
     if (submittingRef.current) return;
     setSubmitted(true);
@@ -272,6 +281,7 @@ export function useNewMeetingForm({
     selfId,
     toggleParticipant,
     setMany,
+    addParticipant,
     submitting,
     anyLoading,
     unavailable,

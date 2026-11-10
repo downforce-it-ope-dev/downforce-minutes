@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router';
 import {
   ArrowRight,
   Bell,
+  FileText,
   Mail,
   Mic,
   Pencil,
@@ -31,6 +32,9 @@ import {
   SelectField,
   Checkbox,
   FilterChips,
+  ChoiceGroup,
+  DateField,
+  toDateValue,
   Pill,
   ProgressBar,
   RecordToMinutesIllustration,
@@ -202,8 +206,22 @@ function InputsSection() {
 function ChoiceSection() {
   const [view, setView] = useState<'all' | 'selected'>('all');
   const [checked, setChecked] = useState(true);
+  const [template, setTemplate] = useState<'default' | 'project'>('default');
+  const [date, setDate] = useState(() => toDateValue(new Date()));
   return (
     <Section title="선택 부품">
+      <div className="grid gap-6 tablet:grid-cols-2">
+        <DateField label="회의 날짜" value={date} onChange={setDate} />
+        <ChoiceGroup
+          label="회의록 템플릿"
+          value={template}
+          onChange={setTemplate}
+          options={[
+            { value: 'default', label: '기본 회의록', icon: FileText },
+            { value: 'project', label: '프로젝트 회의', icon: FileText },
+          ]}
+        />
+      </div>
       <Row label="보기 필터 칩">
         <FilterChips
           label="보기"

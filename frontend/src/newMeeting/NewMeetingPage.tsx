@@ -1,19 +1,33 @@
-import { useEffect, useLayoutEffect, useRef, type FormEvent } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
-import { Mic } from 'lucide-react';
+import { FileText, Mic, UserPlus } from 'lucide-react';
 import { AccountButton, SidebarAccount } from '../auth/AccountMenu';
 import { loadAccountEmail } from '../auth/accountEmail';
 import { saveRecordingSession } from '../meeting/recordingSessionStore';
 import { createMeetingSession, type MeetingDraft, type MeetingSessionAttempt } from '../newMeetingApi';
-import { AppShell, Button, Card, SelectField, TextField, useToast, type ToastOptions } from '../ui';
+import {
+  AppShell,
+  Button,
+  Card,
+  ChoiceGroup,
+  DateField,
+  Dialog,
+  TABLET_QUERY,
+  TextField,
+  useMediaQuery,
+  useToast,
+  type ToastOptions,
+} from '../ui';
+import { NewParticipantForm } from './NewParticipantForm';
 import { ParticipantPicker } from './ParticipantPicker';
 import { configReady, useNewMeetingForm, type NewMeetingNotice } from './useNewMeetingForm';
 
 /*
  * MTG-01 새 회의 (GitHub #26, docs/renewal/화면기획/MTG-01_새회의.md).
- * - 휴대폰: 1단 페이지 스크롤, 회의 시작은 탭 바 위에 고정
- * - 태블릿 세로: 회의 정보 → 남은 높이 전부 참석자 선택 영역(목록만 스크롤) → 회의 시작
- * - 태블릿 가로: 왼쪽 회의 정보·회의 시작 / 오른쪽 참석자 선택 영역(높이 가득)
+ * 정보 위계(사용자 결정 2026-11-10): 회의 제목(가로 가득, 큰 글자) → 날짜·템플릿(좌우) → 참석자.
+ * - 태블릿: 참석자 영역은 남은 높이를 쓰고 목록만 스크롤한다. 오른쪽 패널에서 새 참석자를 바로 등록하고, 그 아래에 회의 시작
+ * - 휴대폰: 1단 페이지 스크롤, 새 참석자는 대화상자, 회의 시작은 탭 바 위에 고정
+ * - 날짜는 큰 달력 대화상자, 템플릿은 버튼으로 고른다
  * - 오류·상태 알림은 토스트, 입력 오류는 테두리로만 표시한다(S-13)
  */
 
@@ -60,6 +74,8 @@ function NewMeetingForm({
   onSubmit: (attempt: MeetingSessionAttempt) => Promise<void>;
 }) {
   const toast = useToast();
+  const tablet = useMediaQuery(TABLET_QUERY);
+  const [addOpen, setAddOpen] = useState(false);
   const retryRef = useRef<Record<'config' | 'templates' | 'participants', () => Promise<void>> | null>(null);
 
   function notify(notice: NewMeetingNotice) {
@@ -97,90 +113,96 @@ function NewMeetingForm({
     if (noTemplates) toast({ message: '사용할 수 있는 템플릿이 없습니다.', tone: 'danger' });
   }, [noTemplates, toast]);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    void form.submit();
-  }
-
   const templates = form.templates.data ?? [];
 
-  return (
-    <form
-      noValidate
-      onSubmit={handleSubmit}
-      className="flex flex-1 flex-col gap-4 tablet:min-h-0 tablet-lg:grid tablet-lg:gap-6 tablet-lg:grid-cols-5 tablet-lg:grid-rows-2"
+  const startButton = (
+    <Button
+      size="lg"
+      shape="pill"
+      icon={Mic}
+      fullWidth
+      className="shadow-primary"
+      disabled={form.anyLoading || form.unavailable}
+      loading={form.submitting}
+      onClick={() => void form.submit()}
     >
-      <Card
-        as="section"
-        aria-labelledby="meeting-info-title"
-        className="flex flex-col gap-4 tablet-lg:col-span-2 tablet-lg:col-start-1 tablet-lg:row-start-1 tablet-lg:self-start"
-      >
-        <h2 id="meeting-info-title" className="text-title text-text">
-          회의 정보
-        </h2>
+      {form.submitting ? '회의 시작 중…' : '회의 시작'}
+    </Button>
+  );
+
+  return (
+    <div className="flex flex-1 flex-col gap-4 tablet:min-h-0">
+      <Card as="section" aria-label="회의 정보" className="flex shrink-0 flex-col gap-4">
         <TextField
           label="회의 제목"
+          inputSize="lg"
           value={form.title}
           onChange={(event) => form.setTitle(event.target.value)}
           invalid={form.errors.title}
           required
         />
-        <div className="grid gap-4 tablet:grid-cols-2 tablet-lg:grid-cols-1">
-          <TextField
-            label="회의 날짜"
-            type="date"
-            value={form.meetingDate}
-            onChange={(event) => form.setMeetingDate(event.target.value)}
-            invalid={form.errors.meetingDate}
-            required
-            className="tabular-nums"
-          />
-          <SelectField
+        <div className="grid gap-4 tablet:grid-cols-2">
+          <DateField label="회의 날짜" value={form.meetingDate} onChange={form.setMeetingDate} invalid={form.errors.meetingDate} />
+          <ChoiceGroup
             label="회의록 템플릿"
             value={form.templateId}
-            onChange={(event) => form.setTemplateId(event.target.value)}
-            disabled={form.templates.status !== 'ready' || templates.length === 0}
+            onChange={form.setTemplateId}
+            disabled={form.templates.status !== 'ready'}
             invalid={form.errors.templateId}
-            required
-          >
-            {templates.map((template) => (
-              <option key={template.id} value={template.id}>
-                {template.name}
-              </option>
-            ))}
-          </SelectField>
+            options={templates.map((template) => ({ value: template.id, label: template.name, icon: FileText }))}
+          />
         </div>
       </Card>
 
-      <ParticipantPicker
-        participants={form.roster}
-        selectedIds={form.participantIds}
-        selfId={form.selfId}
-        status={form.participants.status}
-        invalid={form.errors.participants}
-        onToggle={form.toggleParticipant}
-        onSetMany={form.setMany}
-        className="tablet:min-h-0 tablet:flex-1 tablet-lg:col-span-3 tablet-lg:col-start-3 tablet-lg:row-span-2 tablet-lg:row-start-1"
-      />
-
-      {/* 회의 시작: 휴대폰은 탭 바 위 고정(낮은 화면은 본문 끝), 태블릿 세로는 영역 아래, 태블릿 가로는 왼쪽 단 아래 */}
-      <div className="h-20 tablet:hidden short:hidden" aria-hidden="true" />
-      <div className="fixed inset-x-0 bottom-0 z-30 px-4 pb-safe tablet:static tablet:px-0 tablet:pb-0 tablet-lg:col-span-2 tablet-lg:col-start-1 tablet-lg:row-start-2 tablet-lg:self-end short:static short:px-0 short:pb-0">
-        <div className="mb-20 tablet:mb-0 short:mb-0">
-          <Button
-            type="submit"
-            size="lg"
-            shape="pill"
-            icon={Mic}
-            fullWidth
-            className="shadow-primary"
-            disabled={form.anyLoading || form.unavailable}
-            loading={form.submitting}
-          >
-            {form.submitting ? '회의 시작 중…' : '회의 시작'}
-          </Button>
-        </div>
+      <div className="flex flex-col gap-4 tablet:min-h-0 tablet:flex-1 tablet:flex-row">
+        <ParticipantPicker
+          participants={form.roster}
+          selectedIds={form.participantIds}
+          selfId={form.selfId}
+          status={form.participants.status}
+          invalid={form.errors.participants}
+          onToggle={form.toggleParticipant}
+          onSetMany={form.setMany}
+          className="tablet:min-h-0 tablet:flex-1"
+          action={
+            !tablet && (
+              <Button size="sm" variant="secondary" shape="pill" icon={UserPlus} aria-haspopup="dialog" onClick={() => setAddOpen(true)}>
+                새 참석자
+              </Button>
+            )
+          }
+        />
+        {tablet && (
+          <div className="flex w-72 shrink-0 flex-col gap-4">
+            <Card as="section" aria-labelledby="new-participant-title" className="flex flex-col gap-4">
+              <h2 id="new-participant-title" className="text-title text-text">
+                새 참석자
+              </h2>
+              <NewParticipantForm onCreated={form.addParticipant} />
+            </Card>
+            <div className="mt-auto">{startButton}</div>
+          </div>
+        )}
       </div>
-    </form>
+
+      {!tablet && (
+        <>
+          {/* 휴대폰: 회의 시작을 탭 바 위에 고정 (낮은 화면은 본문 끝) */}
+          <div className="h-20 short:hidden" aria-hidden="true" />
+          <div className="fixed inset-x-0 bottom-0 z-30 px-4 pb-safe short:static short:px-0 short:pb-0">
+            <div className="mb-20 short:mb-0">{startButton}</div>
+          </div>
+          <Dialog open={addOpen} onOpenChange={setAddOpen} title="새 참석자">
+            <NewParticipantForm
+              autoFocus
+              onCreated={(participant) => {
+                form.addParticipant(participant);
+                setAddOpen(false);
+              }}
+            />
+          </Dialog>
+        </>
+      )}
+    </div>
   );
 }
