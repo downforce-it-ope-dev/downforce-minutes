@@ -28,6 +28,8 @@ const MAIN_NAV: readonly NavEntry[] = [
 export interface AppShellProps {
   /** 상단 바 제목(h1) */
   title: ReactNode;
+  /** 제목을 화면에서 숨기고 화면 읽기 프로그램에만 남긴다 (홈처럼 메뉴가 곧 위치를 알려 줄 때) */
+  hideTitle?: boolean;
   /** 상세 화면의 뒤로 가기. to가 없으면 브라우저 뒤로 가기 */
   /** 뒤로 가기. onClick이 있으면 그것만 한다(같은 경로 안에서 화면 상태를 되돌릴 때) */
   back?: { to?: string; label?: string; onClick?: () => void };
@@ -47,7 +49,7 @@ export interface AppShellProps {
  * - tablet-lg(960 이상): 왼쪽 사이드바 240(글자 로고 + Minutes, 아이콘·이름 가로, 아래 계정)
  * - 메뉴와 상단 바는 고정이고 본문만 스크롤한다. short(높이 560 이하)에서는 상단 바를 줄인다
  */
-export function AppShell({ title, back, actions, focus = false, account, children }: AppShellProps) {
+export function AppShell({ title, hideTitle = false, back, actions, focus = false, account, children }: AppShellProps) {
   return (
     <AppCanvas>
       <ToastProvider placement={focus ? 'base' : 'tabbar'}>
@@ -59,10 +61,10 @@ export function AppShell({ title, back, actions, focus = false, account, childre
         </a>
         {!focus && <MainNav account={account} />}
         <div className={cn('flex h-dvh flex-col', !focus && 'tablet:pl-rail tablet-lg:pl-sidebar')}>
-          <TopBar title={title} back={back} actions={focus ? undefined : actions} />
+          <TopBar title={title} hideTitle={hideTitle} back={back} actions={focus ? undefined : actions} />
           {/* 본문만 스크롤하므로, 안에 누를 요소가 없어도 키보드로 스크롤할 수 있게 초점을 받는다 */}
           <main id="main-content" tabIndex={0} aria-label="본문" className="min-h-0 flex-1 overflow-y-auto">
-            <div className="mx-auto w-full max-w-content px-4 pt-2 pb-8 tablet:px-6 tablet-lg:px-8 short:pb-4">{children}</div>
+            <div className="mx-auto flex min-h-full w-full max-w-content flex-col px-4 pt-2 pb-8 tablet:px-6 tablet-lg:px-8 short:pb-4">{children}</div>
           </main>
           {/* 휴대폰 하단 탭 바 자리 */}
           {!focus && <div className="h-16 shrink-0 pb-safe tablet:hidden" aria-hidden="true" />}
@@ -135,7 +137,7 @@ function NavItem({ to, label, icon, end }: NavEntry) {
   );
 }
 
-function TopBar({ title, back, actions }: Pick<AppShellProps, 'title' | 'back' | 'actions'>) {
+function TopBar({ title, hideTitle, back, actions }: Pick<AppShellProps, 'title' | 'hideTitle' | 'back' | 'actions'>) {
   const navigate = useNavigate();
   return (
     <header className="shrink-0 pt-safe">
@@ -150,7 +152,8 @@ function TopBar({ title, back, actions }: Pick<AppShellProps, 'title' | 'back' |
             onClick={() => (back.onClick ? back.onClick() : back.to ? navigate(back.to) : navigate(-1))}
           />
         )}
-        <h1 className="min-w-0 flex-1 truncate text-headline text-text">{title}</h1>
+        <h1 className={cn('min-w-0 flex-1 truncate text-headline text-text', hideTitle && 'sr-only')}>{title}</h1>
+        {hideTitle && <span className="flex-1" aria-hidden="true" />}
         {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
       </div>
     </header>

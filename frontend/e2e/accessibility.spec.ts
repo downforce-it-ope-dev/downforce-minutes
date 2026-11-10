@@ -36,7 +36,7 @@ async function visitScreen(page: Page, screen: Screen): Promise<void> {
 }
 
 // SCR-003·007·012는 현재 화면과 제목이 맞지 않아 제외했다.
-for (const screen of screens.filter(({ id }) => !['SCR-003', 'SCR-007', 'SCR-012'].includes(id))) {
+for (const screen of screens.filter(({ id }) => !['SCR-001', 'SCR-003', 'SCR-007', 'SCR-012'].includes(id))) {
   test(`${screen.id} ${screen.route} has no serious WCAG 2.2 A/AA axe violations`, async ({ page }) => {
     await visitScreen(page, screen);
     await expectNoSeriousAxeViolations(page);

@@ -1,61 +1,6 @@
-/* HOME-01 메인 */
+/* 회의 목록(MIN-01)·처리 실패 목록이 쓰는 규칙. 홈(HOME-01)은 리뉴얼(#24)되어 홈 전용 규칙은 지웠다 */
 
-.home-page { display: grid; min-height: calc(100vh - 74px - env(safe-area-inset-bottom)); place-items: start center; padding: 34px 24px 0; }
-.home-content { width: min(100%, 820px); text-align: center; }
-.home-toolbar { display: flex; justify-content: flex-end; margin-bottom: clamp(36px, 8vh, 78px); }
-.home-connection-button { display: inline-flex; min-width: 44px; min-height: 44px; align-items: center; justify-content: flex-end; gap: 8px; border: 0; border-radius: 0; padding: 4px; background: transparent; color: #253044; text-align: left; box-shadow: none; }
-.home-connection-button:hover { background: transparent; }
-.home-connection-button:focus-visible { outline: 3px solid #3b82f6; outline-offset: 2px; border-radius: 6px; }
-.home-connection-button .home-provider-icon, .home-connection-button .home-provider-placeholder { border: 0; border-radius: 0; background: transparent; }
-.home-connection-button .home-provider-icon img { width: 25px; height: 25px; }
-.home-provider-icon, .home-provider-placeholder { display: grid; flex: 0 0 30px; width: 30px; height: 30px; place-items: center; border: 1px solid #e4e8ee; border-radius: 9px; background: #fff; }
-.home-provider-icon img { width: 21px; height: 21px; object-fit: contain; }
-.home-provider-placeholder { color: #7b8797; font-size: 18px; }
-.home-connection-indicator { width: 8px; height: 8px; border-radius: 50%; background: #98a2b3; }
-.home-connection-button.is-connected .home-connection-indicator { background: #36a66f; box-shadow: 0 0 0 3px #36a66f1c; }
-.home-message { margin: 0 auto 52px; }
-.home-message h2 { margin: 0; color: #253044; font-size: clamp(32px, 7vw, 46px); letter-spacing: -.045em; line-height: 1.25; }
-.home-cta { width: 100%; }
-.home-recent { margin-top: 42px; text-align: left; }
-.home-recent-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
-.home-recent-heading h2 { margin: 0; color: #253044; font-size: 17px; }
-.home-all-meetings { display: inline-flex; min-height: 44px; align-items: center; gap: 7px; border: 0; border-radius: 8px; padding: 0 8px; background: transparent; color: #0b2d5b; font-size: 13px; font-weight: 650; }
-.home-all-meetings svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.home-all-meetings:hover { background: #e0f2ff; }
-.home-recent .state-card { min-height: 112px; }
-.home-recent .empty-card:has(.empty-meetings-icon) { min-height: 88px; justify-content: center; border-style: dashed; background: #fbfcfe; }
-.home-recent .meeting-summary-list { gap: 0; overflow: hidden; border: 1px solid #e7ebf0; border-radius: 12px; background: #fff; }
-.home-recent .meeting-summary-row { border: 0; border-bottom: 1px solid #edf0f4; border-radius: 0; padding: 0 12px; background: transparent; }
-.home-recent .meeting-summary-row:last-child { border-bottom: 0; }
-.home-recent .meeting-summary-button { min-height: 76px; padding: 9px 3px; }
-.home-recent .meeting-summary-copy { display: grid; min-width: 0; gap: 2px; }
-.home-recent .meeting-summary-meta { min-height: 18px; }
-.home-recent .meeting-summary-participants { overflow: hidden; color: #344054; font-size: 12px; line-height: 1.45; text-overflow: ellipsis; white-space: nowrap; }
-.home-recent .meeting-summary-row h3 { margin-bottom: 5px; }
-.home-recent .meeting-summary-button:hover { background: #fafbfc; }
-.home-recent .meeting-summary-button:focus-visible { outline-offset: -2px; }
 .empty-meetings-icon { display: block; width: 64px; height: 59px; object-fit: contain; }
-.home-dialog-backdrop { position: fixed; z-index: 100; inset: 0; display: grid; place-items: center; padding: 20px; background: #17203380; }
-.home-connection-dialog { width: min(100%, 460px); max-height: min(90vh, 720px); overflow: auto; border: 1px solid #e1e7ef; border-radius: 20px; padding: 24px; background: #fff; box-shadow: 0 24px 80px #11182733; text-align: left; }
-.home-connection-dialog > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
-.home-connection-dialog .eyebrow { margin: 0 0 6px; color: #718096; font-size: 10px; font-weight: 750; letter-spacing: .14em; }
-.home-connection-dialog h2 { margin: 0; color: #1f2937; font-size: 22px; }
-.home-dialog-close { display: grid; width: 40px; height: 40px; flex: 0 0 40px; place-items: center; border: 0; border-radius: 0; padding: 0; background: transparent; color: #526073; font-size: 27px; line-height: 1; }
-.home-dialog-close:hover { background: transparent; color: #253044; }
-.home-dialog-provider { display: flex; align-items: center; gap: 12px; border: 1px solid #e5e9ef; border-radius: 14px; padding: 14px; }
-.home-dialog-provider > span:nth-child(2) { display: grid; gap: 4px; }
-.home-dialog-provider small { color: #748095; font-size: 12px; }
-.home-connected-check { display: grid; width: 25px; height: 25px; place-items: center; margin-left: auto; border-radius: 50%; background: #e9f7ef; color: #21834c; font-weight: 800; }
-.home-document-structure { margin: 22px 0; border-radius: 14px; padding: 16px; background: #f7f9fc; }
-.home-document-structure h3 { margin: 0 0 12px; font-size: 14px; }
-.home-document-structure ul { display: grid; gap: 10px; margin: 0; padding-left: 20px; color: #344054; font-size: 13px; }
-.home-document-structure ul ul { gap: 8px; margin-top: 9px; padding-left: 19px; color: #526073; }
-.home-document-structure li span { margin-left: 6px; color: #8a95a5; font-size: 12px; }
-.home-dialog-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.home-dialog-actions .button, .home-dialog-status .button { min-height: 48px; }
-.home-dialog-status { display: grid; gap: 12px; padding: 8px 0 2px; }
-.home-dialog-status strong { color: #253044; }
-.home-dialog-status p { margin: 0; color: #697586; font-size: 14px; line-height: 1.55; }
 .meeting-summary-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
 .meeting-summary-row { min-width: 0; border: 1px solid #e5e9ef; border-radius: 12px; padding: 14px 16px; background: #fff; text-align: left; overflow-wrap: anywhere; }
 .meeting-summary-button { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; width: 100%; border: 0; border-radius: 8px; padding: 0; background: transparent; color: inherit; text-align: left; }
@@ -71,16 +16,6 @@
 .processing-failure-stage { padding-top: 10px; border-top: 1px solid #edf0f4; color: #667085 !important; }
 @media (max-width: 420px) {
   .meeting-summary-row { padding: 13px; }
-}
-.button.home-cta { font-size: 19px; font-weight: 750; }
-@media (max-width: 520px) {
-  .home-page { padding: max(12px, env(safe-area-inset-top)) 18px 0; }
-  .home-toolbar { margin-bottom: clamp(12px, 3vh, 24px); }
-  .home-message { margin-bottom: clamp(16px, 4vh, 28px); }
-  .home-recent { margin-top: clamp(12px, 3vh, 22px); }
-  .home-dialog-backdrop { align-items: end; padding: 0; }
-  .home-connection-dialog { width: 100%; max-height: calc(92dvh - env(safe-area-inset-top)); border-radius: 20px 20px 0 0; padding: 23px 20px max(22px, env(safe-area-inset-bottom)); }
-  .home-dialog-actions { grid-template-columns: 1fr; }
 }
 .processing-failure-list { display: grid; gap: 8px; margin: 0 0 18px; }
 .processing-failure-list h2 { margin: 0; color: #344054; font-size: 14px; font-weight: 650; }
@@ -99,33 +34,4 @@
 @media (max-width: 520px) {
   .processing-failure-list .meeting-summary-row { align-items: flex-start; flex-direction: column; }
   .processing-failure-retry { width: 100%; min-height: 44px; }
-}
-.app-shell:has(.home-page) { padding-bottom: calc(74px + env(safe-area-inset-bottom)); }
-.app-shell:has(.home-page) .app-route-viewport { padding-bottom: 0; }
-.home-page {
-  display: flex;
-  flex: 1 1 auto;
-  min-height: 0;
-  justify-content: center;
-  overflow: hidden;
-}
-.home-content {
-  display: flex;
-  width: min(100%, 820px);
-  height: 100%;
-  min-height: 0;
-  flex-direction: column;
-}
-.home-toolbar, .home-message, .home-cta { flex: 0 0 auto; }
-.home-recent { display: flex; min-height: 0; flex: 0 0 auto; flex-direction: column; overflow: visible; }
-.home-recent-heading { flex: 0 0 auto; }
-.home-recent .meeting-summary-list { min-height: 0; flex: 0 0 auto; overflow: hidden; }
-.home-recent > .state-card { min-height: 0; flex: 0 0 auto; }
-@media (max-height: 720px) {
-  .home-toolbar { margin-bottom: 8px; }
-  .home-message { margin-bottom: 14px; }
-  .home-cta { min-height: 60px; font-size: 17px; }
-  .home-recent { margin-top: 8px; }
-  .home-recent-heading { margin-bottom: 6px; }
-  .home-recent .meeting-summary-button { min-height: 66px; padding-top: 6px; padding-bottom: 6px; }
 }

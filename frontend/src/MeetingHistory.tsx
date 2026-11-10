@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { AsyncState } from './components/async-state/AsyncState';
 import { normalizeApiError, type SafeApiError } from './lib/api/normalizeApiError';
 import { listMeetings, MeetingListApiError, type MeetingSummary } from './meetingListApi';
 import { filterMeetings, hasInvalidDateRange, type MeetingFilters } from './meetingFilters';
-import { getSetupSnapshot, type DocumentProvider, type SetupSnapshot } from './documentSetupApi';
 import { ProcessingFailureList } from './ProcessingFailureList';
 
 type ListResult =
@@ -118,90 +117,6 @@ function MeetingList({ limit, emptyMessage, enableFilters = false, quietEmpty = 
         <div className="state-card empty-card"><p>검색 결과가 없습니다.</p></div>
       ) : <MeetingRows meetings={items} showParticipantNames linkRows />}
     </>} />
-  );
-}
-
-export function HomePage() {
-  const navigate = useNavigate();
-  const [connection, setConnection] = useState<{ status: 'loading' | 'error' | 'ready'; snapshot?: SetupSnapshot }>({ status: 'loading' });
-  const [connectionDialogOpen, setConnectionDialogOpen] = useState(false);
-  const connectionButtonRef = useRef<HTMLButtonElement | null>(null);
-  const dialogCloseRef = useRef<HTMLButtonElement | null>(null);
-
-  useEffect(() => {
-    let live = true;
-    void getSetupSnapshot().then(({ snapshot }) => {
-      if (live) setConnection({ status: 'ready', snapshot });
-    }).catch(() => {
-      if (live) setConnection({ status: 'error' });
-    });
-    return () => { live = false; };
-  }, []);
-
-  useEffect(() => {
-    if (!connectionDialogOpen) return;
-    dialogCloseRef.current?.focus();
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setConnectionDialogOpen(false);
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => {
-      window.removeEventListener('keydown', onKeyDown);
-      connectionButtonRef.current?.focus();
-    };
-  }, [connectionDialogOpen]);
-
-  const active = connection.snapshot?.active ?? null;
-  const providerLabel = (provider: DocumentProvider) => provider === 'NOTION' ? 'Notion' : 'Confluence';
-  const connectionReady = connection.snapshot?.status === 'READY' && connection.snapshot.canCreateMeeting;
-  const connectionLabel = connection.status === 'loading' ? '연결 상태 확인 중' : connection.status === 'error'
-    ? '연결 상태 확인 필요' : active
-      ? connection.snapshot?.status === 'SWITCHING' ? `${providerLabel(active.provider)} 전환 중`
-        : connection.snapshot?.status === 'ATTENTION_REQUIRED' ? '연결 점검 필요'
-          : connectionReady ? `${providerLabel(active.provider)} 연결됨` : '문서 설정 확인 필요'
-      : '문서 서비스 연결 필요';
-
-  return (
-    <main className="home-page">
-      <div className="home-content">
-        <div className="home-toolbar">
-          <button ref={connectionButtonRef} className={`home-connection-button${connectionReady ? ' is-connected' : ''}`} type="button"
-            aria-label={`문서 서비스 연결 상태: ${connectionLabel}`} aria-haspopup="dialog" onClick={() => setConnectionDialogOpen(true)}>
-            <span className="home-connection-indicator" aria-hidden="true" />
-            {active ? <span className={`home-provider-icon home-provider-icon-${active.provider.toLowerCase()}`}><img src={active.provider === 'NOTION' ? '/assets/notion.ico' : '/assets/confluence.svg'} alt="" /></span>
-              : <span className="home-provider-placeholder" aria-hidden="true">▤</span>}
-          </button>
-        </div>
-        <div className="home-message">
-          <h2>회의를 시작할까요?</h2>
-        </div>
-        <button className="button button-primary home-cta" type="button" onClick={() => navigate('/meetings/new')}>새 회의 시작</button>
-        <section className="home-recent" aria-labelledby="recent-meetings-title">
-          <div className="home-recent-heading">
-            <h2 id="recent-meetings-title">최근 회의</h2>
-            <button className="home-all-meetings" type="button" onClick={() => navigate('/meetings')}>전체 보기 <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m5.5 3 5 5-5 5" /></svg></button>
-          </div>
-          <MeetingList limit={3} emptyMessage="최근 회의가 없습니다. 새 회의를 시작해 보세요." quietEmpty linkRows showRecentParticipantNames />
-        </section>
-      </div>
-      {connectionDialogOpen && <div className="home-dialog-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setConnectionDialogOpen(false); }}>
-        <section className="home-connection-dialog" role="dialog" aria-modal="true" aria-labelledby="home-connection-dialog-title">
-          <header><div><h2 id="home-connection-dialog-title">문서 연결 상태</h2></div>
-            <button ref={dialogCloseRef} className="home-dialog-close" type="button" aria-label="닫기" onClick={() => setConnectionDialogOpen(false)}>×</button></header>
-          {connection.status === 'loading' ? <p role="status">문서 연결 상태를 불러오는 중…</p>
-            : connection.status === 'error' ? <div className="home-dialog-status" role="alert"><strong>연결 상태를 확인할 수 없습니다</strong><p>백엔드 연결을 확인한 뒤 다시 시도해 주세요.</p>
-              <button className="button button-secondary" type="button" onClick={() => { setConnection({ status: 'loading' }); void getSetupSnapshot().then(({ snapshot }) => setConnection({ status: 'ready', snapshot })).catch(() => setConnection({ status: 'error' })); }}>다시 확인</button></div>
-              : active ? <>
-                <div className="home-dialog-provider"><span className={`home-provider-icon home-provider-icon-${active.provider.toLowerCase()}`}><img src={active.provider === 'NOTION' ? '/assets/notion.ico' : '/assets/confluence.svg'} alt="" /></span>
-                  <span><strong>{providerLabel(active.provider)}</strong><small>{connection.snapshot?.status === 'SWITCHING' ? '새 문서 서비스로 전환 중' : connectionReady ? `연결됨 · 버전 ${active.connectionVersion}` : '연결 상태를 확인해 주세요'}</small></span>
-                  {connectionReady && <span className="home-connected-check" aria-label="연결됨">✓</span>}</div>
-                <div className="home-document-structure"><h3>문서 구조</h3><ul><li><strong>Meeting Automation</strong><ul><li>Meetings <span>회의록</span></li><li>Participants <span>참석자</span></li><li>Templates <span>기본 회의록 템플릿</span></li></ul></li></ul></div>
-                <div className="home-dialog-actions"><button className="button button-primary" type="button" onClick={() => navigate('/setup/document')}>문서 연결 변경</button></div>
-              </> : <div className="home-dialog-status"><strong>연결된 문서 서비스가 없습니다</strong><p>회의록을 저장하려면 문서 서비스를 연결해 주세요.</p>
-                <button className="button button-primary" type="button" onClick={() => navigate('/setup/document')}>문서 서비스 연결</button></div>}
-        </section>
-      </div>}
-    </main>
   );
 }
 

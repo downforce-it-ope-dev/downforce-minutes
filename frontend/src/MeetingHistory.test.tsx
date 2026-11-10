@@ -3,7 +3,8 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { StrictMode } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router';
-import { HomePage, MeetingsPage } from './MeetingHistory';
+import { MeetingsPage } from './MeetingHistory';
+import { HomePage } from './home/HomePage';
 import type { MeetingSummary } from './meetingListApi';
 
 afterEach(() => {
@@ -37,65 +38,6 @@ function installListFetch(items: MeetingSummary[]) {
   vi.stubGlobal('fetch', withHealthyBackend(fetchMock));
   return fetchMock;
 }
-
-describe('Home recent meetings', () => {
-
-  it('keeps the create-meeting CTA visible when there are no recent meetings', async () => {
-    installListFetch([]);
-    render(<MemoryRouter><HomePage /></MemoryRouter>);
-
-    expect(await screen.findByText(/최근 회의가 없습니다/)).toBeTruthy();
-    expect(screen.getByRole('img', { name: '회의 기록 없음' })).toBeTruthy();
-    expect(screen.getByRole('heading', { name: '최근 회의가 없습니다. 새 회의를 시작해 보세요.' }).className).toContain('visually-hidden');
-    expect(screen.getByRole('button', { name: /새 회의 시작/ })).toBeTruthy();
-  });
-
-  it('opens a document service status dialog with structure and connection actions', async () => {
-    installListFetch([]);
-    render(<MemoryRouter><Routes><Route path="/" element={<HomePage />} /><Route path="/setup/document" element={<h1>문서 연결 설정</h1>} /></Routes></MemoryRouter>);
-
-    fireEvent.click(await screen.findByRole('button', { name: /Notion 연결됨/ }));
-    expect(screen.getByRole('dialog', { name: '문서 연결 상태' })).toBeTruthy();
-    expect(screen.getByText('Meetings')).toBeTruthy();
-    expect(screen.getByText('Participants')).toBeTruthy();
-    expect(screen.getByText('Templates')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: '문서 연결 변경' }));
-    expect(await screen.findByRole('heading', { name: '문서 연결 설정' })).toBeTruthy();
-  });
-
-  it('shows a safe error and retries the same five-meeting query', async () => {
-    let meetingReads = 0;
-    const fetchMock = vi.fn<(input: RequestInfo | URL) => Promise<Response>>((input) => {
-      const path = new URL(String(input)).pathname;
-      if (path.endsWith('/document-setup')) return Promise.resolve(response({ data: { version: 0, status: 'UNCONFIGURED', active: null, draft: null, operation: null, canCreateMeeting: false } }));
-      meetingReads += 1;
-      return Promise.resolve(meetingReads === 1
-        ? response({ error: { code: 'PROVIDER_FAILURE', message: 'sensitive provider data' } }, 502)
-        : response({ data: { items: meetings.slice(0, 2) } }));
-    });
-    vi.stubGlobal('fetch', withHealthyBackend(fetchMock));
-    render(<MemoryRouter><HomePage /></MemoryRouter>);
-
-    expect(await screen.findByRole('alert')).toBeTruthy();
-    expect(screen.queryByText(/sensitive provider data/)).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: '다시 시도' }));
-
-    expect(await screen.findByText('Meeting 2')).toBeTruthy();
-    expect(fetchMock.mock.calls.filter(([url]) => String(url).includes('limit=3'))).toHaveLength(2);
-  });
-
-  it('announces the loading state while the list request is pending', async () => {
-    const pending: Array<{ path: string; resolve: (value: Response) => void }> = [];
-    vi.stubGlobal('fetch', withHealthyBackend(vi.fn((input: RequestInfo | URL) => new Promise<Response>((resolve) => {
-      pending.push({ path: new URL(String(input)).pathname, resolve });
-    }))));
-    render(<MemoryRouter><HomePage /></MemoryRouter>);
-
-    expect(screen.getByRole('heading', { name: '최근 회의' })).toBeTruthy();
-    expect(screen.getByRole('status').textContent).toContain('회의 목록');
-    await act(async () => { pending.forEach(({ resolve }) => resolve(response({ data: { items: [] } }))); });
-  });
-});
 
 describe('Meetings page', () => {
   it('shows failed recordings in the current meeting list and retries them into processing', async () => {
@@ -160,8 +102,8 @@ describe('Meetings page', () => {
     await act(async () => {
       pendingResponses.forEach(({ resolve }) => resolve(response({ data: { items: [] } })));
     });
-    expect(await screen.findByText(/최근 회의가 없습니다/)).toBeTruthy();
-    expect(await screen.findByText(/회의 기록이 없습니다/)).toBeTruthy();
+    // 홈(새 화면)과 회의록 목록(기존 화면) 모두 빈 상태를 보인다
+    expect((await screen.findAllByText(/회의 기록이 없습니다/)).length).toBeGreaterThanOrEqual(2);
   });
 
   it('requests the API default of 100 and renders summaries in the API-provided order', async () => {

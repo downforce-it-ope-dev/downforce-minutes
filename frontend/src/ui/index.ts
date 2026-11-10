@@ -23,6 +23,7 @@ export { LogoSymbol, type LogoSymbolProps } from './art/LogoSymbol';
 export { CanvasWaves, type CanvasWavesProps } from './art/CanvasWaves';
 export { Waveform, type WaveformProps } from './art/Waveform';
 export { RecordToMinutesIllustration } from './art/RecordToMinutesIllustration';
+export { MeetingFlowVisual } from './art/MeetingFlowVisual';
 export { MailCodeIllustration } from './art/MailCodeIllustration';
 export { ServerRecoveryIllustration, type ServerRecoveryIllustrationProps } from './art/ServerRecoveryIllustration';
 export { NotFoundIllustration } from './art/NotFoundIllustration';
