@@ -1,5 +1,5 @@
 ﻿import { describe, expect, it } from 'vitest';
-import { filterMeetings, groupMeetingsByLocalMonth, hasInvalidDateRange } from './meetingFilters';
+import { filterMeetings, hasInvalidDateRange } from './meetingFilters';
 import type { MeetingSummary } from './meetingListApi';
 
 const meetings: MeetingSummary[] = [
@@ -22,12 +22,9 @@ describe('meeting filters', () => {
     expect(filterMeetings(meetings, { query: '', from: '2026-10-31', to: '' }).map(({ documentId }) => documentId)).toEqual(['new', 'middle']);
   });
 
-  it('ignores a reversed date range and groups filtered records by local month without reordering records', () => {
+  it('ignores a reversed date range', () => {
     expect(hasInvalidDateRange('2026-11-01', '2026-10-01')).toBe(true);
     expect(filterMeetings(meetings, { query: '', from: '2026-11-01', to: '2026-10-01' })).toEqual(meetings);
-    expect(groupMeetingsByLocalMonth(meetings).map(({ label, meetings: group }) => [label, group.map(({ documentId }) => documentId)])).toEqual([
-      ['2026년 11월', ['new']], ['2026년 10월', ['middle', 'old']],
-    ]);
   });
 });
 

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { graceParticipant, installSyntheticApi, meetingFixtures, participant, screens, widths } from './fixtures';
+import { graceParticipant, installSyntheticApi, participant, screens, widths } from './fixtures';
 
 // SCR-012는 현재 화면과 제목이 맞지 않아 제외했다.
 for (const screen of screens.filter(({ id }) => !['SCR-001', 'SCR-012'].includes(id))) {
@@ -65,47 +65,6 @@ for (const screen of screens.filter(({ id }) => !['SCR-001', 'SCR-012'].includes
     }
   });
 }
-
-test('SCR-009 filters synthetic meetings by title and date and reports an invalid date range', async ({ page }) => {
-  await page.setViewportSize({ width: 375, height: 800 });
-  await installSyntheticApi(page, screens.find((screen) => screen.id === 'SCR-009')!, { meetings: meetingFixtures });
-  await page.goto('/meetings');
-
-  const productMeeting = page.locator('.meeting-summary-row').filter({ hasText: '제품 전략 회의' });
-  const supportMeeting = page.locator('.meeting-summary-row').filter({ hasText: '고객 지원 주간 회의' });
-  await expect(productMeeting).toBeVisible();
-  await expect(supportMeeting).toBeVisible();
-
-  const search = page.getByRole('searchbox', { name: '회의 검색' });
-  await search.fill('제품 전략');
-  await search.press('Enter');
-  await expect(productMeeting).toBeVisible();
-  await expect(supportMeeting).toHaveCount(0);
-  await search.fill('');
-  await search.press('Enter');
-  await expect(supportMeeting).toBeVisible();
-  await page.getByRole('button', { name: '상세 조건' }).click();
-
-  await page.getByLabel('시작일').fill('2026-10-13');
-  await page.getByLabel('종료일').fill('2026-10-15');
-  await expect(productMeeting).toBeVisible();
-  await expect(supportMeeting).toHaveCount(0);
-
-  await page.getByLabel('시작일').fill('2026-10-20');
-  await page.getByLabel('종료일').fill('2026-10-19');
-  await expect(page.getByRole('alert')).toHaveText('시작일은 종료일보다 늦을 수 없습니다. 날짜 범위는 적용하지 않았습니다.');
-  await expect(page.getByLabel('시작일')).toHaveAttribute('aria-invalid', 'true');
-  await expect(productMeeting).toBeVisible();
-  await expect(supportMeeting).toBeVisible();
-
-  await page.getByLabel('시작일').fill('');
-  await page.getByLabel('종료일').fill('');
-  await expect(search).toHaveValue('');
-  await expect(page.getByLabel('시작일')).toHaveValue('');
-  await expect(page.getByLabel('종료일')).toHaveValue('');
-  await expect(productMeeting).toBeVisible();
-  await expect(supportMeeting).toBeVisible();
-});
 
 test('all app routes keep the brand and page heading visible during scrolling', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 480 });

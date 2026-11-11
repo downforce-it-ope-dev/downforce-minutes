@@ -13,8 +13,6 @@ import { Link, NavLink, Route, Routes } from 'react-router';
 import { restoreEmailSettings } from './emailSettingsApi';
 import { AsyncState } from './components/async-state/AsyncState';
 import { normalizeApiError } from './lib/api/normalizeApiError';
-import { MeetingsPage } from './MeetingHistory';
-import { MeetingDetailPage } from './MeetingDetailPage';
 import { SettingsPage } from './SettingsPage';
 import { DocumentGate } from './documentGate/DocumentGate';
 import { useGateBlocking } from './documentGate/gateBlocking';
@@ -354,8 +352,6 @@ export function App() {
       <div className="app-route-viewport">
         <Routes>
           <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/meetings" element={<MeetingsPage />} />
-          <Route path="/meetings/:documentId" element={<MeetingDetailPage />} />
           <Route path="/participants" element={<DocumentGate><ParticipantsPage /></DocumentGate>} />
           <Route path="/settings/participants" element={<DocumentGate><ParticipantsPage /></DocumentGate>} />
         </Routes>
