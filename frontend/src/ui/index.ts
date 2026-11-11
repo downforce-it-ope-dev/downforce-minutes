@@ -5,6 +5,9 @@ export { Icon, type IconProps, type IconSize } from './Icon';
 export { Button, ButtonAnchor, ButtonLink, type ButtonAnchorProps, type ButtonLinkProps, type ButtonProps, type ButtonSize, type ButtonVariant } from './Button';
 export { IconButton, type IconButtonProps, type IconButtonVariant } from './IconButton';
 export { TextField, type TextFieldProps } from './TextField';
+export { TextArea, type TextAreaProps } from './TextArea';
+export { ChipRadioGroup, type ChipRadioGroupProps, type ChipRadioOption } from './ChipRadioGroup';
+export { Tabs, type TabItem, type TabsProps } from './Tabs';
 export { OtpInput, type OtpInputProps } from './OtpInput';
 export { SelectField, type SelectFieldProps } from './SelectField';
 export { Checkbox, type CheckboxProps } from './Checkbox';
@@ -12,7 +15,7 @@ export { FilterChips, type FilterChipOption, type FilterChipsProps } from './Fil
 export { ChoiceGroup, type ChoiceGroupProps, type ChoiceOption } from './ChoiceGroup';
 export { DateField, type DateFieldProps } from './DateField';
 export { parseDateValue, toDateValue } from './dateValue';
-export { TABLET_QUERY, useMediaQuery } from './useMediaQuery';
+export { TABLET_LG_QUERY, TABLET_QUERY, useMediaQuery } from './useMediaQuery';
 export { RoundActionButton, type RoundActionButtonProps } from './RoundActionButton';
 export { Card, type CardProps } from './Card';
 export { Pill, type PillProps, type PillTone } from './Pill';

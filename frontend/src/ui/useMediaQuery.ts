@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react';
 
 /** 화면 폭 기준 (tailwind.css @theme --breakpoint-*) */
 export const TABLET_QUERY = '(min-width: 37.5rem)';
+export const TABLET_LG_QUERY = '(min-width: 60rem)';
 
 /**
  * 미디어 쿼리 일치 여부. 같은 내용을 크기마다 다른 방식으로 그려야 할 때만 쓴다

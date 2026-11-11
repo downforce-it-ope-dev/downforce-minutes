@@ -37,6 +37,9 @@ import {
   Checkbox,
   FilterChips,
   RoundActionButton,
+  TextArea,
+  ChipRadioGroup,
+  Tabs,
   ChoiceGroup,
   DateField,
   toDateValue,
@@ -128,6 +131,7 @@ function ComponentsView() {
         <OtpSection />
         <ChoiceSection />
         <RecordingButtonSection />
+        <ReviewPartsSection />
         <StatusSection />
         <SurfacesSection />
         <OverlaySection />
@@ -210,6 +214,41 @@ function InputsSection() {
           <option value="">선택 안 함</option>
         </SelectField>
       </div>
+    </Section>
+  );
+}
+
+function ReviewPartsSection() {
+  const [speaker, setSpeaker] = useState('p1');
+  const [tab, setTab] = useState<'mapping' | 'transcript'>('mapping');
+  const [summary, setSummary] = useState('주간 진행 상황을 공유하고 다음 분기 우선순위를 정했다.');
+  return (
+    <Section title="검토 부품">
+      <div className="grid gap-6 tablet:grid-cols-2">
+        <TextArea label="회의 요약" value={summary} onChange={(event) => setSummary(event.target.value)} minRows={3} />
+        <TextArea label="빈 항목 (오류)" value="" onChange={() => {}} error="내용을 입력해 주세요." />
+      </div>
+      <Row label="참석자 칩 (하나 고르기)">
+        <ChipRadioGroup
+          label="화자 A 참석자"
+          value={speaker}
+          onChange={setSpeaker}
+          options={[
+            { value: 'p1', label: '홍길동' },
+            { value: 'p2', label: '김철수', hint: '· B', hintLabel: '화자 B로 지정됨' },
+            { value: '', label: '미지정' },
+          ]}
+        />
+      </Row>
+      <Tabs
+        label="검토 패널"
+        value={tab}
+        onChange={setTab}
+        items={[
+          { value: 'mapping', label: '화자 매핑', badge: 2, badgeLabel: '미지정 2명', content: <p className="p-4 text-body">화자 매핑 내용</p> },
+          { value: 'transcript', label: '전사 원문', content: <p className="p-4 text-body">전사 원문 내용</p> },
+        ]}
+      />
     </Section>
   );
 }
