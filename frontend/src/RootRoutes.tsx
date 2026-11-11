@@ -12,6 +12,7 @@ import { NewMeetingPage } from './newMeeting/NewMeetingPage';
 import { NotFoundPage } from './notFound/NotFoundPage';
 import { ProcessingRoute } from './processing/ProcessingPage';
 import { RecordingRoute } from './recording/RecordingPage';
+import { ReviewRoute } from './review/ReviewPage';
 import { ServerRecoveryOverlay } from './recovery/ServerRecoveryOverlay';
 import { ToastProvider } from './ui';
 
@@ -94,6 +95,15 @@ function AppRoutes() {
         element={
           <RequireAuth>
             <ProcessingRoute />
+          </RequireAuth>
+        }
+      />
+      {/* 회의록 검토 (MTG-04, #29). 집중 모드 */}
+      <Route
+        path="/meetings/:sessionId/review"
+        element={
+          <RequireAuth>
+            <ReviewRoute />
           </RequireAuth>
         }
       />

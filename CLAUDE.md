@@ -82,9 +82,11 @@
   - 부품 확인 화면 `/__ui`는 개발 서버와 Vercel Preview에서만 열린다(운영 빌드 제외). 새 부품을 만들면 여기에도 추가한다.
   - R5에서 추가한 부품: `SelectField`(선택 상자), `Checkbox`, `FilterChips`(보기 칩), `ChoiceGroup`(버튼으로 하나 고르기), `DateField`(큰 달력 대화상자), `RoundActionButton`(원형 녹음 버튼), `useMediaQuery`·`TABLET_QUERY`(크기마다 다른 방식으로 그릴 때만). `TextField`의 `inputSize="lg"`는 글자만 키우고 높이는 같다.
   - MTG-03에서 추가한 부품: `ButtonAnchor`(버튼 모양 앱 밖 링크, 파일 다운로드). 앱 안 이동은 `ButtonLink`.
-  - `AppShell`: `fillHeight`(태블릿에서 본문 높이를 화면에 맞추고 영역 안만 스크롤), `toastPlacement="top"`(아래쪽에 큰 동작 버튼이 있는 화면).
+  - `AppShell`: `fillHeight`(태블릿에서 본문 높이를 화면에 맞추고 영역 안만 스크롤, `"tablet-lg"`면 큰 태블릿만), `toastPlacement="top"`(아래쪽에 큰 동작 버튼이 있는 화면), `focusActions`(집중 모드 상단 바 오른쪽).
+  - MTG-04에서 추가한 부품: `TextArea`(내용만큼 늘어나는 여러 줄 입력), `ChipRadioGroup`(칩 하나 고르기), `Tabs`, `TABLET_LG_QUERY`.
 - **회의 진행 흐름 (R5)**
-  - 새 회의(`/meetings/new`)·회의 녹음(`/meetings/:sessionId/recording`)·회의 처리(`/meetings/:sessionId/processing`)는 리뉴얼 라우트다. 검토 이후 화면은 아직 기존 `App`이 그린다.
+  - 새 회의(`/meetings/new`)·회의 녹음·회의 처리·회의록 검토(`/meetings/:sessionId/review`)는 리뉴얼 라우트이고 모두 집중 모드다. 회의 결과(`/complete`)는 아직 기존 `App`이 그린다.
+  - 검토 로직은 `src/review/useReviewSession.ts`(기존 처리 그대로, 화자 매핑은 칩을 누르면 0.3초 뒤 묶어 저장). 집중 모드에서 상단 바에 둘 것은 `AppShell`의 `focusActions`로 넘긴다.
   - 처리 로직은 `src/processing/useProcessingSession.ts`(기존 처리 그대로). 처리 화면은 녹음 화면이 남긴 같은 탭 저장소에서 회의 제목을 읽는다.
   - 새 회의가 만든 녹음 세션은 `src/meeting/recordingSessionStore.ts`(브라우저 탭 저장소 + 메모리)로 녹음 화면에 넘긴다.
   - 녹음 로직은 `src/recording/useRecordingSession.ts`(기존 처리 그대로). 녹음 화면 진단 패널은 Preview·개발 서버에서 `?debug`로 연다.

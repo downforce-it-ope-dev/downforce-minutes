@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import {
   createParticipant,
   deleteParticipant,
@@ -15,14 +15,9 @@ import { restoreSlackWebhookSettings } from './slackSettingsApi';
 import { restoreEmailSettings } from './emailSettingsApi';
 import { AsyncState } from './components/async-state/AsyncState';
 import { normalizeApiError } from './lib/api/normalizeApiError';
-import { ReviewSpeakerPage } from './ReviewSpeakerPage';
-import type { ReviewSpeaker, StructuredMinutes } from './reviewApi';
-import type { MinutesSaveState } from './ReviewMinutesEditor';
 import { MeetingsPage } from './MeetingHistory';
 import { MeetingDetailPage } from './MeetingDetailPage';
 import { SettingsPage } from './SettingsPage';
-import { NavigationLeaveGuard } from './components/NavigationLeaveGuard';
-import { useReportSessionWork } from './auth/sessionWork';
 import { DocumentGate } from './documentGate/DocumentGate';
 import { useGateBlocking } from './documentGate/gateBlocking';
 import { Toast } from './components/Toast';
@@ -340,48 +335,17 @@ function BottomNavigation() {
   );
 }
 
-export function App({ onMinutesSave, minutesSaveState }: {
-  onMinutesSave?: (sessionId: string, minutes: StructuredMinutes) => void;
-  minutesSaveState?: MinutesSaveState;
-} = {}) {
+export function App() {
   useEffect(() => {
     void restoreSlackWebhookSettings().catch(() => undefined);
     void restoreEmailSettings().catch(() => undefined);
   }, []);
-  const [reviewNavigationGuard, setReviewNavigationGuard] = useState(false);
-  const [speakerDrafts, setSpeakerDrafts] = useState<Record<string, Record<string, string | null>>>({});
-  const initializeSpeakerDraft = useCallback((sessionId: string, speakers: ReviewSpeaker[]) => {
-    setSpeakerDrafts((current) => {
-      const sessionDraft = current[sessionId] ?? {};
-      const nextDraft = { ...sessionDraft };
-      for (const speaker of speakers) {
-        if (!Object.prototype.hasOwnProperty.call(nextDraft, speaker.speakerId)) nextDraft[speaker.speakerId] = speaker.participantId;
-      }
-      return { ...current, [sessionId]: nextDraft };
-    });
-  }, []);
-  const updateSpeakerDraft = useCallback((sessionId: string, speakerId: string, participantId: string | null) => {
-    setSpeakerDrafts((current) => ({
-      ...current,
-      [sessionId]: { ...(current[sessionId] ?? {}), [speakerId]: participantId },
-    }));
-  }, []);
-  const commitSpeakerMappings = useCallback((sessionId: string, speakers: ReviewSpeaker[]) => {
-    setSpeakerDrafts((current) => ({
-      ...current,
-      [sessionId]: Object.fromEntries(speakers.map((speaker) => [speaker.speakerId, speaker.participantId])),
-    }));
-  }, []);
-  // 녹음(MTG-02, #27)·처리(MTG-03, #28) 화면은 리뉴얼 라우트로 옮겼다. 녹음·처리 중 세션 유지는 그 화면이 맡는다
-  const shouldWarnBeforeLeaving = reviewNavigationGuard;
-  // 로그인 세션 관리(#15): 진행 중 작업이 있으면 만료돼도 끝날 때까지 로그인 화면으로 보내지 않는다
-  useReportSessionWork(shouldWarnBeforeLeaving, false);
+  // 녹음(MTG-02, #27)·처리(MTG-03, #28)·검토(MTG-04, #29) 화면은 리뉴얼 라우트로 옮겼다. 이탈 경고·세션 유지는 그 화면이 맡는다
   // 문서 연결 확인(CMN-04, #19) 중·실패 화면은 메뉴를 숨기는 새 화면이라, 그동안 기존 헤더·하단 탭을 숨긴다
   const gateBlocking = useGateBlocking();
 
   return (
     <div className="app-shell">
-      <NavigationLeaveGuard active={shouldWarnBeforeLeaving} />
       {!gateBlocking && <header className="product-header">
         <Link className="product-header-brand" to="/" aria-label="Windsoft Minutes 홈">
           <img src="/assets/windsoft-favicon-mark.png" alt="" />
@@ -395,7 +359,6 @@ export function App({ onMinutesSave, minutesSaveState }: {
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/meetings" element={<MeetingsPage />} />
           <Route path="/meetings/:documentId" element={<MeetingDetailPage />} />
-          <Route path="/meetings/:sessionId/review" element={<ReviewSpeakerPage drafts={speakerDrafts} onInitialize={initializeSpeakerDraft} onChange={updateSpeakerDraft} onCommit={commitSpeakerMappings} onMinutesSave={onMinutesSave} minutesSaveState={minutesSaveState} onNavigationGuardChange={setReviewNavigationGuard} />} />
           <Route path="/meetings/:sessionId/complete" element={<CompletePage />} />
           <Route path="/participants" element={<DocumentGate><ParticipantsPage /></DocumentGate>} />
           <Route path="/settings/participants" element={<DocumentGate><ParticipantsPage /></DocumentGate>} />

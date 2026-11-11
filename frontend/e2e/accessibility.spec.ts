@@ -24,8 +24,8 @@ async function visitScreen(page: Page, screen: Screen): Promise<void> {
   await expect(heading).toContainText(screen.heading);
 }
 
-// SCR-007·012는 현재 화면과 제목이 맞지 않아 제외했다.
-for (const screen of screens.filter(({ id }) => !['SCR-001', 'SCR-007', 'SCR-012'].includes(id))) {
+// SCR-012는 현재 화면과 제목이 맞지 않아 제외했다.
+for (const screen of screens.filter(({ id }) => !['SCR-001', 'SCR-012'].includes(id))) {
   test(`${screen.id} ${screen.route} has no serious WCAG 2.2 A/AA axe violations`, async ({ page }) => {
     await visitScreen(page, screen);
     await expectNoSeriousAxeViolations(page);
