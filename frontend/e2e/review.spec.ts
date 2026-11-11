@@ -74,7 +74,7 @@ test('화자 매핑: 화자마다 왼쪽에 대화 내용, 오른쪽에 참석�
   for (const size of [{ width: 1180, height: 820 }, { width: 820, height: 1180 }]) {
     await page.setViewportSize(size);
     await page.goto(`/meetings/${SESSION}/review`);
-    await expect(page.getByRole('tab', { name: /화자 매핑/ })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('navigation', { name: '검토 단계' }).getByRole('button', { name: /^화자 매핑/ })).toHaveAttribute('aria-current', 'true');
     const card = page.getByRole('article', { name: '화자 A' });
     const utterance = (await card.getByText(/이번 주 배포 일정부터/).boundingBox())!;
     const chips = (await card.getByRole('radiogroup').boundingBox())!;
@@ -82,14 +82,18 @@ test('화자 매핑: 화자마다 왼쪽에 대화 내용, 오른쪽에 참석�
   }
 });
 
-test('회의록: 구역을 골라 편집하고, 항목을 추가해도 그 구역 안에서만 늘어난다. 발송은 가운데, 저장은 상단 바', async ({ page }) => {
+test('검토 단계 목록(탭 없음): 구역을 골라 편집하고, 항목을 추가해도 그 구역 안에서만 늘어난다. 발송은 가운데, 저장은 상단 바', async ({ page }) => {
   await mock(page);
   await page.setViewportSize({ width: 1180, height: 820 });
   await page.goto(`/meetings/${SESSION}/review`);
-  await page.getByRole('tab', { name: '회의록' }).click();
-  await page.getByRole('button', { name: /^논의 내용/ }).click();
+  const nav = page.getByRole('navigation', { name: '검토 단계' });
+  await expect(page.getByRole('tab')).toHaveCount(0);
+  // 단계 목록은 왼쪽, 고른 내용은 오른쪽
+  const navBox = (await nav.boundingBox())!;
+  await nav.getByRole('button', { name: /^논의 내용/ }).click();
   const panel = page.getByRole('region', { name: '논의 내용' });
   await expect(panel.getByRole('textbox')).toHaveCount(2);
+  expect((await panel.boundingBox())!.x).toBeGreaterThan(navBox.x + navBox.width);
   for (let index = 0; index < 6; index += 1) await panel.getByRole('button', { name: '논의 내용 추가' }).click();
   await expect(panel.getByRole('textbox')).toHaveCount(8);
   // 페이지는 늘어나지 않고 발송 버튼이 늘 보인다

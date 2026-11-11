@@ -4,8 +4,8 @@ import { Plus, RefreshCw, Save, ScrollText, Send } from 'lucide-react';
 import { useReportSessionWork } from '../auth/sessionWork';
 import { NavigationLeaveGuard } from '../components/NavigationLeaveGuard';
 import type { ReviewSpeaker } from '../reviewApi';
-import { AppShell, Button, ButtonLink, Card, Dialog, IconButton, ProgressBar, Tabs, ToastBridge, type ToastFunction } from '../ui';
-import { MinutesSectionNav, MinutesSectionPanel, type MinutesSectionKey } from './MinutesEditor';
+import { AppShell, Button, ButtonLink, Card, Dialog, IconButton, ProgressBar, ToastBridge, type ToastFunction } from '../ui';
+import { MinutesSectionPanel, ReviewSectionNav, type ReviewSectionKey } from './MinutesEditor';
 import { installSampleReviewApi } from './sampleReviewApi';
 import { SpeakerMappingSection } from './SpeakerMappingSection';
 import { speakerDisplayLabel } from './speakerPreview';
@@ -16,9 +16,9 @@ import { useReviewSession, type MappingChange } from './useReviewSession';
  * MTG-04 회의록 검토 (GitHub #29, docs/renewal/화면기획/MTG-04_회의록검토.md). 집중 모드(메뉴 없음, 뒤로 가기 → 회의록 목록).
  * 사용자 결정(2026-11-11):
  * - 상단 바: 저장 버튼(바뀐 내용이 있을 때만) + 전사 원문 버튼. "저장됨" 같은 상태 글자는 두지 않는다
- * - 본문은 탭 "화자 매핑 / 회의록". 미지정 화자가 있으면 화자 매핑부터 연다
+ * - 탭 없이 검토 단계 목록(화자 매핑 + 회의록 다섯 구역)에서 하나를 골라 크게 본다. 미지정 화자가 있으면 화자 매핑부터
  * - 화자 매핑: 화자마다 한 줄 카드, 왼쪽에 화자·대화 내용, 오른쪽에서 참석자를 고른다
- * - 회의록: 구역 목록에서 하나를 골라 크게 편집한다(항목이 늘어도 그 구역 안에서만 스크롤)
+ * - 회의록 구역: 항목이 늘어도 그 구역 안에서만 스크롤
  * - 발송은 화면 아래 가운데. 버튼 문구는 짧은 단어
  * - 작업 결과·오류는 토스트, 발송을 막는 이유와 미지정 화자 확인만 대화상자(P02)
  */
@@ -117,19 +117,18 @@ function speakerColor(review: Review, speakerId: string) {
 }
 
 function ReviewBody({ sessionId, review, onShowInTranscript }: { sessionId: string; review: Review; onShowInTranscript: (segmentId: string) => void }) {
-  const [tab, setTab] = useState<'mapping' | 'minutes' | null>(null);
-  const [section, setSection] = useState<MinutesSectionKey>('summary');
+  const [section, setSection] = useState<ReviewSectionKey | null>(null);
   const [confirmUnassigned, setConfirmUnassigned] = useState(false);
 
   const data = review.review;
-  // 처음 불러왔을 때 한 번만 고른다(미지정이 있으면 화자 매핑). 지정을 끝내도 탭이 저절로 바뀌지 않게 한다
-  if (data && tab === null) setTab(review.mapping.unassignedCount > 0 ? 'mapping' : 'minutes');
+  // 처음 불러왔을 때 한 번만 고른다(미지정이 있으면 화자 매핑, 없으면 회의 요약). 지정을 끝내도 저절로 바뀌지 않게 한다
+  if (data && section === null) setSection(review.mapping.unassignedCount > 0 || !data.minutes ? 'mapping' : 'summary');
   if (review.loading && !data) return <ReviewSkeleton />;
   if (!data) return <ReviewFailure failure={review.failure} sessionId={sessionId} onReload={review.actions.reload} />;
 
   const minutes = review.minutes.current;
   const unassigned = review.mapping.unassignedCount;
-  const currentTab = tab ?? (unassigned > 0 ? 'mapping' : 'minutes');
+  const current: ReviewSectionKey = section ?? 'mapping';
 
   function send() {
     if (unassigned > 0) setConfirmUnassigned(true);
@@ -137,37 +136,22 @@ function ReviewBody({ sessionId, review, onShowInTranscript }: { sessionId: stri
   }
 
   const mapping = (
-    <div className="h-full overflow-y-auto pt-4 pb-2">
-      <SpeakerMappingSection
-        speakers={data.speakers}
-        segments={data.transcript}
-        roster={review.participants.roster}
-        valueOf={review.mapping.valueOf}
-        nameOf={(speaker) => speakerName(review, speaker)}
-        colorOf={(speakerId) => speakerColor(review, speakerId)}
-        status={review.mapping.status}
-        canMap={review.mapping.canMap}
-        needsSettings={review.config.needsSettings}
-        rosterStatus={review.participants.status}
-        onAssign={review.actions.assignSpeaker}
-        onRetry={review.actions.retryMappings}
-        onReloadRoster={review.actions.reloadRoster}
-        onShowInTranscript={onShowInTranscript}
-      />
-    </div>
-  );
-
-  const editor = minutes ? (
-    <div className="flex h-full flex-col gap-4 pt-4 tablet:flex-row tablet:gap-6">
-      <MinutesSectionNav minutes={minutes} value={section} onChange={setSection} className="shrink-0 tablet:w-48" />
-      <Card className="min-h-0 flex-1 tablet:overflow-y-auto">
-        <MinutesSectionPanel section={section} minutes={minutes} roster={review.participants.roster} disabled={!review.minutes.editable} onChange={review.actions.updateMinutes} />
-      </Card>
-    </div>
-  ) : (
-    <Card className="mt-4">
-      <p className="text-body text-text-muted">표시할 회의록이 없습니다.</p>
-    </Card>
+    <SpeakerMappingSection
+      speakers={data.speakers}
+      segments={data.transcript}
+      roster={review.participants.roster}
+      valueOf={review.mapping.valueOf}
+      nameOf={(speaker) => speakerName(review, speaker)}
+      colorOf={(speakerId) => speakerColor(review, speakerId)}
+      status={review.mapping.status}
+      canMap={review.mapping.canMap}
+      needsSettings={review.config.needsSettings}
+      rosterStatus={review.participants.status}
+      onAssign={review.actions.assignSpeaker}
+      onRetry={review.actions.retryMappings}
+      onReloadRoster={review.actions.reloadRoster}
+      onShowInTranscript={onShowInTranscript}
+    />
   );
 
   return (
@@ -186,23 +170,29 @@ function ReviewBody({ sessionId, review, onShowInTranscript }: { sessionId: stri
         </div>
       )}
 
-      <Tabs
-        label="검토"
-        value={currentTab}
-        onChange={setTab}
-        className="tablet:min-h-0 tablet:flex-1"
-        panelClassName="tablet:overflow-hidden"
-        items={[
-          {
-            value: 'mapping',
-            label: '화자 매핑',
-            badge: unassigned > 0 ? unassigned : undefined,
-            badgeLabel: unassigned > 0 ? `미지정 ${unassigned}명` : undefined,
-            content: mapping,
-          },
-          { value: 'minutes', label: '회의록', content: editor },
-        ]}
-      />
+      {/* 검토 단계: 왼쪽(태블릿 세로·휴대폰은 위) 목록에서 하나를 골라 오른쪽에서 크게 본다. 각 영역은 따로 스크롤한다 */}
+      <div className="flex flex-col gap-4 tablet:min-h-0 tablet:flex-1 tablet-lg:flex-row tablet-lg:gap-6">
+        <ReviewSectionNav
+          leading={{ key: 'mapping', title: '화자 매핑', warning: unassigned, warningLabel: `미지정 ${unassigned}명` }}
+          minutes={minutes}
+          value={current}
+          onChange={setSection}
+          className="shrink-0 tablet-lg:w-52"
+        />
+        <div className="min-w-0 flex-1 tablet:min-h-0 tablet:overflow-y-auto">
+          {current === 'mapping' ? (
+            mapping
+          ) : minutes ? (
+            <Card>
+              <MinutesSectionPanel section={current} minutes={minutes} roster={review.participants.roster} disabled={!review.minutes.editable} onChange={review.actions.updateMinutes} />
+            </Card>
+          ) : (
+            <Card>
+              <p className="text-body text-text-muted">표시할 회의록이 없습니다.</p>
+            </Card>
+          )}
+        </div>
+      </div>
 
       {/* 발송: 화면 아래 가운데. 휴대폰은 화면 아래 고정 */}
       <div className="h-20 tablet:hidden short:hidden" aria-hidden="true" />

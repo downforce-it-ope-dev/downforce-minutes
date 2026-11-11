@@ -126,8 +126,8 @@ function renderReview() {
 
 /** 회의록 탭을 열고 원하는 구역을 고른다 */
 async function openMinutes(section = '회의 요약') {
-  fireEvent.click(await screen.findByRole('tab', { name: '회의록' }));
-  fireEvent.click(screen.getByRole('button', { name: new RegExp(`^${section}`) }));
+  const nav = await screen.findByRole('navigation', { name: '검토 단계' });
+  fireEvent.click(within(nav).getByRole('button', { name: new RegExp(`^${section}`) }));
 }
 
 const calls = (fetchMock: ReturnType<typeof vi.fn>, suffix: string, method: string) =>
@@ -151,8 +151,11 @@ describe('회의록 검토 (MTG-04)', () => {
     expect(within(cards[0]).getByText('이번 주 배포 일정부터 정리하고 넘어갈게요.')).toBeTruthy();
     expect(within(cards[1]).getByRole('radio', { name: '미지정' }).getAttribute('aria-checked')).toBe('true');
     expect(screen.getByText('2명 중 1명 지정')).toBeTruthy();
-    // 미지정 화자가 있으면 화자 매핑 탭부터 연다
-    expect(screen.getByRole('tab', { name: /화자 매핑/ }).getAttribute('aria-selected')).toBe('true');
+    // 탭 없이 검토 단계 목록. 미지정 화자가 있으면 화자 매핑부터 연다
+    expect(screen.queryByRole('tab')).toBeNull();
+    const nav = screen.getByRole('navigation', { name: '검토 단계' });
+    expect(within(nav).getAllByRole('button').map((button) => button.textContent)).toEqual(['화자 매핑1미지정 1명', '회의 요약', '논의 내용1', '결정 사항1', '후속 조치0', '실행 항목1']);
+    expect(within(nav).getByRole('button', { name: /^화자 매핑/ }).getAttribute('aria-current')).toBe('true');
     expect(screen.queryByText('저장됨')).toBeNull();
     await openMinutes();
     expect((screen.getByRole('textbox', { name: '회의 요약' }) as HTMLTextAreaElement).value).toBe('배포 일정을 정했다.');
@@ -203,7 +206,7 @@ describe('회의록 검토 (MTG-04)', () => {
     expect(screen.getByRole('button', { name: '저장' }).getAttribute('aria-disabled')).toBe('true');
     fireEvent.click(screen.getByRole('button', { name: '결정 사항 2 삭제' }));
 
-    fireEvent.click(screen.getByRole('button', { name: /^회의 요약/ }));
+    await openMinutes();
     fireEvent.change(screen.getByRole('textbox', { name: '회의 요약' }), { target: { value: '배포 일정과 QA 일정을 정했다.' } });
     fireEvent.click(screen.getByRole('button', { name: '저장' }));
     expect(await screen.findByText('회의록이 저장되었습니다.')).toBeTruthy();
@@ -285,7 +288,7 @@ describe('회의록 검토 (MTG-04)', () => {
     });
     renderReview();
     fireEvent.click(await screen.findByRole('button', { name: '다시 불러오기' }));
-    expect(await screen.findByRole('tab', { name: '회의록' })).toBeTruthy();
+    expect(await screen.findByRole('navigation', { name: '검토 단계' })).toBeTruthy();
     expect(calls(fetchMock, `/meeting-sessions/${SESSION}`, 'GET')).toHaveLength(2);
   });
 });

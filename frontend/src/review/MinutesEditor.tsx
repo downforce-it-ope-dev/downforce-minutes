@@ -6,7 +6,8 @@ import { validDueDate } from './minutesValidation';
 
 /*
  * 회의록 편집 (MTG-04-F01~F03). 사용자 결정(2026-11-11): 다섯 구역을 한 페이지에 쌓지 않고,
- * 구역 목록(태블릿 왼쪽 세로 / 휴대폰 위 가로)에서 고른 구역 하나를 크게 편집한다. 항목을 추가해도 그 구역 안에서만 길어진다.
+ * 검토 단계 목록(화자 매핑 + 다섯 구역, 태블릿 왼쪽 세로 / 휴대폰 위 가로)에서 고른 것 하나를 크게 편집한다.
+ * 항목을 추가해도 그 구역 안에서만 길어진다.
  * 빈 항목은 입력란 아래 오류 문구, 삭제·추가 버튼은 늘 보인다.
  */
 
@@ -35,38 +36,63 @@ function sectionHasError(minutes: StructuredMinutes, key: MinutesSectionKey): bo
 }
 
 /** 구역 목록. 태블릿은 세로 목록, 휴대폰은 가로로 넘기는 줄 */
-export function MinutesSectionNav({
+/** 검토 단계 목록의 맨 앞에 붙는 항목 (화자 매핑) */
+export interface LeadingSection {
+  key: 'mapping';
+  title: string;
+  /** 경고 개수 (미지정 화자 수). 0이면 표시하지 않는다 */
+  warning: number;
+  warningLabel: string;
+}
+
+export type ReviewSectionKey = 'mapping' | MinutesSectionKey;
+
+/**
+ * 검토 단계 목록 (사용자 결정 2026-11-11): 화자 매핑 + 회의록 다섯 구역을 한 목록에 두고 하나씩 고른다.
+ * 태블릿 가로는 왼쪽 세로 목록, 태블릿 세로·휴대폰은 위 가로로 넘기는 줄(내용 폭을 넓게 쓴다). 탭은 두지 않는다.
+ */
+export function ReviewSectionNav({
+  leading,
   minutes,
   value,
   onChange,
   className,
 }: {
-  minutes: StructuredMinutes;
-  value: MinutesSectionKey;
-  onChange: (key: MinutesSectionKey) => void;
+  leading: LeadingSection;
+  minutes: StructuredMinutes | null;
+  value: ReviewSectionKey;
+  onChange: (key: ReviewSectionKey) => void;
   className?: string;
 }) {
+  const items: Array<{ key: ReviewSectionKey; title: string; count: number | null; error: boolean; warning?: number; warningLabel?: string }> = [
+    { key: leading.key, title: leading.title, count: null, error: false, warning: leading.warning, warningLabel: leading.warningLabel },
+    ...(minutes ? MINUTES_SECTIONS.map(({ key, title }) => ({ key, title, count: sectionCount(minutes, key), error: sectionHasError(minutes, key) })) : []),
+  ];
   return (
-    <nav aria-label="회의록 구역" className={className}>
-      <ul className="flex gap-2 overflow-x-auto tablet:flex-col tablet:gap-1 tablet:overflow-visible">
-        {MINUTES_SECTIONS.map(({ key, title }) => {
+    <nav aria-label="검토 단계" className={className}>
+      <ul className="flex gap-2 overflow-x-auto tablet-lg:flex-col tablet-lg:gap-1 tablet-lg:overflow-visible">
+        {items.map(({ key, title, count, error, warning, warningLabel }, index) => {
           const selected = key === value;
-          const count = sectionCount(minutes, key);
-          const error = sectionHasError(minutes, key);
           return (
-            <li key={key} className="shrink-0">
+            <li key={key} className={cn('shrink-0', index === 1 && 'tablet-lg:mt-3 tablet-lg:border-t tablet-lg:border-border tablet-lg:pt-3')}>
               <button
                 type="button"
                 aria-current={selected ? 'true' : undefined}
                 onClick={() => onChange(key)}
                 className={cn(
-                  'flex h-12 w-full cursor-pointer items-center justify-between gap-3 rounded-full border px-4 text-label whitespace-nowrap tablet:h-14 tablet:rounded-md tablet:border-0',
-                  selected ? 'border-primary bg-selected text-selected-text' : 'border-border bg-bg text-text active:bg-bg-subtle tablet:bg-transparent',
+                  'flex h-12 w-full cursor-pointer items-center justify-between gap-3 rounded-full border px-4 text-label whitespace-nowrap tablet-lg:h-14 tablet-lg:rounded-md tablet-lg:border-0',
+                  selected ? 'border-primary bg-selected text-selected-text' : 'border-border bg-bg text-text active:bg-bg-subtle tablet-lg:bg-transparent',
                 )}
               >
                 <span>{title}</span>
                 <span className="flex items-center gap-1.5">
                   {error && <span aria-label="입력 확인 필요" className="size-2 rounded-full bg-danger" />}
+                  {warning ? (
+                    <span className="inline-flex min-w-6 items-center justify-center rounded-full bg-warning-soft px-2 text-caption text-warning-text tabular-nums">
+                      <span aria-hidden="true">{warning}</span>
+                      <span className="sr-only">{warningLabel}</span>
+                    </span>
+                  ) : null}
                   {count !== null && <span className="text-caption text-text-muted tabular-nums">{count}</span>}
                 </span>
               </button>
