@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useParams } from 'react-router';
 import { Check, CircleAlert, LoaderCircle, Plus, RefreshCw, ScrollText, Send } from 'lucide-react';
 import { useReportSessionWork } from '../auth/sessionWork';
@@ -16,8 +16,9 @@ import {
   ProgressBar,
   TABLET_LG_QUERY,
   Tabs,
+  ToastBridge,
   useMediaQuery,
-  useToast,
+  type ToastFunction,
 } from '../ui';
 import { MinutesEditor } from './MinutesEditor';
 import { SpeakerMappingSection } from './SpeakerMappingSection';
@@ -41,20 +42,9 @@ export function ReviewRoute() {
   return <ReviewScreen key={sessionId} sessionId={sessionId} />;
 }
 
-type ToastFn = ReturnType<typeof useToast>;
-
-/** AppShell 안에서만 토스트를 쓸 수 있어, 바깥(검토 상태)으로 토스트 함수를 넘긴다 */
-function ToastBridge({ onReady }: { onReady: (toast: ToastFn) => void }) {
-  const toast = useToast();
-  useLayoutEffect(() => {
-    onReady(toast);
-  }, [onReady, toast]);
-  return null;
-}
-
 function ReviewScreen({ sessionId }: { sessionId: string }) {
-  const toastRef = useRef<ToastFn | null>(null);
-  const connectToast = useCallback((toast: ToastFn) => {
+  const toastRef = useRef<ToastFunction | null>(null);
+  const connectToast = useCallback((toast: ToastFunction) => {
     toastRef.current = toast;
   }, []);
   const wide = useMediaQuery(TABLET_LG_QUERY);

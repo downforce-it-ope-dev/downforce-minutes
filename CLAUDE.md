@@ -85,7 +85,8 @@
   - `AppShell`: `fillHeight`(태블릿에서 본문 높이를 화면에 맞추고 영역 안만 스크롤, `"tablet-lg"`면 큰 태블릿만), `toastPlacement="top"`(아래쪽에 큰 동작 버튼이 있는 화면), `focusActions`(집중 모드 상단 바 오른쪽).
   - MTG-04에서 추가한 부품: `TextArea`(내용만큼 늘어나는 여러 줄 입력), `ChipRadioGroup`(칩 하나 고르기), `Tabs`, `TABLET_LG_QUERY`.
 - **회의 진행 흐름 (R5)**
-  - 새 회의(`/meetings/new`)·회의 녹음·회의 처리·회의록 검토(`/meetings/:sessionId/review`)는 리뉴얼 라우트이고 모두 집중 모드다. 회의 결과(`/complete`)는 아직 기존 `App`이 그린다.
+  - 새 회의(`/meetings/new`)·회의 녹음·회의 처리·회의록 검토·회의 결과(`/meetings/:sessionId/complete`)는 모두 리뉴얼 라우트이고 집중 모드다(뒤로 가기 → 홈 또는 회의록 목록).
+  - 결과 로직은 `src/complete/useCompleteSession.ts`(기존 처리 그대로, Slack 알림 채널은 보이지 않음). 화면 상태를 `AppShell` 바깥에 둘 때 토스트는 `ToastBridge`로 넘긴다.
   - 검토 로직은 `src/review/useReviewSession.ts`(기존 처리 그대로, 화자 매핑은 칩을 누르면 0.3초 뒤 묶어 저장). 집중 모드에서 상단 바에 둘 것은 `AppShell`의 `focusActions`로 넘긴다.
   - 처리 로직은 `src/processing/useProcessingSession.ts`(기존 처리 그대로). 처리 화면은 녹음 화면이 남긴 같은 탭 저장소에서 회의 제목을 읽는다.
   - 새 회의가 만든 녹음 세션은 `src/meeting/recordingSessionStore.ts`(브라우저 탭 저장소 + 메모리)로 녹음 화면에 넘긴다.

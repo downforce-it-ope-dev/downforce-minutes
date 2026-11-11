@@ -25,7 +25,6 @@ const LEGACY_CSS_FILES = new Set([
   'src/styles/pages/meetings.css',
   'src/styles/pages/participants.css',
   'src/styles/pages/settings.css',
-  'src/styles/pages/share.css',
 ]);
 const TAILWIND_ENTRY = 'src/tailwind.css';
 

@@ -542,7 +542,8 @@ export function useReviewSession(sessionId: string, events: ReviewEvents) {
       }
       confirmed = true;
       confirmAttempt.current = null;
-      await publishSession(sessionId, confirmedVersion, createIdempotencyKey(), current.participantIds, config.data?.notification?.enabled === true);
+      // Slack 알림은 폐기했다(D-11, #30): 알림은 켜지 않는다
+      await publishSession(sessionId, confirmedVersion, createIdempotencyKey(), current.participantIds, false);
       navigate(`/meetings/${encodeURIComponent(sessionId)}/complete`, { replace: true });
     } catch (error) {
       // 확정됐거나 결과가 불명확하면 결과 화면에서 상태를 확인한다

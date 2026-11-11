@@ -10,8 +10,6 @@ import {
 } from './participantsApi';
 import './tailwind.css';
 import { Link, NavLink, Route, Routes } from 'react-router';
-import { CompletePage } from './CompletePage';
-import { restoreSlackWebhookSettings } from './slackSettingsApi';
 import { restoreEmailSettings } from './emailSettingsApi';
 import { AsyncState } from './components/async-state/AsyncState';
 import { normalizeApiError } from './lib/api/normalizeApiError';
@@ -337,10 +335,9 @@ function BottomNavigation() {
 
 export function App() {
   useEffect(() => {
-    void restoreSlackWebhookSettings().catch(() => undefined);
     void restoreEmailSettings().catch(() => undefined);
   }, []);
-  // 녹음(MTG-02, #27)·처리(MTG-03, #28)·검토(MTG-04, #29) 화면은 리뉴얼 라우트로 옮겼다. 이탈 경고·세션 유지는 그 화면이 맡는다
+  // 녹음(MTG-02, #27)·처리(MTG-03, #28)·검토(MTG-04, #29)·결과(MTG-05, #30) 화면은 리뉴얼 라우트로 옮겼다. 앱 시작 시 Slack 설정 복구는 없앴다(D-11). 이탈 경고·세션 유지는 그 화면이 맡는다
   // 문서 연결 확인(CMN-04, #19) 중·실패 화면은 메뉴를 숨기는 새 화면이라, 그동안 기존 헤더·하단 탭을 숨긴다
   const gateBlocking = useGateBlocking();
 
@@ -359,7 +356,6 @@ export function App() {
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/meetings" element={<MeetingsPage />} />
           <Route path="/meetings/:documentId" element={<MeetingDetailPage />} />
-          <Route path="/meetings/:sessionId/complete" element={<CompletePage />} />
           <Route path="/participants" element={<DocumentGate><ParticipantsPage /></DocumentGate>} />
           <Route path="/settings/participants" element={<DocumentGate><ParticipantsPage /></DocumentGate>} />
         </Routes>
