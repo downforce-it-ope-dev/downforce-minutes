@@ -98,7 +98,8 @@ describe('회의 처리 (MTG-03) · 처리 중', () => {
     renderPage();
     expect(await screen.findByRole('timer')).toBeTruthy();
     await waitFor(() => expect(screen.queryByRole('timer')).toBeNull(), { timeout: 2_500 });
-    expect(screen.getByText('처리 상태를 새로고침하지 못했습니다. 자동으로 다시 확인합니다.')).toBeTruthy();
+    // 토스트는 화면이 바뀐 뒤 조금 늦게 뜬다
+    expect(await screen.findByText('처리 상태를 새로고침하지 못했습니다. 자동으로 다시 확인합니다.', undefined, { timeout: 2_000 })).toBeTruthy();
   });
 
   it('화자 분석 100%는 회의록 생성 단계로 본다', async () => {
@@ -163,7 +164,7 @@ describe('회의 처리 (MTG-03) · 조회 실패', () => {
     vi.stubGlobal('fetch', withHealthyBackend(fetchMock));
     renderPage();
     expect(await screen.findByRole('heading', { name: '처리 상태를 불러오지 못했습니다' })).toBeTruthy();
-    expect(screen.getByText('연결을 확인해 주세요. 처리 상태는 자동으로 다시 확인합니다.')).toBeTruthy();
+    expect(await screen.findByText('연결을 확인해 주세요. 처리 상태는 자동으로 다시 확인합니다.', undefined, { timeout: 2_000 })).toBeTruthy();
     expect(document.body.textContent).not.toContain('private proxy diagnostic');
     available = true;
     fireEvent.click(screen.getByRole('button', { name: '다시 시도' }));
