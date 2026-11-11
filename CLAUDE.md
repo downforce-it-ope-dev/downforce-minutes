@@ -1,5 +1,12 @@
 # 프로젝트 지침
 
+## 응답 언어: 반드시 한국어 (필수)
+
+- 사용자에게 보이는 모든 글은 **반드시 한국어 경어체**로 쓴다. 결과 보고뿐 아니라 작업 중 진행 안내, 질문, 오류 설명, 요약까지 예외 없이 한국어다.
+- 영어로 답하지 않는다. 사용자가 영어로 쓰거나 영어 자료를 다루더라도 답은 한국어로 한다.
+- 코드, 명령어, 파일 경로, 커밋 메시지, 고유 이름(API·라이브러리 이름 등)은 원래 표기를 그대로 둔다.
+- 긴 작업 뒤 보고나 대화 요약 직후처럼 언어가 바뀌기 쉬운 순간에도 첫 문장부터 한국어로 쓴다.
+
 ## 스타일 방식: 신규·리뉴얼 화면은 Tailwind CSS로만 작성 (필수)
 
 화면 전체를 한 번에 바꾸지 않는다. 신규 화면을 만들거나 기존 화면을 리뉴얼할 때 그 화면을 Tailwind CSS로 작성한다. 근거와 세부 원칙은 [스타일 방식 검토](docs/renewal/스타일_전환_검토.md)를 따른다.
@@ -80,6 +87,17 @@
   - 공통 부품은 `frontend/src/ui/`에 있고 `../ui`(index)에서 불러온다. 같은 부품을 화면에 새로 만들지 않는다.
   - 리뉴얼 화면 라우트는 `frontend/src/RootRoutes.tsx`에 추가한다. 여기 라우트는 기존 `App` 레이아웃(헤더·하단 탭 바·기존 CSS) 밖에서 그려진다.
   - 부품 확인 화면 `/__ui`는 개발 서버와 Vercel Preview에서만 열린다(운영 빌드 제외). 새 부품을 만들면 여기에도 추가한다.
+  - R5에서 추가한 부품: `SelectField`(선택 상자), `Checkbox`, `FilterChips`(보기 칩), `ChoiceGroup`(버튼으로 하나 고르기), `DateField`(큰 달력 대화상자), `RoundActionButton`(원형 녹음 버튼), `useMediaQuery`·`TABLET_QUERY`(크기마다 다른 방식으로 그릴 때만). `TextField`의 `inputSize="lg"`는 글자만 키우고 높이는 같다.
+  - MTG-03에서 추가한 부품: `ButtonAnchor`(버튼 모양 앱 밖 링크, 파일 다운로드). 앱 안 이동은 `ButtonLink`.
+  - `AppShell`: `fillHeight`(태블릿에서 본문 높이를 화면에 맞추고 영역 안만 스크롤, `"tablet-lg"`면 큰 태블릿만), `toastPlacement="top"`(아래쪽에 큰 동작 버튼이 있는 화면), `focusActions`(집중 모드 상단 바 오른쪽).
+  - MTG-04에서 추가한 부품: `TextArea`(내용만큼 늘어나는 여러 줄 입력), `ChipRadioGroup`(칩 하나 고르기), `Tabs`, `TABLET_LG_QUERY`.
+- **회의 진행 흐름 (R5)**
+  - 새 회의(`/meetings/new`)·회의 녹음·회의 처리·회의록 검토·회의 결과(`/meetings/:sessionId/complete`)는 모두 리뉴얼 라우트이고 집중 모드다(뒤로 가기 → 홈 또는 회의록 목록).
+  - 결과 로직은 `src/complete/useCompleteSession.ts`(기존 처리 그대로, Slack 알림 채널은 보이지 않음). 화면 상태를 `AppShell` 바깥에 둘 때 토스트는 `ToastBridge`로 넘긴다.
+  - 검토 로직은 `src/review/useReviewSession.ts`(기존 처리 그대로, 화자 매핑은 칩을 누르면 0.3초 뒤 묶어 저장). 집중 모드에서 상단 바에 둘 것은 `AppShell`의 `focusActions`로 넘긴다.
+  - 처리 로직은 `src/processing/useProcessingSession.ts`(기존 처리 그대로). 처리 화면은 녹음 화면이 남긴 같은 탭 저장소에서 회의 제목을 읽는다.
+  - 새 회의가 만든 녹음 세션은 `src/meeting/recordingSessionStore.ts`(브라우저 탭 저장소 + 메모리)로 녹음 화면에 넘긴다.
+  - 녹음 로직은 `src/recording/useRecordingSession.ts`(기존 처리 그대로). 녹음 화면 진단 패널은 Preview·개발 서버에서 `?debug`로 연다.
 - **로그인과 인증 목업 (#15)**
   - `/login`·`/__ui`를 뺀 모든 경로는 `RequireAuth`(`src/auth/AuthGate.tsx`)를 거친다. 로그인하지 않았으면 로그인 화면으로 보낸다.
   - 개발 서버와 Vercel Preview는 인증 목업(`src/auth/authMock.ts`)을 쓴다. 메일을 보내지 않고, 인증 코드는 `123456`이다. Backend가 Preview 출처를 허용하면 Vercel Preview 환경 변수 `AUTH_MOCK=0`으로 끈다. Vercel Production에서는 값과 관계없이 꺼진다.
@@ -130,3 +148,9 @@
 - **리뉴얼 완료 시 삭제**
   - 화면을 리뉴얼하면 그 화면 전용 파일(`frontend/src/styles/pages/*.css`)을 같은 작업에서 삭제한다.
   - 공통 파일(`base`·`layout`·`components.css`)의 규칙은 그 클래스를 쓰는 기존 화면이 하나도 없을 때 삭제한다.
+- **기존 화면을 리뉴얼 라우트로 옮길 때 함께 고칠 곳 (MTG-02·03에서 정리)**
+  - 라우트: `RootRoutes.tsx`에 추가하고, `App.tsx`의 `<Route>`와 `legacyRoutes.ts`의 `LEGACY_PATHS`에서 지운다. `App.tsx`에서 그 화면만 쓰던 상태·import도 지운다.
+  - 기존 CSS: 화면 전용 `styles/pages/*.css` 파일을 지우고, `styles/index.css`의 `@import`와 `scripts/check-styles.mjs`의 `LEGACY_CSS_FILES` 목록에서도 지운다.
+  - 기존 화면 파일과 테스트: 기존 `*.tsx`·`*.test.tsx`를 지우고, 테스트는 새 화면 폴더로 옮긴다. `App.test.tsx`에 그 경로를 그리는 테스트가 있으면 함께 옮긴다.
+  - e2e: `e2e/fixtures.ts`의 `screens`에서 그 화면(SCR-xxx)을 빼고, 새 화면 e2e(axe·가로 넘침, 4개 크기)를 `e2e/<화면>.spec.ts`로 만든다.
+  - 확인: 기존 화면 계산 스타일 비교(`compare-legacy-styles.mjs`)를 고치기 전후로 돌린다. 차이는 뺀 화면(SCR-xxx)만 있어야 한다.

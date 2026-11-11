@@ -60,14 +60,10 @@ export function requestCapture(): CapturedRequests {
   return { meetingCreates: 0, confirmBodies: [], publishBodies: [], retryDeliveryIds: [] };
 }
 
+// SCR-002 새 회의(#26)·SCR-003 회의 녹음(#27)·SCR-005 회의 처리(#28)·SCR-006 회의록 검토(#29)·SCR-008 회의 결과(#30)는 리뉴얼되어 기존 화면 검사에서 뺐다.
+// 검사는 e2e/new-meeting.spec.ts·recording.spec.ts·processing.spec.ts·review.spec.ts·complete.spec.ts. SCR-007 공유는 쓰지 않는 화면이라 뺐다(P-3)
 export const screens: Screen[] = [
   { id: 'SCR-001', route: '/', heading: /회의를 시작할까요\?/, headingLevel: 2, contentSelector: '.home-content', paddingSelector: '.home-page' },
-  { id: 'SCR-002', route: '/meetings/new', heading: /새 회의/, contentSelector: '.new-meeting-page', paddingSelector: '.new-meeting-page' },
-  { id: 'SCR-003', route: `/meetings/${sessionId}/recording`, heading: new RegExp(longKoreanTitle), contentSelector: '.recording-page', paddingSelector: '.recording-page' },
-  { id: 'SCR-005', route: `/meetings/${sessionId}/processing`, heading: /회의 처리/, contentSelector: '.processing-page', paddingSelector: '.processing-page', apiState: 'processing' },
-  { id: 'SCR-006', route: `/meetings/${sessionId}/review`, heading: /회의록 검토/, contentSelector: '.review-speaker-page', paddingSelector: '.review-speaker-page', apiState: 'review' },
-  { id: 'SCR-007', route: `/meetings/${sessionId}/share`, heading: /회의록 공유/, contentSelector: '.share-page', paddingSelector: '.share-page', apiState: 'review' },
-  { id: 'SCR-008', route: `/meetings/${sessionId}/complete`, heading: /회의 결과/, contentSelector: '.share-page.complete-page', paddingSelector: '.complete-page', apiState: 'complete' },
   { id: 'SCR-009', route: '/meetings', heading: /회의 기록/, contentSelector: '.meetings-page', paddingSelector: '.meetings-page' },
   { id: 'SCR-010', route: '/meetings/fixture-document', heading: new RegExp(longKoreanTitle), contentSelector: '.meeting-detail-page', paddingSelector: '.meeting-detail-page' },
   { id: 'SCR-011', route: '/settings', heading: /설정/, contentSelector: '.settings-page', paddingSelector: '.settings-page' },

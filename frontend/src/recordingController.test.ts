@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { RecordingController, type MediaRecorderAdapter, type RecorderLike } from './recordingController';
+import { INPUT_STALL_MS, RecordingController, type MediaRecorderAdapter, type RecorderLike } from './recordingController';
 
 const acceptedMimeTypes = ['audio/webm;codecs=opus', 'audio/mp4'];
 const uploadPolicy = { chunkDurationSeconds: 15, acceptedMimeTypes };
@@ -8,7 +8,7 @@ function createFixture(options: {
   supported?: boolean;
   supportedTypes?: string[];
   getUserMedia?: () => Promise<{ getTracks: () => Array<{ stop: () => void }> }>;
-  monitorInput?: (stream: { getTracks: () => Array<{ stop: () => void }> }, onLevel: (level: number) => void) => () => void;
+  monitorInput?: (stream: { getTracks: () => Array<{ stop: () => void }> }, onLevel: (level: number, signal?: { frozen?: boolean }) => void) => () => void;
   constructionError?: Error;
   recorderStartError?: Error;
   recorderStopError?: Error;
@@ -95,6 +95,40 @@ describe('RecordingController', () => {
     expect(fixture.adapter.getUserMedia).toHaveBeenCalledTimes(1);
     expect(monitorInput).toHaveBeenCalledTimes(2);
     expect(firstCleanup).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports a stalled input only after the signal stays frozen for INPUT_STALL_MS and clears it when sound returns', async () => {
+    let emit: ((level: number, signal?: { frozen?: boolean }) => void) | undefined;
+    const fixture = createFixture({ monitorInput: (_stream, onLevel) => { emit = onLevel; return vi.fn(); } });
+    await fixture.controller.prepareMicrophone();
+    emit?.(0.3);
+    expect(fixture.controller.getSnapshot()).toMatchObject({ microphoneInputDetected: true, microphoneInputStalled: false });
+
+    emit?.(0, { frozen: true });
+    fixture.advanceTo(INPUT_STALL_MS - 1);
+    emit?.(0, { frozen: true });
+    expect(fixture.controller.getSnapshot().microphoneInputStalled).toBe(false);
+    fixture.advanceTo(INPUT_STALL_MS);
+    emit?.(0, { frozen: true });
+    expect(fixture.controller.getSnapshot().microphoneInputStalled).toBe(true);
+
+    emit?.(0.2);
+    expect(fixture.controller.getSnapshot().microphoneInputStalled).toBe(false);
+  });
+
+  it('reopens the microphone on retry when the input was stalled', async () => {
+    let emit: ((level: number, signal?: { frozen?: boolean }) => void) | undefined;
+    const fixture = createFixture({ monitorInput: (_stream, onLevel) => { emit = onLevel; return vi.fn(); } });
+    await fixture.controller.prepareMicrophone();
+    emit?.(0, { frozen: true });
+    fixture.advanceTo(INPUT_STALL_MS);
+    emit?.(0, { frozen: true });
+
+    await fixture.controller.prepareMicrophone();
+
+    expect(fixture.track.stop).toHaveBeenCalledTimes(1);
+    expect(fixture.adapter.getUserMedia).toHaveBeenCalledTimes(2);
+    expect(fixture.controller.getSnapshot().microphoneInputStalled).toBe(false);
   });
 
   it('releases the microphone stream if input monitoring cannot be initialized', async () => {

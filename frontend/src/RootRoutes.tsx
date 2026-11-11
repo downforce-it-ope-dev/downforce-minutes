@@ -8,7 +8,12 @@ import { DocumentGate } from './documentGate/DocumentGate';
 import { DocumentSetupPage } from './documentSetup/DocumentSetupPage';
 import { HomePage } from './home/HomePage';
 import { LEGACY_PATHS } from './legacyRoutes';
+import { NewMeetingPage } from './newMeeting/NewMeetingPage';
 import { NotFoundPage } from './notFound/NotFoundPage';
+import { ProcessingRoute } from './processing/ProcessingPage';
+import { RecordingRoute } from './recording/RecordingPage';
+import { ReviewRoute } from './review/ReviewPage';
+import { CompleteRoute } from './complete/CompletePage';
 import { ServerRecoveryOverlay } from './recovery/ServerRecoveryOverlay';
 import { ToastProvider } from './ui';
 
@@ -62,6 +67,53 @@ function AppRoutes() {
             <DocumentGate>
               <HomePage />
             </DocumentGate>
+          </RequireAuth>
+        }
+      />
+      {/* 새 회의 (MTG-01, #26). 회의 생성 후 녹음 화면(기존 App)으로 세션을 넘긴다 */}
+      <Route
+        path="/meetings/new"
+        element={
+          <RequireAuth>
+            <DocumentGate>
+              <NewMeetingPage />
+            </DocumentGate>
+          </RequireAuth>
+        }
+      />
+      {/* 회의 녹음 (MTG-02, #27). 집중 모드 */}
+      <Route
+        path="/meetings/:sessionId/recording"
+        element={
+          <RequireAuth>
+            <RecordingRoute />
+          </RequireAuth>
+        }
+      />
+      {/* 회의 처리 (MTG-03, #28). 집중 모드. 처리 완료(REVIEW)면 검토 화면(기존 App)으로 간다 */}
+      <Route
+        path="/meetings/:sessionId/processing"
+        element={
+          <RequireAuth>
+            <ProcessingRoute />
+          </RequireAuth>
+        }
+      />
+      {/* 회의록 검토 (MTG-04, #29). 집중 모드 */}
+      <Route
+        path="/meetings/:sessionId/review"
+        element={
+          <RequireAuth>
+            <ReviewRoute />
+          </RequireAuth>
+        }
+      />
+      {/* 회의 결과 (MTG-05, #30). 집중 모드 */}
+      <Route
+        path="/meetings/:sessionId/complete"
+        element={
+          <RequireAuth>
+            <CompleteRoute />
           </RequireAuth>
         }
       />

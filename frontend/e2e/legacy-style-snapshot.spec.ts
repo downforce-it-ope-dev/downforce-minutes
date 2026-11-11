@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { expect, test } from '@playwright/test';
-import { installSyntheticApi, longKoreanTitle, screens, sessionId } from './fixtures';
+import { installSyntheticApi, screens } from './fixtures';
 
 /*
  * 기존 화면 계산 스타일 수집 (docs/renewal/스타일_전환_검토.md 4.2, 5.1).
@@ -28,12 +28,6 @@ test('기존 화면 계산 스타일 수집', async ({ page }) => {
   for (const screen of screens.filter(({ id }) => id !== 'SCR-001')) {
     for (const size of sizes) {
       await page.setViewportSize(size);
-      if (screen.id === 'SCR-003') {
-        await page.addInitScript((session) => sessionStorage.setItem('meeting-automation.recording-session', JSON.stringify(session)), {
-          sessionId, version: 3, status: 'CREATED', title: longKoreanTitle,
-          uploadPolicy: { chunkDurationSeconds: 30, maxChunkBytes: 1_000_000, acceptedMimeTypes: ['audio/webm'] },
-        });
-      }
       await page.unrouteAll({ behavior: 'ignoreErrors' });
       await installSyntheticApi(page, screen);
       await page.goto(screen.route);

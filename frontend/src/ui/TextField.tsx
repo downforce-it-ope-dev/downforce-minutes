@@ -18,6 +18,8 @@ export interface TextFieldProps extends Omit<InputHTMLAttributes<HTMLInputElemen
   shape?: 'default' | 'pill';
   /** 이름표를 화면에서 숨기고 화면 읽기 프로그램에만 남긴다. 화면에 다른 제목이 이름표 역할을 할 때만 쓴다 */
   hideLabel?: boolean;
+  /** 높이는 48(태블릿 52)로 같다. md: 글자 16 / lg: 글자 title — 화면에서 가장 중요한 한 줄 입력(예: 회의 제목). 옆 입력과 높이를 맞춘다 */
+  inputSize?: 'md' | 'lg';
   /** 입력란 오른쪽에 붙일 요소(입력란과 세로 가운데 정렬). 예: 로그인 화살표 버튼 */
   trailing?: ReactNode;
   ref?: Ref<HTMLInputElement>;
@@ -36,6 +38,7 @@ export function TextField({
   shape = 'default',
   hideLabel = false,
   trailing,
+  inputSize = 'md',
   id,
   className,
   'aria-describedby': describedBy,
@@ -66,7 +69,8 @@ export function TextField({
           aria-invalid={isInvalid || undefined}
           aria-describedby={describedByIds}
           className={cn(
-            'h-12 tablet:h-13 w-full border bg-bg text-body text-text placeholder:text-text-muted',
+            'w-full border bg-bg text-text placeholder:text-text-muted',
+            'h-12 tablet:h-13', inputSize === 'lg' ? 'text-title' : 'text-body',
             'disabled:cursor-not-allowed disabled:bg-neutral-100 disabled:text-neutral-500',
             shape === 'pill' ? 'rounded-full px-5 shadow-card' : 'rounded-md px-3.5',
             icon && (shape === 'pill' ? 'pl-14' : 'pl-12'),

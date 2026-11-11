@@ -6,7 +6,7 @@ import { Icon } from '../Icon';
 import { IconButton } from '../IconButton';
 import { Logo } from '../art/Logo';
 import { LogoSymbol } from '../art/LogoSymbol';
-import { ToastProvider } from '../Toast';
+import { ToastProvider, type ToastPlacement } from '../Toast';
 import { AppCanvas } from './AppCanvas';
 
 interface NavEntry {
@@ -33,12 +33,21 @@ export interface AppShellProps {
   /** 상세 화면의 뒤로 가기. to가 없으면 브라우저 뒤로 가기 */
   /** 뒤로 가기. onClick이 있으면 그것만 한다(같은 경로 안에서 화면 상태를 되돌릴 때) */
   back?: { to?: string; label?: string; onClick?: () => void };
-  /** 상단 바 오른쪽 (문서 연결 상태 칩, 새 회의 버튼 등). 집중 모드에서는 숨긴다 */
+  /** 상단 바 오른쪽 (문서 연결 상태 칩, 새 회의 버튼 등). 집중 모드에서는 숨기고 focusActions를 쓴다 */
   actions?: ReactNode;
   /** 집중 모드 (CMN-01-F03): 메뉴를 숨기고 상단 바에는 제목과 뒤로 가기만 둔다 */
   focus?: boolean;
   /** 사이드바 아래 계정 영역 (HOME 묶음에서 채운다, CMN-01-F05) */
   account?: ReactNode;
+  /**
+   * 본문 높이를 화면에 맞춘다. 화면 안 영역(예: 참석자 목록)이 따로 스크롤할 때 쓴다. 낮은 화면(short)은 페이지 스크롤.
+   * true: 태블릿 이상 / 'tablet-lg': 큰 태블릿만 (그보다 작으면 페이지 스크롤, 예: 검토 화면 2단)
+   */
+  fillHeight?: boolean | 'tablet-lg';
+  /** 집중 모드에서도 상단 바 오른쪽에 둘 것 (예: 검토 화면의 저장 상태·전사 원문). 메뉴성 동작은 넣지 않는다 */
+  focusActions?: ReactNode;
+  /** 토스트 위치. 기본: 집중 모드는 화면 아래, 그 밖은 탭 바 위. 아래쪽에 큰 동작 버튼이 있으면 top */
+  toastPlacement?: ToastPlacement;
   children: ReactNode;
 }
 
@@ -49,10 +58,10 @@ export interface AppShellProps {
  * - tablet-lg(960 이상): 왼쪽 사이드바 240(글자 로고 + Minutes, 아이콘·이름 가로, 아래 계정)
  * - 메뉴와 상단 바는 고정이고 본문만 스크롤한다. short(높이 560 이하)에서는 상단 바를 줄인다
  */
-export function AppShell({ title, hideTitle = false, back, actions, focus = false, account, children }: AppShellProps) {
+export function AppShell({ title, hideTitle = false, back, actions, focus = false, account, fillHeight = false, toastPlacement, focusActions, children }: AppShellProps) {
   return (
     <AppCanvas>
-      <ToastProvider placement={focus ? 'base' : 'tabbar'}>
+      <ToastProvider placement={toastPlacement ?? (focus ? 'base' : 'tabbar')}>
         <a
           href="#main-content"
           className="sr-only z-50 rounded-md bg-bg px-4 py-3 text-label shadow-overlay focus:not-sr-only focus:fixed focus:top-4 focus:left-4"
@@ -61,10 +70,18 @@ export function AppShell({ title, hideTitle = false, back, actions, focus = fals
         </a>
         {!focus && <MainNav account={account} />}
         <div className={cn('flex h-dvh flex-col', !focus && 'tablet:pl-rail tablet-lg:pl-sidebar')}>
-          <TopBar title={title} hideTitle={hideTitle} back={back} actions={focus ? undefined : actions} />
+          <TopBar title={title} hideTitle={hideTitle} back={back} actions={focus ? focusActions : actions} />
           {/* 본문만 스크롤하므로, 안에 누를 요소가 없어도 키보드로 스크롤할 수 있게 초점을 받는다 */}
           <main id="main-content" tabIndex={0} aria-label="본문" className="min-h-0 flex-1 overflow-y-auto">
-            <div className="mx-auto flex min-h-full w-full max-w-content flex-col px-4 pt-2 pb-8 tablet:px-6 tablet-lg:px-8 short:pb-4">{children}</div>
+            <div
+              className={cn(
+                'mx-auto flex min-h-full w-full max-w-content flex-col px-4 pt-2 pb-8 tablet:px-6 tablet-lg:px-8 short:pb-4',
+                fillHeight === true && 'tablet:h-full tablet:pb-4 short:h-auto',
+                fillHeight === 'tablet-lg' && 'tablet-lg:h-full tablet-lg:pb-4 short:h-auto',
+              )}
+            >
+              {children}
+            </div>
           </main>
           {/* 휴대폰 하단 탭 바 자리 */}
           {!focus && <div className="h-16 shrink-0 pb-safe tablet:hidden" aria-hidden="true" />}

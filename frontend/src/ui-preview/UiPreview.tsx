@@ -3,8 +3,12 @@ import { Link, useSearchParams } from 'react-router';
 import {
   ArrowRight,
   Bell,
+  Download,
+  CircleStop,
+  FileText,
   Mail,
   Mic,
+  Pause,
   Pencil,
   RefreshCw,
   Trash2,
@@ -19,6 +23,7 @@ import {
   LeaveConfirmDialog,
   Banner,
   Button,
+  ButtonAnchor,
   Card,
   cn,
   Dialog,
@@ -28,6 +33,16 @@ import {
   ServerRecoveryIllustration,
   MailCodeIllustration,
   OtpInput,
+  SelectField,
+  Checkbox,
+  FilterChips,
+  RoundActionButton,
+  TextArea,
+  ChipRadioGroup,
+  Tabs,
+  ChoiceGroup,
+  DateField,
+  toDateValue,
   Pill,
   ProgressBar,
   RecordToMinutesIllustration,
@@ -114,6 +129,9 @@ function ComponentsView() {
         <IconButtonsSection />
         <InputsSection />
         <OtpSection />
+        <ChoiceSection />
+        <RecordingButtonSection />
+        <ReviewPartsSection />
         <StatusSection />
         <SurfacesSection />
         <OverlaySection />
@@ -153,6 +171,11 @@ function ButtonsSection() {
           코드 다시 받기 (52초)
         </Button>
       </Row>
+      <Row label="앱 밖 링크 (ButtonAnchor, 파일 다운로드)">
+        <ButtonAnchor href="#" variant="secondary" icon={Download} download>
+          오디오 다운로드
+        </ButtonAnchor>
+      </Row>
       <Row label="대표 동작 (hero, 휴대폰 56 · 태블릿 72)">
         <Button variant="hero" icon={Mic}>
           새 회의
@@ -183,7 +206,106 @@ function InputsSection() {
         <TextField label="회사 이메일 (오류)" type="email" defaultValue="meet@gmail.com" invalid />
         <TextField label="회사 이메일 (알약형)" type="email" shape="pill" icon={Mail} placeholder="name@miinit.com" />
         <TextField label="비활성" disabled defaultValue="수정할 수 없음" />
+        <SelectField label="회의록 템플릿" defaultValue="default.md">
+          <option value="default.md">기본 회의록</option>
+          <option value="project.md">프로젝트 회의</option>
+        </SelectField>
+        <SelectField label="선택 상자 (오류)" invalid defaultValue="">
+          <option value="">선택 안 함</option>
+        </SelectField>
       </div>
+    </Section>
+  );
+}
+
+function ReviewPartsSection() {
+  const [speaker, setSpeaker] = useState('p1');
+  const [tab, setTab] = useState<'mapping' | 'transcript'>('mapping');
+  const [summary, setSummary] = useState('주간 진행 상황을 공유하고 다음 분기 우선순위를 정했다.');
+  return (
+    <Section title="검토 부품">
+      <div className="grid gap-6 tablet:grid-cols-2">
+        <TextArea label="회의 요약" value={summary} onChange={(event) => setSummary(event.target.value)} minRows={3} />
+        <TextArea label="빈 항목 (오류)" value="" onChange={() => {}} error="내용을 입력해 주세요." />
+      </div>
+      <Row label="참석자 칩 (하나 고르기)">
+        <ChipRadioGroup
+          label="화자 A 참석자"
+          value={speaker}
+          onChange={setSpeaker}
+          options={[
+            { value: 'p1', label: '홍길동' },
+            { value: 'p2', label: '김철수', hint: '· B', hintLabel: '화자 B로 지정됨' },
+            { value: '', label: '미지정' },
+          ]}
+        />
+      </Row>
+      <Tabs
+        label="검토 패널"
+        value={tab}
+        onChange={setTab}
+        items={[
+          { value: 'mapping', label: '화자 매핑', badge: 2, badgeLabel: '미지정 2명', content: <p className="p-4 text-body">화자 매핑 내용</p> },
+          { value: 'transcript', label: '전사 원문', content: <p className="p-4 text-body">전사 원문 내용</p> },
+        ]}
+      />
+    </Section>
+  );
+}
+
+function RecordingButtonSection() {
+  return (
+    <Section title="녹음 버튼">
+      <div className="flex flex-wrap items-start gap-8">
+        <RoundActionButton icon={Mic} label="녹음 시작" />
+        <RoundActionButton icon={Pause} label="일시정지" />
+        <RoundActionButton icon={CircleStop} label="회의 종료" tone="danger" size="md" />
+        <RoundActionButton icon={Mic} label="비활성" disabled />
+      </div>
+    </Section>
+  );
+}
+
+function ChoiceSection() {
+  const [view, setView] = useState<'all' | 'selected'>('all');
+  const [checked, setChecked] = useState(true);
+  const [template, setTemplate] = useState<'default' | 'project'>('default');
+  const [date, setDate] = useState(() => toDateValue(new Date()));
+  return (
+    <Section title="선택 부품">
+      <div className="grid gap-6 tablet:grid-cols-2">
+        <DateField label="회의 날짜" value={date} onChange={setDate} />
+        <ChoiceGroup
+          label="회의록 템플릿"
+          value={template}
+          onChange={setTemplate}
+          options={[
+            { value: 'default', label: '기본 회의록', icon: FileText },
+            { value: 'project', label: '프로젝트 회의', icon: FileText },
+          ]}
+        />
+      </div>
+      <Row label="보기 필터 칩">
+        <FilterChips
+          label="보기"
+          value={view}
+          onChange={setView}
+          options={[
+            { value: 'all', label: '전체', count: 24 },
+            { value: 'selected', label: '선택됨', count: 3 },
+          ]}
+        />
+      </Row>
+      <Row label="체크 상자">
+        <label className="flex h-12 cursor-pointer items-center gap-3">
+          <Checkbox checked={checked} onChange={() => setChecked((value) => !value)} />
+          선택
+        </label>
+        <label className="flex h-12 items-center gap-3">
+          <Checkbox checked disabled onChange={() => {}} />
+          고정 선택
+        </label>
+      </Row>
     </Section>
   );
 }
