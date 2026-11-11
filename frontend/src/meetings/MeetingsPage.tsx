@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
-import { ArrowDownWideNarrow, ArrowUpNarrowWide, CalendarDays, ChevronRight, Mic, Plus, RefreshCw, RotateCcw, Search, X, type LucideIcon } from 'lucide-react';
+import { ArrowDownWideNarrow, ArrowUpNarrowWide, CalendarDays, ChevronRight, Mic, RefreshCw, RotateCcw, Search, X, type LucideIcon } from 'lucide-react';
 import { AccountButton, SidebarAccount } from '../auth/AccountMenu';
 import { filterMeetings, hasInvalidDateRange } from '../meetingFilters';
 import { listMeetings, type MeetingSummary } from '../meetingListApi';
@@ -26,6 +26,7 @@ import { ProcessingFailures } from './ProcessingFailures';
  * - 사용자 결정(2026-11-11): 검색은 위쪽 넓은 알약형 검색창(검색 사이트처럼), 기간·정렬·초기화는 그 옆 원형 아이콘 버튼.
  *   기간 버튼은 시작일·종료일 대화상자를 연다. 목록은 그 아래 전체 폭, 태블릿 이상은 회의명·일시·참석자를 한 줄로 늘어놓는다
  * - 조건은 주소(?q·from·to·sort)에 남겨 상세에서 돌아와도 유지한다(MIN-02 목록으로)
+ * - 새 회의는 화면 아래 가운데 고정(사용자 결정 2026-11-11, 기존 화면 위치 유지)
  * - 처리 실패 회의는 목록 위에 있을 때만 보인다(F07·F08)
  * - 오류·안내는 토스트, 입력 오류는 테두리만(S-13)
  */
@@ -65,27 +66,24 @@ export function MeetingsPage() {
     <AppShell
       title="회의록"
       account={<SidebarAccount />}
+      toastPlacement="top"
       actions={
-        <>
-          <span className="hidden tablet:flex">
-            <Button shape="pill" icon={Plus} onClick={() => navigate('/meetings/new')}>
-              새 회의
-            </Button>
-          </span>
-          <span className="tablet-lg:hidden">
-            <AccountButton />
-          </span>
-        </>
+        <span className="tablet-lg:hidden">
+          <AccountButton />
+        </span>
       }
     >
       <MeetingsBody />
-      {/* 휴대폰: 새 회의를 탭 바 위에 고정 (낮은 화면은 본문 끝) */}
-      <div className="h-20 tablet:hidden short:hidden" aria-hidden="true" />
-      <div className="fixed inset-x-0 bottom-0 z-30 px-4 pb-safe tablet:hidden short:static short:mt-4 short:px-0 short:pb-0">
-        <div className="mb-20 short:mb-0">
-          <Button variant="hero" icon={Mic} className="w-full" onClick={() => navigate('/meetings/new')}>
-            새 회의
-          </Button>
+      {/* 새 회의: 화면 아래 가운데 고정(휴대폰은 탭 바 위). 목록 끝이 버튼에 가리지 않게 자리를 비운다. 낮은 화면은 본문 끝 */}
+      <div className="h-20 tablet:h-28 short:hidden" aria-hidden="true" />
+      {/* 바깥: 메뉴 폭만큼 비켜 본문 영역과 같은 가운데를 쓴다 */}
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 pb-safe tablet:pl-rail tablet-lg:pl-sidebar short:pointer-events-auto short:static short:mt-4 short:pb-0 short:pl-0">
+        <div className="flex justify-center px-4 tablet:px-6 short:px-0">
+          <div className="pointer-events-auto mb-20 w-full tablet:mb-6 tablet:max-w-form short:mb-0">
+            <Button variant="hero" icon={Mic} className="w-full" onClick={() => navigate('/meetings/new')}>
+              새 회의
+            </Button>
+          </div>
         </div>
       </div>
     </AppShell>

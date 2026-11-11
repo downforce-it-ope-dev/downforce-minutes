@@ -98,6 +98,13 @@ test('MIN-01: 위쪽 넓은 검색창 + 원형 버튼, 그 아래 전체 폭 목
   expect(Math.abs((await date.boundingBox())!.y - (await title.boundingBox())!.y)).toBeLessThanOrEqual(4);
   expect((await date.boundingBox())!.x).toBeGreaterThan((await title.boundingBox())!.x);
 
+  // 새 회의: 화면 아래 가운데 고정(상단 바에는 없다)
+  const create = (await page.getByRole('button', { name: '새 회의' }).boundingBox())!;
+  const main = (await page.locator('#main-content').boundingBox())!;
+  expect(Math.abs(create.x + create.width / 2 - (main.x + main.width / 2))).toBeLessThanOrEqual(1);
+  expect(create.y + create.height).toBeGreaterThan(820 - 40);
+  await expect(page.getByRole('banner').getByRole('button', { name: '새 회의' })).toHaveCount(0);
+
   await period.click();
   const dialog = page.getByRole('dialog', { name: '기간' });
   await expect(dialog.getByRole('button', { name: '시작일' })).toBeVisible();
