@@ -143,7 +143,8 @@ export function MinutesSectionPanel({ section, minutes, roster, disabled = false
   return (
     <section aria-label={title} className="flex flex-col gap-3 tablet:h-full">
       <SectionHead title={title} disabled={disabled} onAdd={() => setItems([...items, ''])} />
-      <div className="flex flex-col gap-3 tablet:min-h-0 tablet:flex-1 tablet:overflow-y-auto">
+      {/* 포커스 외곽선(2px + 간격 2px)이 스크롤 영역 가장자리에서 잘리지 않게 안쪽 여백을 두고, 같은 만큼 바깥으로 넓혀 위치는 그대로 둔다 */}
+      <div className="-m-1.5 flex flex-col gap-3 p-1.5 tablet:min-h-0 tablet:flex-1 tablet:overflow-y-auto">
         {items.length === 0 && <p className="py-6 text-center text-body text-text-muted">항목 없음</p>}
         {items.map((value, index) => (
           <div key={index} className="flex items-start gap-2">
@@ -177,7 +178,7 @@ function ActionItems({ minutes, roster, disabled, onChange }: { minutes: Structu
         disabled={disabled}
         onAdd={() => onChange({ ...minutes, actionItems: [...minutes.actionItems, { ownerParticipantId: null, task: '', dueDate: null }] })}
       />
-      <div className="flex flex-col gap-3 tablet:min-h-0 tablet:flex-1 tablet:overflow-y-auto">
+      <div className="-m-1.5 flex flex-col gap-3 p-1.5 tablet:min-h-0 tablet:flex-1 tablet:overflow-y-auto">
         {minutes.actionItems.length === 0 && <p className="py-6 text-center text-body text-text-muted">항목 없음</p>}
         {minutes.actionItems.map((action, index) => {
           const ownerKnown = action.ownerParticipantId === null || roster.some(({ id }) => id === action.ownerParticipantId);
