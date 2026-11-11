@@ -1,6 +1,6 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
-import { ArrowDownUp, CalendarDays, ChevronRight, Mic, Plus, RefreshCw, RotateCcw, Search, X } from 'lucide-react';
+import { ArrowDownWideNarrow, ArrowUpNarrowWide, CalendarDays, ChevronRight, Mic, Plus, RefreshCw, RotateCcw, Search, X, type LucideIcon } from 'lucide-react';
 import { AccountButton, SidebarAccount } from '../auth/AccountMenu';
 import { filterMeetings, hasInvalidDateRange } from '../meetingFilters';
 import { listMeetings, type MeetingSummary } from '../meetingListApi';
@@ -8,15 +8,12 @@ import {
   AppShell,
   Button,
   Card,
-  ChoiceGroup,
   cn,
   DateField,
   Dialog,
   Icon,
   IconButton,
-  TABLET_LG_QUERY,
   TextField,
-  useMediaQuery,
   useToast,
 } from '../ui';
 import { formatChipDate, formatMeetingAt, participantSummary } from './meetingFormat';
@@ -26,7 +23,8 @@ import { ProcessingFailures } from './ProcessingFailures';
 /*
  * MIN-01 회의록 목록 (GitHub #32, docs/renewal/화면기획/MIN-01_회의록목록.md).
  * - 검색(회의명·참석자)은 입력하는 즉시 화면 안에서 거른다. 서버 목록은 최대 100건(API-017)
- * - 기간·정렬: 큰 태블릿은 왼쪽 필터 단(280)에 늘 보이고, 그보다 작으면 "기간"·정렬 칩으로 접는다
+ * - 사용자 결정(2026-11-11): 검색은 위쪽 넓은 알약형 검색창(검색 사이트처럼), 기간·정렬·초기화는 그 옆 원형 아이콘 버튼.
+ *   기간 버튼은 시작일·종료일 대화상자를 연다. 목록은 그 아래 전체 폭, 태블릿 이상은 회의명·일시·참석자를 한 줄로 늘어놓는다
  * - 조건은 주소(?q·from·to·sort)에 남겨 상세에서 돌아와도 유지한다(MIN-02 목록으로)
  * - 처리 실패 회의는 목록 위에 있을 때만 보인다(F07·F08)
  * - 오류·안내는 토스트, 입력 오류는 테두리만(S-13)
@@ -40,11 +38,6 @@ export interface MeetingListFilters {
   to: string;
   sort: 'new' | 'old';
 }
-
-const SORT_OPTIONS = [
-  { value: 'new', label: '최신순' },
-  { value: 'old', label: '오래된순' },
-] as const;
 
 function useListFilters() {
   const [params, setParams] = useSearchParams();
@@ -72,7 +65,6 @@ export function MeetingsPage() {
     <AppShell
       title="회의록"
       account={<SidebarAccount />}
-      fillHeight="tablet-lg"
       actions={
         <>
           <span className="hidden tablet:flex">
@@ -106,7 +98,6 @@ function MeetingsBody() {
   const [load, setLoad] = useState<Load>({ status: 'loading' });
   const [attempt, setAttempt] = useState(0);
   const [periodOpen, setPeriodOpen] = useState(false);
-  const wide = useMediaQuery(TABLET_LG_QUERY);
 
   useEffect(() => {
     let live = true;
@@ -126,7 +117,10 @@ function MeetingsBody() {
   const invalidRange = hasInvalidDateRange(filters.from, filters.to);
   // 최대 100건이라 그릴 때마다 거르고 정렬해도 충분하다
   const visible = load.status === 'ready' ? sortMeetings(filterMeetings(load.data, filters), filters.sort) : [];
-  const filtered = Boolean(filters.query || filters.from || filters.to);
+  const hasPeriod = Boolean(filters.from || filters.to);
+  const filtered = Boolean(filters.query || hasPeriod);
+  const period = hasPeriod ? `${formatChipDate(filters.from)} ~ ${formatChipDate(filters.to)}` : '';
+  const newest = filters.sort === 'new';
 
   const setDate = (patch: { from?: string; to?: string }) => {
     const next = { from: patch.from ?? filters.from, to: patch.to ?? filters.to };
@@ -135,64 +129,47 @@ function MeetingsBody() {
   };
   const reset = () => update({ query: '', from: '', to: '' });
 
-  const searchField = (
-    <TextField
-      label="회의 검색"
-      hideLabel
-      type="search"
-      icon={Search}
-      placeholder="회의명 또는 참석자"
-      value={filters.query}
-      onChange={(event) => update({ query: event.target.value })}
-      trailing={filters.query && <IconButton icon={X} label="검색어 지우기" variant="surface" onClick={() => update({ query: '' })} />}
-    />
-  );
-  const dateFields = (
-    <>
-      <DateField label="시작일" value={filters.from} invalid={invalidRange} onChange={(from) => setDate({ from })} />
-      <DateField label="종료일" value={filters.to} invalid={invalidRange} onChange={(to) => setDate({ to })} />
-    </>
-  );
-  const periodLabel = filters.from || filters.to ? `${formatChipDate(filters.from)} ~ ${formatChipDate(filters.to)}` : '기간';
-
   return (
-    <div className="flex flex-col gap-4 tablet-lg:min-h-0 tablet-lg:flex-1 tablet-lg:flex-row tablet-lg:gap-6">
-      {wide ? (
-      /* 큰 태블릿: 왼쪽 필터 단(고정) */
-      <aside aria-label="검색 조건" className="flex w-70 shrink-0 flex-col gap-6">
-        {searchField}
-        <div className="flex flex-col gap-4">{dateFields}</div>
-        <ChoiceGroup label="정렬" options={SORT_OPTIONS} value={filters.sort} onChange={(sort) => update({ sort })} />
-        <Button variant="secondary" shape="pill" icon={RotateCcw} disabled={!filtered} onClick={reset}>
-          조건 초기화
-        </Button>
-      </aside>
-      ) : (
-      /* 그보다 작으면: 검색 + 기간·정렬 칩 */
-      <div className="flex flex-col gap-3">
-        {searchField}
-        <div className="flex flex-wrap gap-2">
-          <ChipButton icon={CalendarDays} selected={Boolean(filters.from || filters.to)} invalid={invalidRange} haspopup onClick={() => setPeriodOpen(true)}>
-            <span className="tabular-nums">{periodLabel}</span>
-          </ChipButton>
-          <ChipButton
-            icon={ArrowDownUp}
-            selected={filters.sort === 'old'}
-            label={`정렬: ${filters.sort === 'new' ? '최신순' : '오래된순'}`}
-            onClick={() => update({ sort: filters.sort === 'new' ? 'old' : 'new' })}
-          >
-            {filters.sort === 'new' ? '최신순' : '오래된순'}
-          </ChipButton>
+    <div className="flex flex-col gap-4 tablet:gap-6">
+      {/* 위쪽: 넓은 검색창 + 원형 버튼(기간·정렬·초기화) */}
+      <div role="search" aria-label="회의 검색 조건" className="flex items-center gap-2 tablet:gap-3">
+        <TextField
+          label="회의 검색"
+          hideLabel
+          type="search"
+          shape="pill"
+          icon={Search}
+          placeholder="회의명 또는 참석자"
+          value={filters.query}
+          onChange={(event) => update({ query: event.target.value })}
+          className="min-w-0 flex-1"
+          inside={filters.query && <IconButton icon={X} label="검색어 지우기" onClick={() => update({ query: '' })} />}
+        />
+        <div className="flex shrink-0 items-center gap-2 tablet:gap-3">
+          <RoundButton
+            icon={CalendarDays}
+            label={hasPeriod ? `기간 ${period}` : '기간'}
+            selected={hasPeriod}
+            invalid={invalidRange}
+            haspopup
+            onClick={() => setPeriodOpen(true)}
+          />
+          <RoundButton
+            icon={newest ? ArrowDownWideNarrow : ArrowUpNarrowWide}
+            label={`정렬: ${newest ? '최신순' : '오래된순'}`}
+            selected={!newest}
+            onClick={() => update({ sort: newest ? 'old' : 'new' })}
+          />
+          {filtered && <RoundButton icon={RotateCcw} label="조건 초기화" selected={false} onClick={reset} />}
         </div>
       </div>
-      )}
       <Dialog
-        open={periodOpen && !wide}
+        open={periodOpen}
         onOpenChange={setPeriodOpen}
         title="기간"
         footer={
           <>
-            <Button variant="secondary" shape="pill" disabled={!filters.from && !filters.to} onClick={() => update({ from: '', to: '' })}>
+            <Button variant="secondary" shape="pill" disabled={!hasPeriod} onClick={() => update({ from: '', to: '' })}>
               초기화
             </Button>
             <Button shape="pill" onClick={() => setPeriodOpen(false)}>
@@ -201,16 +178,13 @@ function MeetingsBody() {
           </>
         }
       >
-        <div className="flex flex-col gap-4">{dateFields}</div>
+        <div className="flex flex-col gap-4">
+          <DateField label="시작일" value={filters.from} invalid={invalidRange} onChange={(from) => setDate({ from })} />
+          <DateField label="종료일" value={filters.to} invalid={invalidRange} onChange={(to) => setDate({ to })} />
+        </div>
       </Dialog>
 
-      {/* 목록 단 (큰 태블릿은 따로 스크롤) */}
-      <section
-        aria-label="회의 목록"
-        className="tablet-lg:-m-1.5 tablet-lg:min-h-0 tablet-lg:flex-1 tablet-lg:overflow-y-auto tablet-lg:p-1.5"
-      >
-        {/* 안쪽 묶음: 영역 높이가 정해져도 항목이 줄어들지 않고 영역이 스크롤되게 한다 */}
-        <div className="flex flex-col gap-3">
+      <section aria-label="회의 목록" className="flex flex-col gap-3">
         <ProcessingFailures />
         {load.status === 'loading' && <ListSkeleton />}
         {load.status === 'error' && (
@@ -227,7 +201,7 @@ function MeetingsBody() {
         {load.status === 'ready' && load.data.length > 0 && (
           <>
             <p aria-live="polite" className="px-1 text-caption text-text-muted tabular-nums">
-              총 {visible.length}건
+              총 {visible.length}건{period && ` · ${period}`}
             </p>
             {visible.length === 0 ? (
               <Card className="flex flex-col items-center gap-4 py-10">
@@ -241,32 +215,46 @@ function MeetingsBody() {
             )}
           </>
         )}
-        </div>
       </section>
     </div>
   );
 }
 
-/** 2줄 목록 행 (태블릿 76 / 휴대폰 72). 행 전체가 상세 링크다 */
+/**
+ * 회의 목록. 행 전체가 상세 링크다.
+ * 휴대폰: 2줄 행 72(회의명 / 일시 · 참석자). 태블릿 이상: 한 줄 행 60에 회의명 | 일시 | 참석자를 가로로 늘어놓고 위에 열 이름을 둔다
+ */
 function MeetingRows({ meetings, listSearch }: { meetings: readonly MeetingSummary[]; listSearch: string }) {
   return (
     <Card as="div" padding="none" className="overflow-hidden">
+      {/* 열 이름 (보기용). 행마다 같은 순서라 화면 읽기 프로그램은 행 내용만 읽는다 */}
+      <div aria-hidden="true" className="hidden h-12 items-center gap-4 border-b border-border bg-bg-subtle px-5 text-caption text-text-muted tablet:flex">
+        <span className="min-w-0 flex-1">회의명</span>
+        <span className="w-36 shrink-0">일시</span>
+        <span className="w-48 shrink-0 tablet-lg:w-72">참석자</span>
+        <span className="w-6 shrink-0" />
+      </div>
       <ul aria-label="회의록">
         {meetings.map((meeting) => {
           const people = participantSummary(meeting.participants);
+          const when = formatMeetingAt(meeting.meetingAt);
           return (
             <li key={meeting.documentId} className="border-b border-border last:border-b-0">
               <Link
                 to={`/meetings/${encodeURIComponent(meeting.documentId)}`}
                 state={{ listSearch }}
-                className="flex min-h-18 items-center gap-3 px-4 py-3 active:bg-selected tablet:min-h-19 tablet:px-5"
+                className="flex min-h-18 items-center gap-3 px-4 py-3 active:bg-selected tablet:min-h-15 tablet:gap-4 tablet:px-5"
               >
-                <span className="flex min-w-0 flex-1 flex-col gap-1">
-                  <span className="truncate text-label text-text">{meeting.title}</span>
-                  <span className="truncate text-caption text-text-muted">
-                    <span className="tabular-nums">{formatMeetingAt(meeting.meetingAt)}</span>
+                <span className="flex min-w-0 flex-1 flex-col gap-1 tablet:flex-row tablet:items-center tablet:gap-4">
+                  <span className="truncate text-label text-text tablet:min-w-0 tablet:flex-1">{meeting.title}</span>
+                  {/* 휴대폰: 둘째 줄 "일시 · 참석자" */}
+                  <span className="truncate text-caption text-text-muted tablet:hidden">
+                    <span className="tabular-nums">{when}</span>
                     {people && ` · ${people}`}
                   </span>
+                  {/* 태블릿 이상: 열 */}
+                  <span className="hidden w-36 shrink-0 text-body text-text-muted tabular-nums tablet:block">{when}</span>
+                  <span className="hidden w-48 shrink-0 truncate text-body text-text-muted tablet:block tablet-lg:w-72">{people || '-'}</span>
                 </span>
                 <Icon icon={ChevronRight} size="lg" className="shrink-0 text-text-muted" />
               </Link>
@@ -282,47 +270,45 @@ function ListSkeleton() {
   return (
     <Card as="div" padding="none" aria-busy="true" aria-label="회의 목록 불러오는 중">
       {[0, 1, 2, 3, 4].map((row) => (
-        <div key={row} className="flex h-18 flex-col border-b border-border last:border-b-0 justify-center gap-2 px-4 tablet:h-19">
-          <span className="h-3 w-1/2 animate-pulse rounded-full bg-bg-subtle motion-reduce:animate-none" />
-          <span className="h-3 w-1/3 animate-pulse rounded-full bg-bg-subtle motion-reduce:animate-none" />
+        <div key={row} className="flex h-18 flex-col justify-center gap-2 border-b border-border px-4 last:border-b-0 tablet:h-15 tablet:flex-row tablet:items-center tablet:gap-4 tablet:px-5">
+          <span className="h-3 w-1/2 animate-pulse rounded-full bg-bg-subtle motion-reduce:animate-none tablet:w-auto tablet:flex-1" />
+          <span className="h-3 w-1/3 animate-pulse rounded-full bg-bg-subtle motion-reduce:animate-none tablet:w-36" />
         </div>
       ))}
     </Card>
   );
 }
 
-/** 조건 칩 (보이는 높이 40, 누르는 영역 48). 조건이 적용되면 선택 색 */
-function ChipButton({
+/** 원형 아이콘 버튼 (검색창과 같은 높이 48, 태블릿 52). 조건이 적용되면 선택 색 */
+function RoundButton({
   icon,
+  label,
   selected,
   invalid = false,
   haspopup = false,
-  label,
   onClick,
-  children,
 }: {
-  icon: typeof Search;
+  icon: LucideIcon;
+  label: string;
   selected: boolean;
   invalid?: boolean;
   haspopup?: boolean;
-  label?: string;
   onClick: () => void;
-  children: ReactNode;
 }) {
   return (
     <button
       type="button"
       aria-label={label}
+      title={label}
       aria-haspopup={haspopup ? 'dialog' : undefined}
       onClick={onClick}
       className={cn(
-        'relative inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-full border px-4 text-label before:absolute before:inset-x-0 before:-inset-y-1',
+        'inline-flex size-12 shrink-0 cursor-pointer items-center justify-center rounded-full border shadow-card tablet:size-13',
         selected ? 'border-primary bg-selected text-selected-text' : 'border-border bg-bg text-text active:bg-bg-subtle',
         invalid && 'border-danger',
       )}
     >
-      <Icon icon={icon} size="md" />
-      {children}
+      <Icon icon={icon} size="lg" />
     </button>
   );
 }

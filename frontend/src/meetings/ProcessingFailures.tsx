@@ -80,17 +80,18 @@ export function ProcessingFailures() {
           const stage = STAGE_LABELS[item.stage] ?? '회의 처리';
           const expiry = item.audioExpiresAt ? formatShortDateTime(item.audioExpiresAt) : '';
           return (
-            <li key={item.sessionId} className="flex min-h-18 items-center gap-3 rounded-lg bg-bg px-4 py-3 tablet:min-h-19">
-              <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <span className="flex min-w-0 items-center gap-2">
+            <li key={item.sessionId} className="flex min-h-18 items-center gap-3 rounded-lg bg-bg px-4 py-3 tablet-lg:min-h-15 tablet-lg:gap-4">
+              {/* 3줄 / 큰 태블릿: 제목 | 일시 · 단계 | 오디오 만료 를 한 줄로 */}
+              <div className="flex min-w-0 flex-1 flex-col gap-1 tablet-lg:flex-row tablet-lg:items-center tablet-lg:gap-4">
+                <span className="flex min-w-0 items-center gap-2 tablet-lg:flex-1">
                   <span className="truncate text-label text-text">{item.title}</span>
                   <span className="shrink-0 rounded-sm bg-danger-soft px-2 py-0.5 text-caption text-danger-text">실패</span>
                 </span>
-                <span className="text-caption text-text-muted">
+                <span className="text-caption text-text-muted tablet-lg:shrink-0">
                   <span className="tabular-nums">{formatMeetingAt(item.meetingAt)}</span> · {stage} 실패
                 </span>
                 {(!canRetry || expiry) && (
-                  <span className="text-caption text-text-muted tabular-nums">{canRetry ? `오디오 만료 ${expiry}` : '오디오 없음'}</span>
+                  <span className="text-caption text-text-muted tabular-nums tablet-lg:shrink-0">{canRetry ? `오디오 만료 ${expiry}` : '오디오 없음'}</span>
                 )}
               </div>
               {canRetry && (

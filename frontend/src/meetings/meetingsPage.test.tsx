@@ -62,10 +62,10 @@ describe('회의록 목록 (MIN-01)', () => {
     expect(await screen.findByRole('list', { name: '회의록' })).toBeTruthy();
     expect(screen.getByRole('heading', { level: 1, name: '회의록' })).toBeTruthy();
     expect(screen.getByText('총 2건')).toBeTruthy();
-    expect(rows().map((row) => row.textContent)).toEqual([
-      '제품 전략 회의2026.10.14 10:00 · 홍길동, 이영희, 김철수, 외 1명',
-      '고객 지원 주간 회의2026.10.10 12:00 · 이영희',
-    ]);
+    // 휴대폰 둘째 줄과 태블릿 열이 함께 있다(크기마다 한쪽만 보인다)
+    expect(rows()[0].textContent).toContain('제품 전략 회의');
+    expect(rows()[0].textContent).toContain('2026.10.14 10:00 · 홍길동, 이영희, 김철수, 외 1명');
+    expect(rows()[1].textContent).toContain('고객 지원 주간 회의');
     expect(rows()[0].getAttribute('href')).toBe('/meetings/doc%2Fnew');
     expect(screen.queryByRole('heading', { name: /처리 실패/ })).toBeNull();
   });
@@ -84,28 +84,30 @@ describe('회의록 목록 (MIN-01)', () => {
 
     fireEvent.change(search, { target: { value: '없는 회의' } });
     expect(screen.getByText('검색 결과 없음')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: '조건 초기화' }));
+    fireEvent.click(within(screen.getByRole('region', { name: '회의 목록' })).getByRole('button', { name: '조건 초기화' }));
     expect(rows()).toHaveLength(2);
     expect(fetchMock.mock.calls.length).toBe(before);
   });
 
-  it('주소의 기간을 적용해 칩에 표시하고, 정렬 칩으로 오래된순으로 바꾼다', async () => {
+  it('주소의 기간을 적용해 건수 옆과 기간 버튼에 표시하고, 정렬 버튼으로 오래된순으로 바꾼다', async () => {
     mockApi({ meetings: [...MEETINGS, { documentId: 'doc-x', title: '11월 회의', meetingAt: '2026-11-02T09:00:00+09:00', participants: [], documentUrl: null }] });
     renderList('/meetings?from=2026-10-01&to=2026-10-31');
     await screen.findByRole('list', { name: '회의록' });
-    expect(screen.getByRole('button', { name: /10\.01 ~ 10\.31/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '기간 10.01 ~ 10.31' })).toBeTruthy();
+    expect(screen.getByText('총 2건 · 10.01 ~ 10.31')).toBeTruthy();
     expect(rows()).toHaveLength(2);
     fireEvent.click(screen.getByRole('button', { name: '정렬: 최신순' }));
     expect(rows()[0].textContent).toContain('고객 지원 주간 회의');
     expect(screen.getByTestId('where').textContent).toContain('sort=old');
   });
 
-  it('기간 칩은 시작일·종료일 대화상자를 열고 초기화로 기간을 지운다', async () => {
+  it('기간 버튼은 시작일·종료일 대화상자를 열고 초기화로 기간을 지운다. 조건이 있을 때만 초기화 버튼이 보인다', async () => {
     mockApi();
     renderList('/meetings?from=2026-10-13');
     await screen.findByRole('list', { name: '회의록' });
     expect(rows()).toHaveLength(1);
-    fireEvent.click(screen.getByRole('button', { name: /10\.13 ~/ }));
+    expect(screen.getByRole('button', { name: '조건 초기화' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /기간 10\.13 ~/ }));
     const dialog = await screen.findByRole('dialog', { name: '기간' });
     expect(within(dialog).getByRole('button', { name: '시작일' })).toBeTruthy();
     expect(within(dialog).getByRole('button', { name: '종료일' })).toBeTruthy();
@@ -114,6 +116,7 @@ describe('회의록 목록 (MIN-01)', () => {
     await waitFor(() => expect(screen.queryByRole('dialog', { name: '기간' })).toBeNull());
     expect(rows()).toHaveLength(2);
     expect(screen.getByRole('button', { name: '기간' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: '조건 초기화' })).toBeNull();
   });
 
   it('처리 실패 회의가 있으면 목록 위에 보이고, 다시 처리하면 회의 처리 화면으로 간다', async () => {

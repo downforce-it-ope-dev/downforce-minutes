@@ -71,27 +71,48 @@ for (const size of SIZES) {
   });
 }
 
-test('MIN-01 태블릿 가로: 왼쪽 필터 단 280, 목록 단만 스크롤', async ({ page }) => {
+test('MIN-01: 위쪽 넓은 검색창 + 원형 버튼, 그 아래 전체 폭 목록(태블릿은 한 줄 가로 배치)', async ({ page }) => {
   await mock(page);
   await page.setViewportSize({ width: 1180, height: 820 });
   await page.goto('/meetings');
-  const filters = page.getByRole('complementary', { name: '검색 조건' });
-  await expect(filters.getByRole('button', { name: '시작일' })).toBeVisible();
-  expect((await filters.boundingBox())!.width).toBe(280);
-  const list = page.getByRole('region', { name: '회의 목록' });
-  expect((await list.boundingBox())!.x).toBeGreaterThan((await filters.boundingBox())!.x + 280);
-  const before = (await filters.boundingBox())!.y;
-  await list.evaluate((element) => { element.scrollTop = element.scrollHeight; });
-  expect(await list.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
-  expect((await filters.boundingBox())!.y).toBe(before);
+  const search = page.getByRole('searchbox', { name: '회의 검색' });
+  const period = page.getByRole('button', { name: '기간' });
+  const sort = page.getByRole('button', { name: '정렬: 최신순' });
+  const searchBox = (await search.boundingBox())!;
+  const periodBox = (await period.boundingBox())!;
+  expect(periodBox.width).toBe(52);
+  expect(periodBox.height).toBe(52);
+  expect(Math.abs(periodBox.y + 26 - (searchBox.y + searchBox.height / 2))).toBeLessThanOrEqual(2);
+  expect(periodBox.x).toBeGreaterThan(searchBox.x + searchBox.width);
+  expect(((await sort.boundingBox())!).x).toBeGreaterThan(periodBox.x);
+  await expect(page.getByRole('button', { name: '조건 초기화' })).toHaveCount(0);
+  const list = page.getByRole('list', { name: '회의록' });
+  const listBox = (await list.boundingBox())!;
+  expect(listBox.y).toBeGreaterThan(searchBox.y + searchBox.height);
+  expect(listBox.width).toBeGreaterThan(800);
+  // 한 줄 행: 일시가 회의명과 같은 줄, 오른쪽에 있다
+  const row = list.getByRole('link').first();
+  expect(Math.round((await row.boundingBox())!.height)).toBe(60);
+  const title = row.getByText(LONG_TITLE);
+  const date = row.getByText('2026.10.28 10:00', { exact: true }).last();
+  expect(Math.abs((await date.boundingBox())!.y - (await title.boundingBox())!.y)).toBeLessThanOrEqual(4);
+  expect((await date.boundingBox())!.x).toBeGreaterThan((await title.boundingBox())!.x);
+
+  await period.click();
+  const dialog = page.getByRole('dialog', { name: '기간' });
+  await expect(dialog.getByRole('button', { name: '시작일' })).toBeVisible();
+  await dialog.getByRole('button', { name: '확인' }).click();
+  await sort.click();
+  await expect(page.getByRole('button', { name: '정렬: 오래된순' })).toBeVisible();
+  await expect(list.getByRole('link').first()).toContainText('주간 회의 13');
 });
 
-test('MIN-01 행 높이: 태블릿 76, 휴대폰 72. 처리 실패는 태블릿 3건·휴대폰 1건 + 모두 보기', async ({ page }) => {
+test('MIN-01 행 높이: 태블릿 60(한 줄), 휴대폰 72(2줄). 처리 실패는 태블릿 3건·휴대폰 1건 + 모두 보기', async ({ page }) => {
   await mock(page);
   await page.setViewportSize({ width: 820, height: 1180 });
   await page.goto('/meetings');
   const row = page.getByRole('list', { name: '회의록' }).getByRole('link').first();
-  expect(Math.round((await row.boundingBox())!.height)).toBe(76);
+  expect(Math.round((await row.boundingBox())!.height)).toBe(60);
   const failures = page.getByRole('region', { name: /처리 실패/ });
   await expect(failures.getByRole('listitem')).toHaveCount(3);
   await failures.getByRole('button', { name: '모두 보기 4' }).click();
