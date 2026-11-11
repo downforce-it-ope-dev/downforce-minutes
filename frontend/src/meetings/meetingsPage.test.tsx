@@ -1,13 +1,20 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { withHealthyBackend } from '../testUtils/withHealthyBackend';
 import { MeetingDetailRoute } from './MeetingDetailPage';
 import { MeetingsPage } from './MeetingsPage';
+import { filterOwnMeetings } from './myMeetings';
 
 const MEETINGS = [
   { documentId: 'doc-old', title: '고객 지원 주간 회의', meetingAt: '2026-10-10T12:00:00+09:00', participants: [{ id: 'p2', name: '이영희' }], documentUrl: null },
   { documentId: 'doc/new', title: '제품 전략 회의', meetingAt: '2026-10-14T10:00:00+09:00', participants: [{ id: 'p1', name: '홍길동' }, { id: 'p2', name: '이영희' }, { id: 'p3', name: '김철수' }, { id: 'p4', name: '박민수' }], documentUrl: null },
+  // 로그인한 사람(이영희, p2)이 참석하지 않은 회의는 보이지 않는다
+  { documentId: 'doc-other', title: '다른 팀 회의', meetingAt: '2026-10-12T09:00:00+09:00', participants: [{ id: 'p1', name: '홍길동' }], documentUrl: null },
+];
+const ROSTER = [
+  { id: 'p1', name: '홍길동', email: 'hong@miinit.com' },
+  { id: 'p2', name: '이영희', email: 'Me@Miinit.com' },
 ];
 const FAILURE = {
   sessionId: 's-fail', version: 4, title: '실패한 회의', meetingAt: '2026-11-05T10:00:00+09:00', stage: 'TRANSCRIPTION',
@@ -22,6 +29,7 @@ function mockApi({ meetings = MEETINGS, failures = [] as unknown[], listStatus =
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const path = new URL(String(input), 'http://localhost').pathname;
     if (path.endsWith('/processing-failures')) return json({ data: { items: failures } });
+    if (path.endsWith('/participants')) return json({ data: { items: ROSTER } });
     if (path.endsWith('/processing/retry') && init?.method === 'POST') return retry ? retry() : json({ data: { sessionId: 's-fail', status: 'PROCESSING', stage: 'TRANSCRIPTION' } }, 202);
     if (path === '/api/v1/meetings') return listStatus === 200 ? json({ data: { items: meetings } }) : json({ error: { code: 'INTERNAL' } }, listStatus);
     throw new Error(`Unexpected request: ${path}`);
@@ -50,9 +58,12 @@ function renderList(entry = '/meetings') {
 
 const rows = () => within(screen.getByRole('list', { name: '회의록' })).getAllByRole('link');
 
+beforeEach(() => localStorage.setItem('ma-auth-email', 'me@miinit.com'));
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  localStorage.clear();
 });
 
 describe('회의록 목록 (MIN-01)', () => {
@@ -66,6 +77,7 @@ describe('회의록 목록 (MIN-01)', () => {
     expect(rows()[0].textContent).toContain('제품 전략 회의');
     expect(rows()[0].textContent).toContain('2026.10.14 10:00 · 홍길동, 이영희, 김철수, 외 1명');
     expect(rows()[1].textContent).toContain('고객 지원 주간 회의');
+    expect(screen.queryByText('다른 팀 회의')).toBeNull();
     expect(rows()[0].getAttribute('href')).toBe('/meetings/doc%2Fnew');
     expect(screen.queryByRole('heading', { name: /처리 실패/ })).toBeNull();
   });
@@ -163,5 +175,25 @@ describe('회의록 목록 (MIN-01)', () => {
     fireEvent.click(await screen.findByRole('button', { name: '회의록 목록' }));
     await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/meetings?q=%EC%A0%9C%ED%92%88'));
     expect(screen.getByRole('searchbox', { name: '회의 검색' })).toHaveProperty('value', '제품');
+  });
+
+  it('로그인 이메일이 참석자 명단에 없으면 아무 회의도 보이지 않는다', async () => {
+    localStorage.setItem('ma-auth-email', 'nobody@miinit.com');
+    mockApi();
+    renderList();
+    expect(await screen.findByText('회의 기록이 없습니다')).toBeTruthy();
+  });
+});
+
+describe('filterOwnMeetings', () => {
+  it('로그인 이메일(대소문자·공백 무시)과 같은 참석자가 있는 회의만 남긴다', () => {
+    const roster = [{ id: 'p1', name: 'A', email: ' Me@Miinit.com ' }, { id: 'p2', name: 'B', email: 'b@miinit.com' }];
+    const meetings = [
+      { documentId: '1', title: 'mine', meetingAt: '2026-10-01T10:00:00Z', participants: [{ id: 'p1', name: 'A' }], documentUrl: null },
+      { documentId: '2', title: 'other', meetingAt: '2026-10-01T10:00:00Z', participants: [{ id: 'p2', name: 'B' }], documentUrl: null },
+    ];
+    expect(filterOwnMeetings(meetings, roster, 'me@miinit.com').map(({ title }) => title)).toEqual(['mine']);
+    expect(filterOwnMeetings(meetings, roster, null)).toEqual([]);
+    expect(filterOwnMeetings(meetings, roster, 'x@miinit.com')).toEqual([]);
   });
 });

@@ -93,6 +93,7 @@
   - MTG-04에서 추가한 부품: `TextArea`(내용만큼 늘어나는 여러 줄 입력), `ChipRadioGroup`(칩 하나 고르기), `Tabs`, `TABLET_LG_QUERY`.
 - **회의록 (R6)**
   - 회의록 목록(`/meetings`)·상세(`/meetings/:documentId`)는 리뉴얼 라우트다(`src/meetings/`). 목록의 검색·기간·정렬 조건은 주소(`?q·from·to·sort`)에 두고, 상세의 "회의록 목록"은 그 조건으로 돌아간다(목록 행 링크의 `state.listSearch`).
+  - 회의록 목록과 홈 최근 회의록은 내가 참석자인 회의만 보인다(`src/meetings/myMeetings.ts`의 `listMyMeetings`, 로그인 이메일과 같은 참석자). 회의 목록 API를 직접 쓰지 않는다.
   - 전사 원문 목록과 화자 색은 검토 화면과 같은 `review/TranscriptList.tsx`·`review/speakerColors.ts`를 쓴다.
 - **회의 진행 흐름 (R5)**
   - 새 회의(`/meetings/new`)·회의 녹음·회의 처리·회의록 검토·회의 결과(`/meetings/:sessionId/complete`)는 모두 리뉴얼 라우트이고 집중 모드다(뒤로 가기 → 홈 또는 회의록 목록).

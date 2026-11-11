@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router';
 import { ArrowDownWideNarrow, ArrowUpNarrowWide, CalendarDays, ChevronRight, Mic, RefreshCw, RotateCcw, Search, X, type LucideIcon } from 'lucide-react';
 import { AccountButton, SidebarAccount } from '../auth/AccountMenu';
 import { filterMeetings, hasInvalidDateRange } from '../meetingFilters';
-import { listMeetings, type MeetingSummary } from '../meetingListApi';
+import type { MeetingSummary } from '../meetingListApi';
 import {
   AppShell,
   Button,
@@ -18,6 +18,7 @@ import {
 } from '../ui';
 import { formatChipDate, formatMeetingAt, participantSummary } from './meetingFormat';
 import { sortMeetings } from './meetingView';
+import { listMyMeetings } from './myMeetings';
 import { ProcessingFailures } from './ProcessingFailures';
 
 /*
@@ -25,6 +26,7 @@ import { ProcessingFailures } from './ProcessingFailures';
  * - 검색(회의명·참석자)은 입력하는 즉시 화면 안에서 거른다. 서버 목록은 최대 100건(API-017)
  * - 사용자 결정(2026-11-11): 검색은 위쪽 넓은 알약형 검색창(검색 사이트처럼), 기간·정렬·초기화는 그 옆 원형 아이콘 버튼.
  *   기간 버튼은 시작일·종료일 대화상자를 연다. 목록은 그 아래 전체 폭, 태블릿 이상은 회의명·일시·참석자를 한 줄로 늘어놓는다
+ * - 내가 참석자인 회의만 보인다(사용자 결정 2026-11-12, myMeetings.ts)
  * - 조건은 주소(?q·from·to·sort)에 남겨 상세에서 돌아와도 유지한다(MIN-02 목록으로)
  * - 새 회의는 화면 아래 가운데 고정(사용자 결정 2026-11-11, 기존 화면 위치 유지)
  * - 처리 실패 회의는 목록 위에 있을 때만 보인다(F07·F08)
@@ -99,7 +101,7 @@ function MeetingsBody() {
 
   useEffect(() => {
     let live = true;
-    listMeetings()
+    listMyMeetings()
       .then((items) => live && setLoad({ status: 'ready', data: items }))
       .catch(() => {
         if (!live) return;

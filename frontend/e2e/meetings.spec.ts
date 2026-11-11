@@ -38,7 +38,11 @@ const DETAIL = {
   documentUrl: 'https://notion.example/page',
 };
 
+// 회의록은 로그인한 사람(홍길동, e2e@miinit.com — 설정의 목업 세션)이 참석한 회의만 보인다. 모든 회의의 첫 참석자가 홍길동이다
+const ROSTER = PEOPLE.map((person, index) => ({ ...person, email: index === 0 ? 'e2e@miinit.com' : `user${index}@miinit.com` }));
+
 async function mock(page: Page, { failures = FAILURES }: { failures?: unknown[] } = {}) {
+  await page.route('**/api/v1/participants', (route) => route.fulfill({ json: { data: { items: ROSTER } } }));
   await page.route('**/api/v1/meetings', (route) => route.fulfill({ json: { data: { items: MEETINGS } } }));
   await page.route('**/api/v1/meetings/doc-0', (route) => route.fulfill({ json: { data: DETAIL } }));
   await page.route('**/api/v1/meeting-sessions/processing-failures', (route) => route.fulfill({ json: { data: { items: failures } } }));
