@@ -7,7 +7,7 @@ import { failureMessage, useCompleteSession, type StepState } from './useComplet
 
 /*
  * MTG-05 회의 결과 (GitHub #30, docs/renewal/화면기획/MTG-05_회의결과.md). 집중 모드(뒤로 가기 → 회의록 목록).
- * - 위: 결과 요약(큰 상태 아이콘 + 결과 제목) / 단계: 회의록 저장 → 이메일 전달 → 완료 (Slack 단계 없음, D-11)
+ * - 위: 결과 요약(큰 상태 아이콘 + 결과 제목, 전체 결과는 여기에서만 보인다) / 단계: 회의록 저장 → 이메일 전달 (Slack 단계 없음, D-11)
  * - 태블릿 가로: 왼쪽 요약·단계, 오른쪽 이메일 수신자 / 그 밖: 1단
  * - 아래: 저장된 회의록 보기(또는 재시도) + 새 회의·회의록 목록. 상단 바에 상태 새로고침
  * - 안내·오류는 토스트(S-13). 오류 코드는 "자세히"에 접어 둔다
@@ -96,7 +96,7 @@ function CompleteBody({ result }: { result: ReturnType<typeof useCompleteSession
       code: steps.document === 'failed' ? failure?.errorCode : undefined,
     },
     ...(result.deliveries.length > 0 ? [{ title: '이메일 전달', state: steps.email }] : []),
-    { title: '완료', state: steps.done },
+    // "완료" 단계는 두지 않는다(사용자 결정 2026-11-11): Slack이 빠져 전달은 이메일뿐이라 이메일 전달 단계·위 결과 제목과 같은 내용이 된다
   ];
 
   const primary = result.savedDocumentId ? (

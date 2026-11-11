@@ -59,7 +59,7 @@ afterEach(() => {
 });
 
 describe('회의 결과 (MTG-05)', () => {
-  it('완료되면 단계(저장 → 이메일 → 완료)와 수신자별 결과, 저장된 회의록 보기를 보인다. Slack 단계는 없다', async () => {
+  it('완료되면 단계(저장 → 이메일)와 수신자별 결과, 저장된 회의록 보기를 보인다. Slack 단계는 없다', async () => {
     mockApi([{
       sessionId: 's1', version: 9, status: 'COMPLETED', allowedActions: [],
       document: { documentId: 'doc-1' },
@@ -73,7 +73,8 @@ describe('회의 결과 (MTG-05)', () => {
     expect(await screen.findByRole('heading', { level: 2, name: '완료' })).toBeTruthy();
     expect(screen.queryByRole('navigation', { name: '주 메뉴' })).toBeNull();
     const steps = within(screen.getByRole('region', { name: '처리 단계' })).getAllByRole('listitem');
-    expect(steps.map((step) => step.textContent)).toEqual(['회의록 저장완료', '이메일 전달완료', '완료완료']);
+    // 전체 결과는 위 제목에만 보이고, 단계는 저장·이메일 두 개뿐이다(완료 단계 중복 제거)
+    expect(steps.map((step) => step.textContent)).toEqual(['회의록 저장완료', '이메일 전달완료']);
     expect(screen.queryByText(/Slack/)).toBeNull();
     const rows = within(screen.getByRole('region', { name: '이메일' })).getAllByRole('listitem');
     expect(rows.map((row) => row.textContent)).toEqual(['홍길동hong@miinit.com전달 완료', '김철수kim@miinit.com전달 완료']);

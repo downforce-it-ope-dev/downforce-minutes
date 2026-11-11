@@ -262,6 +262,7 @@ export function useCompleteSession(sessionId: string, notify: (message: string, 
           ? 'current'
           : 'waiting';
   const emailState: StepState = documentSaved ? deliveryStepState(deliveries) : 'waiting';
+  // 전체 결과(위 결과 제목·아이콘, 저장된 회의록 보기 여부). 단계 목록에는 따로 보이지 않는다
   const doneState: StepState = !documentSaved ? 'waiting' : deliveries.some(({ status }) => status === 'FAILED') ? 'failed' : hasPending ? 'current' : 'complete';
   const savedDocumentId = snapshot?.document?.documentId;
 
