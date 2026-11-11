@@ -175,7 +175,7 @@ function ActionItems({ minutes, roster, disabled, onChange }: { minutes: Structu
       <SectionHead
         title="실행 항목"
         disabled={disabled}
-        onAdd={() => onChange({ ...minutes, actionItems: [...minutes.actionItems, { task: '', ownerParticipantId: null, dueDate: null }] })}
+        onAdd={() => onChange({ ...minutes, actionItems: [...minutes.actionItems, { ownerParticipantId: null, task: '', dueDate: null }] })}
       />
       <div className="flex flex-col gap-3 tablet:min-h-0 tablet:flex-1 tablet:overflow-y-auto">
         {minutes.actionItems.length === 0 && <p className="py-6 text-center text-body text-text-muted">항목 없음</p>}

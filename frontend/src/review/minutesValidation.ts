@@ -17,8 +17,22 @@ export function minutesAreValid(minutes: StructuredMinutes): boolean {
   );
 }
 
+/** 비교용으로 항목 순서를 고정한다. 객체 키 순서(화면에서 새로 만든 항목 등)가 달라도 내용이 같으면 같게 본다 */
+function canonical(minutes: StructuredMinutes | null | undefined) {
+  if (!minutes) return minutes ?? null;
+  return {
+    templateId: minutes.templateId,
+    templateVersion: minutes.templateVersion,
+    summary: minutes.summary,
+    discussionPoints: minutes.discussionPoints,
+    decisions: minutes.decisions,
+    actionItems: minutes.actionItems.map(({ ownerParticipantId, task, dueDate }) => ({ ownerParticipantId, task, dueDate })),
+    followUps: minutes.followUps,
+  };
+}
+
 export function sameMinutes(left: StructuredMinutes | null | undefined, right: StructuredMinutes | null | undefined): boolean {
-  return JSON.stringify(left) === JSON.stringify(right);
+  return JSON.stringify(canonical(left)) === JSON.stringify(canonical(right));
 }
 
 export function snapshotMinutes(minutes: StructuredMinutes): StructuredMinutes {

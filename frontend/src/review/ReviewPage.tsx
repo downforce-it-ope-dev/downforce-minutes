@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router';
 import { Plus, RefreshCw, Save, ScrollText, Send } from 'lucide-react';
 import { useReportSessionWork } from '../auth/sessionWork';
@@ -30,8 +30,8 @@ export function ReviewRoute() {
   const [searchParams] = useSearchParams();
   // 화면 확인용 샘플 (Preview·개발 서버 전용, 운영 빌드에서는 빠진다): /meetings/sample-review/review?sample
   const sample = __UI_PREVIEW__ && searchParams.has('sample');
-  const [sampleReady] = useState(() => (sample ? installSampleReviewApi() : null));
-  useEffect(() => () => sampleReady?.(), [sampleReady]);
+  // 발송 뒤 회의 결과 화면도 샘플로 보이도록 켠 뒤에는 끄지 않는다(새로고침하면 사라진다)
+  useState(() => (sample ? installSampleReviewApi() : null));
   if (!sessionId) return null;
   return <ReviewScreen key={sessionId} sessionId={sessionId} />;
 }

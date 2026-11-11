@@ -145,3 +145,19 @@ test('회의록 다섯 구역은 모두 같은 크기의 카드(발송 위까지
     expect(summary.height).toBeGreaterThan(boxes[0].height * 0.6);
   }
 });
+
+test('Preview 샘플: 실행 항목을 추가하고 저장하면 저장되고, 발송하면 회의 결과(완료)로 간다', async ({ page }) => {
+  await page.setViewportSize({ width: 1180, height: 820 });
+  await page.goto('/meetings/sample-review/review?sample');
+  const nav = page.getByRole('navigation', { name: '검토 단계' });
+  await nav.getByRole('button', { name: /^실행 항목/ }).click();
+  await page.getByRole('button', { name: '실행 항목 추가' }).click();
+  await page.getByRole('textbox', { name: '할 일 3' }).fill('새 할 일');
+  await page.getByRole('button', { name: '저장' }).click();
+  await expect(page.getByText('회의록이 저장되었습니다.')).toBeVisible();
+  await expect(page.getByText(/다시 저장해 주세요/)).toHaveCount(0);
+  await page.getByRole('button', { name: '발송' }).click();
+  await page.getByRole('dialog', { name: /미지정 화자/ }).getByRole('button', { name: '발송' }).click();
+  await expect(page).toHaveURL(/\/meetings\/sample-review\/complete$/);
+  await expect(page.getByRole('heading', { level: 2, name: '완료' })).toBeVisible();
+});

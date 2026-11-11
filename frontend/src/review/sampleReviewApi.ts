@@ -1,7 +1,8 @@
 /*
  * 회의록 검토 화면 확인용 샘플 (Preview·개발 서버 전용, ReviewRoute가 __UI_PREVIEW__ && ?sample 일 때만 설치).
  * 주소: /meetings/sample-review/review?sample
- * 이 화면이 부르는 API만 브라우저 안에서 가짜로 응답한다(서버에 아무것도 보내지 않음). 저장·매핑은 메모리에만 남고, 발송은 막는다.
+ * 이 화면이 부르는 API만 브라우저 안에서 가짜로 응답한다(서버에 아무것도 보내지 않음). 저장·매핑은 메모리에만 남고,
+ * 발송은 흉내만 내어 회의 결과 화면(모두 전달 완료)까지 이어진다.
  */
 
 const SESSION = 'sample-review';
@@ -65,18 +66,22 @@ function json(body: unknown, status = 200) {
 let installed = 0;
 let original: typeof fetch | null = null;
 
-/** 샘플 응답을 켠다. 돌려받은 함수로 끈다(여러 번 켜도 한 번만 바꾼다) */
+/**
+ * 샘플 응답을 켠다(여러 번 불러도 한 번만 바꾼다). 발송 뒤 회의 결과 화면도 같은 샘플로 보이도록,
+ * 켜진 탭에서는 새로고침 전까지 유지한다. 돌려받은 함수는 테스트에서만 쓴다.
+ */
 export function installSampleReviewApi(): () => void {
   installed += 1;
   if (installed === 1) {
     let session = initialSession();
+    let published = false;
     original = globalThis.fetch;
     const passThrough = original.bind(globalThis);
     globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = new URL(typeof input === 'string' || input instanceof URL ? input : input.url, window.location.href);
       const path = url.pathname.replace(/^.*\/api\/v1/, '/api/v1');
       const method = (init?.method ?? 'GET').toUpperCase();
-      if (path === `/api/v1/meeting-sessions/${SESSION}` && method === 'GET') return json({ data: session });
+      if (!published && path === `/api/v1/meeting-sessions/${SESSION}` && method === 'GET') return json({ data: session });
       if (path === `/api/v1/meeting-sessions/${SESSION}/minutes` && method === 'PUT') {
         const body = JSON.parse(String(init?.body ?? '{}'));
         session = { ...session, version: session.version + 1, minutes: { ...session.minutes, ...body } };
@@ -95,8 +100,26 @@ export function installSampleReviewApi(): () => void {
         };
         return json({ data: { version: session.version, mappings: session.speakers.map(({ speakerId, participantId, participantName }) => ({ speakerId, participantId, participantName })) } });
       }
-      // 샘플에서는 발송하지 않는다
-      if (path.startsWith(`/api/v1/meeting-sessions/${SESSION}/`) && method === 'POST') return json({ error: { code: 'SESSION_STATE_CONFLICT' } }, 409);
+      // 발송 흉내: 확정 → 저장·전달 시작 → 회의 결과 화면에서 모두 완료로 보인다(실제로는 아무것도 보내지 않음)
+      if (path === `/api/v1/meeting-sessions/${SESSION}/confirm` && method === 'POST') {
+        session = { ...session, version: session.version + 1, status: 'CONFIRMED' };
+        return json({ data: { status: 'CONFIRMED', version: session.version } });
+      }
+      if (path === `/api/v1/meeting-sessions/${SESSION}/publish` && method === 'POST') {
+        published = true;
+        return json({ data: { sessionId: SESSION, status: 'PUBLISHING' } }, 202);
+      }
+      if (published && path === `/api/v1/meeting-sessions/${SESSION}` && method === 'GET') {
+        return json({ data: {
+          sessionId: SESSION,
+          version: session.version + 1,
+          status: 'COMPLETED',
+          allowedActions: [],
+          meeting: session.meeting,
+          document: { documentId: 'sample-document' },
+          deliveries: session.meeting.participantIds.map((id, index) => ({ deliveryId: `sample-${index}`, channel: 'EMAIL', recipientParticipantId: id, status: 'SENT' })),
+        } });
+      }
       if (path === '/api/v1/participants' && method === 'GET') return json({ data: { items: PARTICIPANTS } });
       if (path === '/api/v1/app-config' && method === 'GET') {
         return json({ data: {
