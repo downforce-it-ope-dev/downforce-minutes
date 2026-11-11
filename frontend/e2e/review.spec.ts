@@ -59,7 +59,7 @@ for (const size of SIZES) {
     await mock(page);
     await page.setViewportSize(size);
     await page.goto(`/meetings/${SESSION}/review`);
-    await expect(page.getByRole('textbox', { name: '회의 요약' })).toBeVisible();
+    await expect(page.getByRole('article').first()).toBeVisible();
     await expect(page.getByRole('navigation', { name: '주 메뉴' })).toHaveCount(0);
     const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22a', 'wcag22aa']).analyze();
     const serious = results.violations.filter(({ impact }) => impact === 'critical' || impact === 'serious');
@@ -69,34 +69,47 @@ for (const size of SIZES) {
   });
 }
 
-test('태블릿 가로: 왼쪽 편집 + 오른쪽 패널, 미지정이 있으면 화자 매핑 탭부터 열고 전사 원문 탭으로 바꿀 수 있다', async ({ page }) => {
+test('화자 매핑: 화자마다 왼쪽에 대화 내용, 오른쪽에 참석자 선택 (태블릿 가로·세로)', async ({ page }) => {
+  await mock(page);
+  for (const size of [{ width: 1180, height: 820 }, { width: 820, height: 1180 }]) {
+    await page.setViewportSize(size);
+    await page.goto(`/meetings/${SESSION}/review`);
+    await expect(page.getByRole('tab', { name: /화자 매핑/ })).toHaveAttribute('aria-selected', 'true');
+    const card = page.getByRole('article', { name: '화자 A' });
+    const utterance = (await card.getByText(/이번 주 배포 일정부터/).boundingBox())!;
+    const chips = (await card.getByRole('radiogroup').boundingBox())!;
+    expect(chips.x).toBeGreaterThan(utterance.x + utterance.width - 1);
+  }
+});
+
+test('회의록: 구역을 골라 편집하고, 항목을 추가해도 그 구역 안에서만 늘어난다. 발송은 가운데, 저장은 상단 바', async ({ page }) => {
   await mock(page);
   await page.setViewportSize({ width: 1180, height: 820 });
   await page.goto(`/meetings/${SESSION}/review`);
-  const panel = page.getByRole('region', { name: '화자 매핑과 전사 원문' });
-  await expect(panel.getByRole('tab', { name: /화자 매핑/ })).toHaveAttribute('aria-selected', 'true');
-  await expect(panel.getByRole('tab', { name: /화자 매핑/ })).toContainText('2');
-  const editor = (await page.getByRole('textbox', { name: '회의 요약' }).boundingBox())!;
-  expect((await panel.boundingBox())!.x).toBeGreaterThan(editor.x + editor.width);
-  expect(Math.round((await panel.boundingBox())!.width)).toBe(384);
-  await panel.getByRole('tab', { name: '전사 원문' }).click();
-  await expect(panel.getByRole('list', { name: '전사 원문' }).getByRole('listitem')).toHaveCount(5);
-  await expect(page.getByRole('button', { name: '발송' })).toBeInViewport();
+  await page.getByRole('tab', { name: '회의록' }).click();
+  await page.getByRole('button', { name: /^논의 내용/ }).click();
+  const panel = page.getByRole('region', { name: '논의 내용' });
+  await expect(panel.getByRole('textbox')).toHaveCount(2);
+  for (let index = 0; index < 6; index += 1) await panel.getByRole('button', { name: '논의 내용 추가' }).click();
+  await expect(panel.getByRole('textbox')).toHaveCount(8);
+  // 페이지는 늘어나지 않고 발송 버튼이 늘 보인다
+  const send = page.getByRole('button', { name: '발송' });
+  await expect(send).toBeInViewport();
+  const box = (await send.boundingBox())!;
+  expect(Math.abs(box.x + box.width / 2 - 1180 / 2)).toBeLessThanOrEqual(2);
+  const save = (await page.getByRole('button', { name: '저장' }).boundingBox())!;
+  expect(save.y).toBeLessThan(100);
 });
 
-test('태블릿 세로: 화자 카드는 2열, 전사 원문은 상단 버튼으로 연다', async ({ page }) => {
-  await mock(page);
-  await page.setViewportSize({ width: 820, height: 1180 });
-  await page.goto(`/meetings/${SESSION}/review`);
-  const cards = page.getByRole('article');
-  await expect(cards).toHaveCount(3);
-  const [a, b] = [(await cards.nth(0).boundingBox())!, (await cards.nth(1).boundingBox())!];
-  expect(Math.round(a.y)).toBe(Math.round(b.y));
-  await page.getByRole('button', { name: '전사 원문' }).click();
-  await expect(page.getByRole('dialog', { name: '전사 원문' }).getByRole('listitem')).toHaveCount(5);
+test('Preview 샘플(?sample): API 없이 화자 매핑과 회의록을 보인다', async ({ page }) => {
+  await page.setViewportSize({ width: 1180, height: 820 });
+  await page.goto('/meetings/sample-review/review?sample');
+  await expect(page.getByRole('article')).toHaveCount(3);
+  await page.getByRole('article', { name: '화자 B' }).getByRole('radio', { name: '이서연' }).click();
+  await expect(page.getByText('3명 중 2명 지정')).toBeVisible();
 });
 
-test('휴대폰: 저장·발송 바가 화면 아래에 고정되어 늘 보인다', async ({ page }) => {
+test('휴대폰: 발송이 화면 아래에 고정되어 늘 보인다', async ({ page }) => {
   await mock(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`/meetings/${SESSION}/review`);

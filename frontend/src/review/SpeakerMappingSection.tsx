@@ -16,7 +16,8 @@ import {
 import type { SaveStatus } from './useReviewSession';
 
 /*
- * 화자 매핑 (MTG-04-F05·F12, 문서 3.7). 화자 1명당 카드 1장: 통계, 대표 발화, 참석자 칩(한 번 눌러 지정, 자동 저장).
+ * 화자 매핑 (MTG-04-F05·F12, 문서 3.7). 화자 1명당 한 줄 카드: 왼쪽에 화자·통계·대표 발화, 오른쪽에서 참석자를 고른다
+ * (사용자 결정 2026-11-11, 휴대폰은 위아래). 칩을 한 번 누르면 지정되고 자동 저장된다.
  * 카드 순서는 말한 시간이 긴 화자부터이고 지정해도 바뀌지 않는다. 설명 문구는 두지 않는다(S-13).
  */
 
@@ -37,8 +38,6 @@ export interface SpeakerMappingSectionProps {
   onRetry: () => void;
   onReloadRoster: () => void;
   onShowInTranscript: (segmentId: string) => void;
-  /** two: 태블릿 세로 2열 / one: 1열(휴대폰, 태블릿 가로 오른쪽 패널) */
-  columns?: 'auto' | 'one';
   className?: string;
 }
 
@@ -57,7 +56,6 @@ export function SpeakerMappingSection({
   onRetry,
   onReloadRoster,
   onShowInTranscript,
-  columns = 'auto',
   className,
 }: SpeakerMappingSectionProps) {
   const stats = useMemo(() => speakerStats(speakers, segments), [speakers, segments]);
@@ -101,7 +99,7 @@ export function SpeakerMappingSection({
       {speakers.length === 0 ? (
         <p className="text-body text-text-muted">감지된 화자가 없습니다.</p>
       ) : (
-        <ul className={cn('grid gap-4', columns === 'auto' && speakers.length > 1 && 'tablet:grid-cols-2')}>
+        <ul className="flex flex-col gap-4">
           {ordered.map((speaker) => (
             <SpeakerCard
               key={speaker.speakerId}
@@ -187,10 +185,11 @@ function SpeakerCard({
 
   return (
     <li>
-      <Card as="article" aria-label={label} className="flex h-full flex-col gap-4">
-        <div className="flex flex-col gap-2">
+      <Card as="article" aria-label={label} className="flex flex-col gap-4 tablet:flex-row tablet:gap-6">
+        {/* 왼쪽: 누구인지 알아볼 내용 */}
+        <div className="flex min-w-0 flex-1 flex-col gap-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="flex items-center gap-2 text-label text-text">
+            <h3 className="flex items-center gap-2 text-title text-text">
               <span aria-hidden="true" className={cn('size-3 rounded-full', color)} />
               {label}
             </h3>
@@ -200,44 +199,41 @@ function SpeakerCard({
               </p>
             )}
           </div>
-          {value ? (
-            <span className="self-start rounded-full bg-selected px-3 py-1 text-label text-selected-text">{nameOf(speaker)}</span>
+          {previews.length > 0 ? (
+            <ol className="flex flex-col gap-2">
+              {previews.map((segment, index) => (
+                <li key={segment.segmentId} className={cn('flex gap-3', !expanded && index === 2 && 'hidden tablet:flex')}>
+                  <span className="w-12 shrink-0 pt-0.5 text-caption text-text-muted tabular-nums">{formatClock(segment.startMs)}</span>
+                  <span className="line-clamp-2 text-body text-text tablet:text-body-lg">{segment.text}</span>
+                </li>
+              ))}
+            </ol>
           ) : (
+            <p className="text-body text-text-muted">발화 없음</p>
+          )}
+          {previews.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              {total > PREVIEW_COUNT && (
+                <Button size="sm" variant="ghost" aria-expanded={expanded} onClick={() => setExpanded((open) => !open)}>
+                  {expanded ? '접기' : `발화 더 보기 (${total})`}
+                </Button>
+              )}
+              <Button size="sm" variant="ghost" onClick={() => onShowInTranscript(previews[0].segmentId)}>
+                원문에서 보기
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* 오른쪽: 이 화자는 누구인가 */}
+        <div className="flex flex-col gap-3 border-t border-border pt-4 tablet:w-72 tablet:shrink-0 tablet:border-t-0 tablet:border-l tablet:pt-0 tablet:pl-6 tablet-lg:w-80">
+          {/* 고른 사람은 칩으로 보이므로, 아직 안 고른 화자만 표시를 단다 */}
+          {!value && (
             <span className="inline-flex items-center gap-1 self-start rounded-full bg-warning-soft px-3 py-1 text-label text-warning-text">
               <Icon icon={TriangleAlert} size="sm" />
               미지정
             </span>
           )}
-        </div>
-
-        {previews.length > 0 && (
-          <ol className="flex flex-col gap-2 border-t border-border pt-3">
-            {previews.map((segment, index) => (
-              <li key={segment.segmentId} className={cn('flex gap-3', !expanded && index === 2 && 'hidden tablet:flex')}>
-                <span className="w-12 shrink-0 text-caption text-text-muted tabular-nums">{formatClock(segment.startMs)}</span>
-                <span className="line-clamp-2 text-body text-text">{segment.text}</span>
-              </li>
-            ))}
-          </ol>
-        )}
-        {(total > PREVIEW_COUNT || previews.length > 0) && (
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            {total > PREVIEW_COUNT ? (
-              <Button size="sm" variant="ghost" aria-expanded={expanded} onClick={() => setExpanded((open) => !open)}>
-                {expanded ? '접기' : `발화 더 보기 (${total})`}
-              </Button>
-            ) : (
-              <span />
-            )}
-            {previews[0] && (
-              <Button size="sm" variant="ghost" onClick={() => onShowInTranscript(previews[0].segmentId)}>
-                원문에서 보기
-              </Button>
-            )}
-          </div>
-        )}
-
-        <div className="mt-auto border-t border-border pt-3">
           <ChipRadioGroup
             label={`${label}의 참석자`}
             options={options}

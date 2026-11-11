@@ -124,6 +124,12 @@ function renderReview() {
   );
 }
 
+/** 회의록 탭을 열고 원하는 구역을 고른다 */
+async function openMinutes(section = '회의 요약') {
+  fireEvent.click(await screen.findByRole('tab', { name: '회의록' }));
+  fireEvent.click(screen.getByRole('button', { name: new RegExp(`^${section}`) }));
+}
+
 const calls = (fetchMock: ReturnType<typeof vi.fn>, suffix: string, method: string) =>
   fetchMock.mock.calls.filter(([url, init]) => new URL(String(url), 'http://localhost').pathname.endsWith(suffix) && (init?.method ?? 'GET') === method);
 
@@ -145,8 +151,13 @@ describe('회의록 검토 (MTG-04)', () => {
     expect(within(cards[0]).getByText('이번 주 배포 일정부터 정리하고 넘어갈게요.')).toBeTruthy();
     expect(within(cards[1]).getByRole('radio', { name: '미지정' }).getAttribute('aria-checked')).toBe('true');
     expect(screen.getByText('2명 중 1명 지정')).toBeTruthy();
+    // 미지정 화자가 있으면 화자 매핑 탭부터 연다
+    expect(screen.getByRole('tab', { name: /화자 매핑/ }).getAttribute('aria-selected')).toBe('true');
+    expect(screen.queryByText('저장됨')).toBeNull();
+    await openMinutes();
     expect((screen.getByRole('textbox', { name: '회의 요약' }) as HTMLTextAreaElement).value).toBe('배포 일정을 정했다.');
     // 담당자는 이 회의 참석자만 고른다
+    await openMinutes('실행 항목');
     const owner = screen.getByRole('combobox', { name: '담당 1' });
     expect(within(owner).getAllByRole('option').map((option) => option.textContent)).toEqual(['담당자 없음', '홍길동', '김철수']);
   });
@@ -184,17 +195,16 @@ describe('회의록 검토 (MTG-04)', () => {
   it('빈 항목은 오류로 보이고 저장할 수 없다. 고친 뒤 저장하면 현재 버전으로 한 번 보낸다', async () => {
     const fetchMock = mockApi();
     renderReview();
-    const summary = await screen.findByRole('textbox', { name: '회의 요약' });
+    await openMinutes('결정 사항');
     expect(screen.getByRole('button', { name: '저장' }).getAttribute('aria-disabled')).toBe('true');
-    expect(screen.getByText('저장됨')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: '결정 사항 추가' }));
     expect(screen.getByText('내용을 입력해 주세요.')).toBeTruthy();
-    expect(screen.getByText('저장 안 됨')).toBeTruthy();
     expect(screen.getByRole('button', { name: '저장' }).getAttribute('aria-disabled')).toBe('true');
     fireEvent.click(screen.getByRole('button', { name: '결정 사항 2 삭제' }));
 
-    fireEvent.change(summary, { target: { value: '배포 일정과 QA 일정을 정했다.' } });
+    fireEvent.click(screen.getByRole('button', { name: /^회의 요약/ }));
+    fireEvent.change(screen.getByRole('textbox', { name: '회의 요약' }), { target: { value: '배포 일정과 QA 일정을 정했다.' } });
     fireEvent.click(screen.getByRole('button', { name: '저장' }));
     expect(await screen.findByText('회의록이 저장되었습니다.')).toBeTruthy();
     const put = calls(fetchMock, '/minutes', 'PUT');
@@ -206,8 +216,8 @@ describe('회의록 검토 (MTG-04)', () => {
   it('회의록 저장이 버전 충돌(412)이면 고친 내용을 유지하고 자동으로 다시 보내지 않는다', async () => {
     const fetchMock = mockApi({ minutes: () => json({ error: { code: 'SESSION_STATE_CONFLICT' } }, 412) });
     renderReview();
-    const summary = await screen.findByRole('textbox', { name: '회의 요약' });
-    fireEvent.change(summary, { target: { value: '내가 고친 요약' } });
+    await openMinutes();
+    fireEvent.change(screen.getByRole('textbox', { name: '회의 요약' }), { target: { value: '내가 고친 요약' } });
     fireEvent.click(screen.getByRole('button', { name: '저장' }));
     expect(await screen.findByText(/수정 내용은 유지했으며 자동 저장하지 않았습니다/)).toBeTruthy();
     expect(calls(fetchMock, '/minutes', 'PUT')).toHaveLength(1);
@@ -217,7 +227,8 @@ describe('회의록 검토 (MTG-04)', () => {
   it('저장하지 않은 변경이 있으면 발송을 막고 이유를 대화상자로 알린다', async () => {
     const fetchMock = mockApi();
     renderReview();
-    fireEvent.change(await screen.findByRole('textbox', { name: '회의 요약' }), { target: { value: '바꾼 요약' } });
+    await openMinutes();
+    fireEvent.change(screen.getByRole('textbox', { name: '회의 요약' }), { target: { value: '바꾼 요약' } });
     fireEvent.click(screen.getByRole('button', { name: '발송' }));
     // 미지정 화자 확인 → 발송
     fireEvent.click(within(await screen.findByRole('dialog', { name: '미지정 화자 1명' })).getByRole('button', { name: '발송' }));
@@ -231,9 +242,8 @@ describe('회의록 검토 (MTG-04)', () => {
     renderReview();
     const cards = await screen.findAllByRole('article');
     fireEvent.click(within(cards[1]).getByRole('radio', { name: '김철수' }));
-    expect((await screen.findAllByText('저장 중')).length).toBeGreaterThan(0);
     await waitFor(() => expect(calls(fetchMock, '/speaker-mappings', 'PUT')).toHaveLength(1));
-    await waitFor(() => expect(screen.queryAllByText('저장 중')).toHaveLength(0));
+    expect(await screen.findByText('저장됨')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '발송' }));
     expect(await screen.findByTestId('where')).toHaveProperty('textContent', `/meetings/${SESSION}/complete`);
     const confirm = calls(fetchMock, '/confirm', 'POST')[0][1]!;
@@ -275,7 +285,7 @@ describe('회의록 검토 (MTG-04)', () => {
     });
     renderReview();
     fireEvent.click(await screen.findByRole('button', { name: '다시 불러오기' }));
-    expect(await screen.findByRole('textbox', { name: '회의 요약' })).toBeTruthy();
+    expect(await screen.findByRole('tab', { name: '회의록' })).toBeTruthy();
     expect(calls(fetchMock, `/meeting-sessions/${SESSION}`, 'GET')).toHaveLength(2);
   });
 });
