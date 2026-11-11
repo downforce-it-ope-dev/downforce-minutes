@@ -4,7 +4,7 @@ import { Plus, RefreshCw, Save, ScrollText, Send } from 'lucide-react';
 import { useReportSessionWork } from '../auth/sessionWork';
 import { NavigationLeaveGuard } from '../components/NavigationLeaveGuard';
 import type { ReviewSpeaker } from '../reviewApi';
-import { AppShell, Button, ButtonLink, Card, Dialog, IconButton, ProgressBar, ToastBridge, type ToastFunction } from '../ui';
+import { AppShell, Button, ButtonLink, Card, cn, Dialog, IconButton, ProgressBar, ToastBridge, type ToastFunction } from '../ui';
 import { MinutesSectionPanel, ReviewSectionNav, type ReviewSectionKey } from './MinutesEditor';
 import { installSampleReviewApi } from './sampleReviewApi';
 import { SpeakerMappingSection } from './SpeakerMappingSection';
@@ -179,11 +179,12 @@ function ReviewBody({ sessionId, review, onShowInTranscript }: { sessionId: stri
           onChange={setSection}
           className="shrink-0 tablet-lg:w-52"
         />
-        <div className="min-w-0 flex-1 tablet:min-h-0 tablet:overflow-y-auto">
+        <div className={cn('min-w-0 flex-1 tablet:min-h-0', current === 'mapping' && 'tablet:overflow-y-auto')}>
           {current === 'mapping' ? (
             mapping
           ) : minutes ? (
-            <Card>
+            // 회의록 다섯 구역은 같은 크기의 카드(발송 위까지 가득)에 담고, 항목은 위에서부터 쌓여 카드 안에서만 스크롤한다
+            <Card className="tablet:h-full">
               <MinutesSectionPanel section={current} minutes={minutes} roster={review.participants.roster} disabled={!review.minutes.editable} onChange={review.actions.updateMinutes} />
             </Card>
           ) : (

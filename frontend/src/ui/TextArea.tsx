@@ -13,6 +13,8 @@ export interface TextAreaProps extends TextareaHTMLAttributes<HTMLTextAreaElemen
   minRows?: number;
   /** body: 16px / large: 태블릿에서 body-lg(18) — 화면의 주 편집 내용(예: 회의록 항목) */
   textSize?: 'body' | 'large';
+  /** 태블릿에서 내용과 관계없이 감싼 영역의 남은 높이를 모두 채운다(긴 글은 입력란 안에서 스크롤). 예: 회의 요약 */
+  fill?: boolean;
   ref?: Ref<HTMLTextAreaElement>;
 }
 
@@ -20,7 +22,7 @@ export interface TextAreaProps extends TextareaHTMLAttributes<HTMLTextAreaElemen
  * 여러 줄 입력 (MTG-04 회의록 편집). 내용만큼 높이가 늘어나 입력란 안에서 따로 스크롤하지 않는다(문서 3.1 터치 키보드 편집).
  * 글자 16px(iPad·iPhone 자동 확대 방지), 테두리는 입력란과 같다. 최소 높이 52(2줄).
  */
-export function TextArea({ label, hideLabel = false, error, minRows = 2, textSize = 'body', id, className, value, ref, ...rest }: TextAreaProps) {
+export function TextArea({ label, hideLabel = false, error, minRows = 2, textSize = 'body', fill = false, id, className, value, ref, ...rest }: TextAreaProps) {
   const autoId = useId();
   const fieldId = id ?? `textarea-${autoId}`;
   const errorId = error ? `${fieldId}-error` : undefined;
@@ -29,13 +31,13 @@ export function TextArea({ label, hideLabel = false, error, minRows = 2, textSiz
   // 내용이 바뀔 때마다 높이를 다시 잰다
   useLayoutEffect(() => {
     const element = inner.current;
-    if (!element) return;
+    if (!element || fill) return;
     element.style.height = 'auto';
     element.style.height = `${element.scrollHeight + 2}px`;
-  }, [value]);
+  }, [value, fill]);
 
   return (
-    <div className={cn('flex flex-col gap-2', className)}>
+    <div className={cn('flex flex-col gap-2', fill && 'tablet:min-h-0 tablet:flex-1', className)}>
       <label htmlFor={fieldId} className={hideLabel ? 'sr-only' : 'text-label text-text'}>
         {label}
       </label>
@@ -52,7 +54,8 @@ export function TextArea({ label, hideLabel = false, error, minRows = 2, textSiz
         aria-invalid={error ? true : rest['aria-invalid']}
         aria-describedby={[rest['aria-describedby'], errorId].filter(Boolean).join(' ') || undefined}
         className={cn(
-          'min-h-13 w-full resize-none overflow-hidden rounded-md border bg-bg px-3.5 py-3 text-text placeholder:text-text-muted',
+          'min-h-13 w-full resize-none rounded-md border bg-bg px-3.5 py-3 text-text placeholder:text-text-muted',
+          fill ? 'overflow-y-auto tablet:min-h-0 tablet:flex-1' : 'overflow-hidden',
           textSize === 'large' ? 'text-body tablet:text-body-lg' : 'text-body',
           'disabled:cursor-not-allowed disabled:bg-neutral-100 disabled:text-neutral-500',
           error ? 'border-danger' : 'border-border-input',

@@ -119,13 +119,14 @@ export function MinutesSectionPanel({ section, minutes, roster, disabled = false
 
   if (section === 'summary') {
     return (
-      <section aria-label={title} className="flex flex-col gap-3">
-        <h2 className="text-title text-text">{title}</h2>
+      <section aria-label={title} className="flex flex-col gap-3 tablet:h-full">
+        <h2 className="flex h-10 shrink-0 items-center text-title text-text">{title}</h2>
         <TextArea
           label={title}
           hideLabel
           textSize="large"
-          minRows={6}
+          fill
+          minRows={10}
           value={minutes.summary}
           disabled={disabled}
           onChange={(event) => onChange({ ...minutes, summary: event.target.value })}
@@ -140,25 +141,27 @@ export function MinutesSectionPanel({ section, minutes, roster, disabled = false
   const items = minutes[key];
   const setItems = (next: string[]) => onChange({ ...minutes, [key]: next });
   return (
-    <section aria-label={title} className="flex flex-col gap-3">
+    <section aria-label={title} className="flex flex-col gap-3 tablet:h-full">
       <SectionHead title={title} disabled={disabled} onAdd={() => setItems([...items, ''])} />
-      {items.length === 0 && <p className="py-6 text-center text-body text-text-muted">항목 없음</p>}
-      {items.map((value, index) => (
-        <div key={index} className="flex items-start gap-2">
-          <span className="mt-3.5 w-6 shrink-0 text-right text-label text-text-muted tabular-nums tablet:mt-4">{index + 1}</span>
-          <TextArea
-            label={`${title} ${index + 1}`}
-            hideLabel
-            textSize="large"
-            className="min-w-0 flex-1"
-            value={value}
-            disabled={disabled}
-            error={value.trim() ? undefined : EMPTY_ITEM}
-            onChange={(event) => setItems(items.map((current, at) => (at === index ? event.target.value : current)))}
-          />
-          <IconButton icon={X} label={`${title} ${index + 1} 삭제`} variant="surface" disabled={disabled} onClick={() => setItems(items.filter((_, at) => at !== index))} />
-        </div>
-      ))}
+      <div className="flex flex-col gap-3 tablet:min-h-0 tablet:flex-1 tablet:overflow-y-auto">
+        {items.length === 0 && <p className="py-6 text-center text-body text-text-muted">항목 없음</p>}
+        {items.map((value, index) => (
+          <div key={index} className="flex items-start gap-2">
+            <span className="mt-3.5 w-6 shrink-0 text-right text-label text-text-muted tabular-nums tablet:mt-4">{index + 1}</span>
+            <TextArea
+              label={`${title} ${index + 1}`}
+              hideLabel
+              textSize="large"
+              className="min-w-0 flex-1"
+              value={value}
+              disabled={disabled}
+              error={value.trim() ? undefined : EMPTY_ITEM}
+              onChange={(event) => setItems(items.map((current, at) => (at === index ? event.target.value : current)))}
+            />
+            <IconButton icon={X} label={`${title} ${index + 1} 삭제`} variant="surface" disabled={disabled} onClick={() => setItems(items.filter((_, at) => at !== index))} />
+          </div>
+        ))}
+      </div>
     </section>
   );
 }
@@ -168,75 +171,77 @@ function ActionItems({ minutes, roster, disabled, onChange }: { minutes: Structu
     onChange({ ...minutes, actionItems: minutes.actionItems.map((item, at) => (at === index ? { ...item, ...patch } : item)) });
   }
   return (
-    <section aria-label="실행 항목" className="flex flex-col gap-3">
+    <section aria-label="실행 항목" className="flex flex-col gap-3 tablet:h-full">
       <SectionHead
         title="실행 항목"
         disabled={disabled}
         onAdd={() => onChange({ ...minutes, actionItems: [...minutes.actionItems, { task: '', ownerParticipantId: null, dueDate: null }] })}
       />
-      {minutes.actionItems.length === 0 && <p className="py-6 text-center text-body text-text-muted">항목 없음</p>}
-      {minutes.actionItems.map((action, index) => {
-        const ownerKnown = action.ownerParticipantId === null || roster.some(({ id }) => id === action.ownerParticipantId);
-        return (
-          <div key={index} className="flex flex-col gap-3 rounded-lg border border-border p-3 tablet:p-4">
-            <div className="flex items-start gap-2">
-              <TextArea
-                label={`할 일 ${index + 1}`}
-                textSize="large"
-                className="min-w-0 flex-1"
-                value={action.task}
-                disabled={disabled}
-                error={action.task.trim() ? undefined : EMPTY_ITEM}
-                onChange={(event) => setAction(index, { task: event.target.value })}
-              />
-              <IconButton
-                icon={X}
-                label={`실행 항목 ${index + 1} 삭제`}
-                variant="surface"
-                className="mt-7"
-                disabled={disabled}
-                onClick={() => onChange({ ...minutes, actionItems: minutes.actionItems.filter((_, at) => at !== index) })}
-              />
-            </div>
-            <div className="grid gap-3 tablet:grid-cols-2">
-              <SelectField
-                label={`담당 ${index + 1}`}
-                value={action.ownerParticipantId ?? ''}
-                disabled={disabled}
-                onChange={(event) => setAction(index, { ownerParticipantId: event.target.value || null })}
-              >
-                <option value="">담당자 없음</option>
-                {!ownerKnown && action.ownerParticipantId && <option value={action.ownerParticipantId}>기존 담당자 유지</option>}
-                {roster.map(({ id, name }) => (
-                  <option key={id} value={id}>
-                    {name}
-                  </option>
-                ))}
-              </SelectField>
-              <div className="flex items-end gap-2">
-                <DateField
-                  label={`기한 ${index + 1}`}
+      <div className="flex flex-col gap-3 tablet:min-h-0 tablet:flex-1 tablet:overflow-y-auto">
+        {minutes.actionItems.length === 0 && <p className="py-6 text-center text-body text-text-muted">항목 없음</p>}
+        {minutes.actionItems.map((action, index) => {
+          const ownerKnown = action.ownerParticipantId === null || roster.some(({ id }) => id === action.ownerParticipantId);
+          return (
+            <div key={index} className="flex flex-col gap-3 rounded-lg border border-border p-3 tablet:p-4">
+              <div className="flex items-start gap-2">
+                <TextArea
+                  label={`할 일 ${index + 1}`}
+                  textSize="large"
                   className="min-w-0 flex-1"
-                  value={action.dueDate ?? ''}
+                  value={action.task}
                   disabled={disabled}
-                  invalid={!validDueDate(action.dueDate)}
-                  onChange={(value) => setAction(index, { dueDate: value })}
+                  error={action.task.trim() ? undefined : EMPTY_ITEM}
+                  onChange={(event) => setAction(index, { task: event.target.value })}
                 />
-                {action.dueDate && (
-                  <IconButton icon={X} label={`기한 ${index + 1} 지우기`} variant="surface" disabled={disabled} onClick={() => setAction(index, { dueDate: null })} />
-                )}
+                <IconButton
+                  icon={X}
+                  label={`실행 항목 ${index + 1} 삭제`}
+                  variant="surface"
+                  className="mt-7"
+                  disabled={disabled}
+                  onClick={() => onChange({ ...minutes, actionItems: minutes.actionItems.filter((_, at) => at !== index) })}
+                />
+              </div>
+              <div className="grid gap-3 tablet:grid-cols-2">
+                <SelectField
+                  label={`담당 ${index + 1}`}
+                  value={action.ownerParticipantId ?? ''}
+                  disabled={disabled}
+                  onChange={(event) => setAction(index, { ownerParticipantId: event.target.value || null })}
+                >
+                  <option value="">담당자 없음</option>
+                  {!ownerKnown && action.ownerParticipantId && <option value={action.ownerParticipantId}>기존 담당자 유지</option>}
+                  {roster.map(({ id, name }) => (
+                    <option key={id} value={id}>
+                      {name}
+                    </option>
+                  ))}
+                </SelectField>
+                <div className="flex items-end gap-2">
+                  <DateField
+                    label={`기한 ${index + 1}`}
+                    className="min-w-0 flex-1"
+                    value={action.dueDate ?? ''}
+                    disabled={disabled}
+                    invalid={!validDueDate(action.dueDate)}
+                    onChange={(value) => setAction(index, { dueDate: value })}
+                  />
+                  {action.dueDate && (
+                    <IconButton icon={X} label={`기한 ${index + 1} 지우기`} variant="surface" disabled={disabled} onClick={() => setAction(index, { dueDate: null })} />
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </section>
   );
 }
 
 function SectionHead({ title, disabled, onAdd }: { title: string; disabled: boolean; onAdd: () => void }) {
   return (
-    <div className="flex items-center justify-between gap-3">
+    <div className="flex h-10 shrink-0 items-center justify-between gap-3">
       <h2 className="text-title text-text">{title}</h2>
       <Button size="sm" variant="secondary" shape="pill" icon={Plus} disabled={disabled} onClick={onAdd} aria-label={`${title} 추가`}>
         추가

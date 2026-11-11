@@ -122,3 +122,26 @@ test('휴대폰: 발송이 화면 아래에 고정되어 늘 보인다', async (
   await expect(page.getByRole('button', { name: '발송' })).toBeInViewport();
   await expect(page.getByRole('button', { name: '저장' })).toBeInViewport();
 });
+
+test('회의록 다섯 구역은 모두 같은 크기의 카드(발송 위까지)에 담기고, 요약 입력란은 카드를 가득 채운다', async ({ page }) => {
+  await mock(page);
+  for (const size of [{ width: 1180, height: 820 }, { width: 820, height: 1180 }]) {
+    await page.setViewportSize(size);
+    await page.goto(`/meetings/${SESSION}/review`);
+    const nav = page.getByRole('navigation', { name: '검토 단계' });
+    const boxes: Array<{ y: number; height: number }> = [];
+    for (const name of ['회의 요약', '논의 내용', '결정 사항', '후속 조치', '실행 항목']) {
+      await nav.getByRole('button', { name: new RegExp(`^${name}`) }).click();
+      const card = page.getByRole('region', { name }).locator('..');
+      const box = (await card.boundingBox())!;
+      boxes.push({ y: Math.round(box.y), height: Math.round(box.height) });
+    }
+    expect(new Set(boxes.map((box) => `${box.y}:${box.height}`)).size, JSON.stringify(boxes)).toBe(1);
+    const send = (await page.getByRole('button', { name: '발송' }).boundingBox())!;
+    expect(boxes[0].y + boxes[0].height).toBeLessThanOrEqual(send.y);
+    expect(send.y - (boxes[0].y + boxes[0].height)).toBeLessThanOrEqual(24);
+    await nav.getByRole('button', { name: /^회의 요약/ }).click();
+    const summary = (await page.getByRole('textbox', { name: '회의 요약' }).boundingBox())!;
+    expect(summary.height).toBeGreaterThan(boxes[0].height * 0.6);
+  }
+});
