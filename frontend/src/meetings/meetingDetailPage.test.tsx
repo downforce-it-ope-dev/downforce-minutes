@@ -55,7 +55,7 @@ afterEach(() => {
 });
 
 describe('회의록 상세 (MIN-02)', () => {
-  it('회의 정보와 내용이 있는 섹션만 검토 화면과 같은 이름·순서로 보인다', async () => {
+  it('회의 정보와 내용이 있는 섹션만 검토 화면과 같은 이름·순서로 위아래로 보인다', async () => {
     const fetchMock = mockDetail(() => json({ data: DETAIL }));
     renderDetail();
     expect(await screen.findByRole('heading', { level: 2, name: '주간 회의' })).toBeTruthy();
@@ -64,10 +64,9 @@ describe('회의록 상세 (MIN-02)', () => {
     const article = screen.getByRole('article');
     expect(within(article).getAllByRole('heading', { level: 3 }).map((heading) => heading.textContent)).toEqual(['회의 요약', '논의 내용', '후속 조치', '실행 항목']);
     const actions = within(screen.getByRole('region', { name: '실행 항목' })).getAllByRole('listitem');
-    expect(actions.map((item) => item.textContent)).toEqual(['일정표 공유담당 홍길동 · 기한 2026-11-12', '회의실 예약담당 미지정 · 기한 없음']);
-    // 섹션 칩(목차)
-    const toc = within(screen.getByRole('navigation', { name: '목차' }));
-    expect(toc.getAllByRole('button').map((button) => button.textContent)).toEqual(['회의 요약', '논의 내용', '후속 조치', '실행 항목']);
+    expect(actions.map((item) => item.textContent)).toEqual(['일정표 공유담당 홍길동기한 2026-11-12', '회의실 예약담당 미지정기한 없음']);
+    // 목차는 두지 않는다(사용자 결정 2026-11-11)
+    expect(screen.queryByRole('navigation', { name: '목차' })).toBeNull();
     // 편집 동작 없음
     expect(screen.queryByRole('textbox')).toBeNull();
   });

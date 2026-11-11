@@ -15,20 +15,18 @@ import {
   Dialog,
   Icon,
   IconButton,
-  TABLET_LG_QUERY,
   TABLET_QUERY,
-  Tabs,
   useMediaQuery,
   useToast,
 } from '../ui';
 import { formatMeetingAtLong } from './meetingFormat';
-import { minutesText, ownerName, safeDocumentUrl, sectionId, visibleSections, type SectionKey } from './meetingView';
+import { minutesText, ownerName, safeDocumentUrl, visibleSections, type SectionKey } from './meetingView';
 
 /*
  * MIN-02 회의록 상세 (GitHub #33, docs/renewal/화면기획/MIN-02_회의록상세.md). 읽기 전용.
  * - 섹션 이름·순서는 검토 화면(MTG-04)과 같다: 회의 요약 / 논의 내용 / 결정 사항 / 후속 조치 / 실행 항목. 내용 없는 섹션은 숨긴다
- * - 큰 태블릿: 왼쪽 본문(읽기 폭 720) + 오른쪽 패널 384(목차 / 전사 원문 탭), 두 단 따로 스크롤
- * - 그보다 작으면: 본문 위 섹션 칩(목차), 전사 원문은 상단 바 버튼 → 대화상자(휴대폰 하단 시트)
+ * - 사용자 결정(2026-11-11, 재구성): 좌우 2단 없이 위아래 한 단. 머리 아래에 섹션마다 카드를 쌓고 본문 폭을 그대로 쓴다.
+ *   목차(섹션 칩·목차 탭)와 화면 안 전사 원문 패널은 두지 않는다. 전사 원문은 상단 바 버튼 → 대화상자(휴대폰 하단 시트)
  * - 상단 바: 목록으로(조건 유지), 원본 문서(URL 있을 때만, 새 탭), 복사(토스트). 휴대폰은 아이콘 버튼
  */
 
@@ -45,7 +43,6 @@ function MeetingDetailScreen({ documentId }: { documentId: string }) {
   const [load, setLoad] = useState<Load>({ status: 'loading' });
   const [attempt, setAttempt] = useState(0);
   const [transcriptOpen, setTranscriptOpen] = useState(false);
-  const wide = useMediaQuery(TABLET_LG_QUERY);
   const tablet = useMediaQuery(TABLET_QUERY);
 
   useEffect(() => {
@@ -69,14 +66,12 @@ function MeetingDetailScreen({ documentId }: { documentId: string }) {
       title="회의록"
       hideTitle
       back={{ to: `/meetings${listSearch ? `?${listSearch}` : ''}`, label: '회의록 목록' }}
-      fillHeight={wide && detail ? 'tablet-lg' : false}
       actions={
         detail && (
           <DetailActions
             detail={detail}
             documentUrl={documentUrl}
             compact={!tablet}
-            showTranscript={!wide}
             onTranscript={() => setTranscriptOpen(true)}
           />
         )
@@ -107,23 +102,14 @@ function MeetingDetailScreen({ documentId }: { documentId: string }) {
           </Button>
         </Card>
       )}
-      {detail &&
-        (wide ? (
-          <div className="flex min-h-0 flex-1 gap-6">
-            {/* 본문 단만 따로 스크롤. 키보드로도 스크롤할 수 있게 초점을 받는다 */}
-            <section aria-label="회의록 본문" tabIndex={0} className="-m-1.5 min-h-0 flex-1 overflow-y-auto p-1.5">
-              <MinutesArticle detail={detail} />
-            </section>
-            <SidePanel detail={detail} />
-          </div>
-        ) : (
-          <>
-            <MinutesArticle detail={detail} withChips />
-            <Dialog open={transcriptOpen} onOpenChange={setTranscriptOpen} title="전사 원문" size="form">
-              <Transcript detail={detail} />
-            </Dialog>
-          </>
-        ))}
+      {detail && (
+        <>
+          <MinutesArticle detail={detail} />
+          <Dialog open={transcriptOpen} onOpenChange={setTranscriptOpen} title="전사 원문" size="form">
+            <Transcript detail={detail} />
+          </Dialog>
+        </>
+      )}
     </AppShell>
   );
 }
@@ -132,13 +118,11 @@ function DetailActions({
   detail,
   documentUrl,
   compact,
-  showTranscript,
   onTranscript,
 }: {
   detail: MeetingDetail;
   documentUrl: string | null;
   compact: boolean;
-  showTranscript: boolean;
   onTranscript: () => void;
 }) {
   const toast = useToast();
@@ -158,7 +142,7 @@ function DetailActions({
   if (compact) {
     return (
       <>
-        {showTranscript && <IconButton icon={ScrollText} label="전사 원문" variant="surface" onClick={onTranscript} />}
+        <IconButton icon={ScrollText} label="전사 원문" variant="surface" onClick={onTranscript} />
         {documentUrl && (
           <a
             href={documentUrl}
@@ -176,11 +160,9 @@ function DetailActions({
   }
   return (
     <>
-      {showTranscript && (
-        <Button variant="secondary" shape="pill" icon={ScrollText} onClick={onTranscript}>
-          전사 원문
-        </Button>
-      )}
+      <Button variant="secondary" shape="pill" icon={ScrollText} onClick={onTranscript}>
+        전사 원문
+      </Button>
       {documentUrl && (
         <ButtonAnchor href={documentUrl} newTab variant="secondary" shape="pill" icon={ExternalLink}>
           원본 문서
@@ -193,21 +175,12 @@ function DetailActions({
   );
 }
 
-function scrollToSection(key: SectionKey) {
-  const target = document.getElementById(sectionId(key));
-  if (!target) return;
-  const reduce = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  target.scrollIntoView?.({ block: 'start', behavior: reduce ? 'auto' : 'smooth' });
-  target.focus({ preventScroll: true });
-}
-
-/** 회의 정보 + 섹션 칩(작은 화면) + 본문 */
-function MinutesArticle({ detail, withChips = false }: { detail: MeetingDetail; withChips?: boolean }) {
-  const sections = visibleSections(detail);
+/** 회의 정보 + 섹션 카드를 위에서 아래로 쌓는다(본문 폭 그대로) */
+function MinutesArticle({ detail }: { detail: MeetingDetail }) {
   const people = detail.participants.map(({ name }) => name).join(', ');
   return (
-    <article aria-labelledby="meeting-title" className="mx-auto flex w-full max-w-reading flex-col gap-6 pb-6">
-      <header className="flex flex-col gap-2">
+    <article aria-labelledby="meeting-title" className="flex flex-col gap-4 tablet:gap-6">
+      <header className="flex flex-col gap-2 px-1">
         <h2 id="meeting-title" className="text-headline text-text">
           {detail.title}
         </h2>
@@ -217,33 +190,14 @@ function MinutesArticle({ detail, withChips = false }: { detail: MeetingDetail; 
           {people ? `참석자 ${people}` : '참석자 정보 없음'}
         </p>
       </header>
-      {withChips && sections.length > 1 && (
-        <nav aria-label="목차" className="-mx-4 overflow-x-auto px-4 tablet:-mx-6 tablet:px-6">
-          <ul className="flex gap-2 py-1">
-            {sections.map(({ key, title }) => (
-              <li key={key} className="shrink-0">
-                <button
-                  type="button"
-                  onClick={() => scrollToSection(key)}
-                  className="relative inline-flex h-10 cursor-pointer items-center rounded-full border border-border bg-bg px-4 text-label text-text before:absolute before:inset-x-0 before:-inset-y-1 active:bg-selected"
-                >
-                  {title}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </nav>
-      )}
-      <Card className="flex flex-col gap-8">
-        {sections.map(({ key, title }) => (
-          <section key={key} id={sectionId(key)} tabIndex={-1} aria-labelledby={`${sectionId(key)}-title`} className="flex scroll-mt-4 flex-col gap-3 outline-none">
-            <h3 id={`${sectionId(key)}-title`} className="text-title text-text">
-              {title}
-            </h3>
-            <SectionBody detail={detail} sectionKey={key} />
-          </section>
-        ))}
-      </Card>
+      {visibleSections(detail).map(({ key, title }) => (
+        <Card as="section" key={key} aria-labelledby={`minutes-section-${key}`} className="flex flex-col gap-3">
+          <h3 id={`minutes-section-${key}`} className="text-title text-text">
+            {title}
+          </h3>
+          <SectionBody detail={detail} sectionKey={key} />
+        </Card>
+      ))}
     </article>
   );
 }
@@ -262,10 +216,15 @@ function SectionBody({ detail, sectionKey }: { detail: MeetingDetail; sectionKey
         {detail.minutes.actionItems.map((item, index) => {
           const owner = ownerName(detail, item.ownerParticipantId);
           return (
-            <li key={`${index}-${item.task}`} className="flex min-h-18 flex-col justify-center gap-1 border-b border-border px-4 py-3 last:border-b-0 tablet:min-h-19">
-              <span className="text-body text-text">{item.task}</span>
-              <span className="text-caption text-text-muted">
-                담당 {owner ?? '미지정'} · 기한 <span className="tabular-nums">{item.dueDate ?? '없음'}</span>
+            <li
+              key={`${index}-${item.task}`}
+              className="flex min-h-18 flex-col justify-center gap-1 border-b border-border px-4 py-3 last:border-b-0 tablet:min-h-15 tablet:flex-row tablet:items-center tablet:gap-4"
+            >
+              {/* 휴대폰: 할 일 / "담당 · 기한" 2줄. 태블릿 이상: 할 일 | 담당 | 기한 한 줄(할 일이 길면 줄바꿈) */}
+              <span className="text-body text-text tablet:min-w-0 tablet:flex-1">{item.task}</span>
+              <span className="text-caption text-text-muted tablet:w-36 tablet:shrink-0 tablet:text-body">담당 {owner ?? '미지정'}</span>
+              <span className="text-caption text-text-muted tablet:w-36 tablet:shrink-0 tablet:text-body">
+                기한 <span className="tabular-nums">{item.dueDate ?? '없음'}</span>
               </span>
             </li>
           );
@@ -281,44 +240,6 @@ function SectionBody({ detail, sectionKey }: { detail: MeetingDetail; sectionKey
         </li>
       ))}
     </ul>
-  );
-}
-
-/** 큰 태블릿 오른쪽 패널 384: 목차 / 전사 원문 */
-function SidePanel({ detail }: { detail: MeetingDetail }) {
-  const [tab, setTab] = useState<'toc' | 'transcript'>('toc');
-  return (
-    <Card as="section" padding="none" aria-label="목차와 전사 원문" className="flex min-h-0 w-96 shrink-0 flex-col overflow-hidden">
-      <Tabs
-        label="보기"
-        value={tab}
-        onChange={setTab}
-        className="min-h-0 flex-1"
-        panelClassName="overflow-y-auto"
-        items={[
-          {
-            value: 'toc',
-            label: '목차',
-            content: (
-              <ul className="flex flex-col gap-1 p-2">
-                {visibleSections(detail).map(({ key, title }) => (
-                  <li key={key}>
-                    <button
-                      type="button"
-                      onClick={() => scrollToSection(key)}
-                      className="flex h-15 w-full cursor-pointer items-center rounded-md px-4 text-left text-label text-text active:bg-selected"
-                    >
-                      {title}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ),
-          },
-          { value: 'transcript', label: '전사 원문', content: <Transcript detail={detail} /> },
-        ]}
-      />
-    </Card>
   );
 }
 
@@ -340,7 +261,7 @@ function Transcript({ detail }: { detail: MeetingDetail }) {
 
 function DetailSkeleton() {
   return (
-    <div aria-busy="true" aria-label="회의록 불러오는 중" className="mx-auto flex w-full max-w-reading flex-col gap-6">
+    <div aria-busy="true" aria-label="회의록 불러오는 중" className="flex w-full flex-col gap-6">
       <div className="flex flex-col gap-3">
         <span className="h-7 w-2/3 animate-pulse rounded-full bg-bg/70 motion-reduce:animate-none" />
         <span className="h-4 w-1/2 animate-pulse rounded-full bg-bg/70 motion-reduce:animate-none" />

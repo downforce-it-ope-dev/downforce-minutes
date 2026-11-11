@@ -14,7 +14,6 @@ export const SECTIONS: ReadonlyArray<{ key: SectionKey; title: string }> = [
   { key: 'actionItems', title: '실행 항목' },
 ];
 
-export const sectionId = (key: SectionKey) => `minutes-section-${key}`;
 
 /** 내용이 있는 섹션만. 요약은 비어도 "요약이 없습니다."로 둔다 */
 export function visibleSections(detail: MeetingDetail) {

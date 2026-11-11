@@ -145,27 +145,29 @@ test('MIN-01 → MIN-02 → 목록으로: 검색 조건 유지', async ({ page }
   await expect(page.getByRole('list', { name: '회의록' }).getByRole('link')).toHaveCount(1);
 });
 
-test('MIN-02 태블릿 가로: 본문 + 오른쪽 패널 384(목차 / 전사 원문), 목차로 섹션 이동', async ({ page }) => {
+test('MIN-02 태블릿 가로: 위아래 한 단(섹션 카드를 쌓음), 목차·전사 원문 패널 없음, 전사 원문은 대화상자', async ({ page }) => {
   await mock(page);
   await page.setViewportSize({ width: 1180, height: 820 });
   await page.goto('/meetings/doc-0');
-  const panel = page.getByRole('region', { name: '목차와 전사 원문' });
-  expect((await panel.boundingBox())!.width).toBe(384);
-  await expect(page.getByRole('button', { name: '전사 원문' })).toHaveCount(0);
-  await panel.getByRole('button', { name: '실행 항목' }).click();
-  const heading = page.getByRole('heading', { level: 3, name: '실행 항목' });
-  await expect(heading).toBeInViewport();
-  await panel.getByRole('tab', { name: '전사 원문' }).click();
-  await expect(panel.getByRole('list', { name: '전사 원문' }).getByRole('listitem')).toHaveCount(20);
+  const summary = page.getByRole('region', { name: '회의 요약' });
+  const discussion = page.getByRole('region', { name: '논의 내용' });
+  const a = (await summary.boundingBox())!;
+  const b = (await discussion.boundingBox())!;
+  expect(b.y).toBeGreaterThan(a.y + a.height);
+  expect(Math.abs(a.x - b.x)).toBeLessThanOrEqual(1);
+  expect(a.width).toBeGreaterThan(800);
+  await expect(page.getByRole('navigation', { name: '목차' })).toHaveCount(0);
+  await expect(page.getByRole('tab')).toHaveCount(0);
+  await page.getByRole('button', { name: '전사 원문' }).click();
+  await expect(page.getByRole('dialog', { name: '전사 원문' }).getByRole('listitem')).toHaveCount(20);
+  await page.keyboard.press('Escape');
   await expect(page.getByRole('link', { name: '원본 문서' })).toHaveAttribute('target', '_blank');
 });
 
-test('MIN-02 휴대폰: 섹션 칩으로 이동, 전사 원문은 하단 시트', async ({ page }) => {
+test('MIN-02 휴대폰: 전사 원문은 하단 시트', async ({ page }) => {
   await mock(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/meetings/doc-0');
-  await page.getByRole('navigation', { name: '목차' }).getByRole('button', { name: '후속 조치' }).click();
-  await expect(page.getByRole('heading', { level: 3, name: '후속 조치' })).toBeInViewport();
   await page.getByRole('button', { name: '전사 원문' }).click();
   await expect(page.getByRole('dialog', { name: '전사 원문' })).toBeVisible();
 });
