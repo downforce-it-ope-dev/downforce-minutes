@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { RefreshCw, Search, Trash2, UserPlus, X } from 'lucide-react';
+import { FileUp, RefreshCw, Search, Trash2, UserPlus, X } from 'lucide-react';
 import { AccountButton, SidebarAccount } from '../auth/AccountMenu';
 import { listParticipants, type Participant } from '../participantsApi';
 import { AppShell, BottomDock, Button, Card, IconButton, SelectField, TextField, useToast } from '../ui';
+import { CsvImportDialog } from './CsvImportDialog';
 import { DeleteParticipantDialog, ParticipantFormDialog, type ParticipantFormTarget } from './ParticipantDialogs';
 import { filterParticipants, hasTeamField, NO_TEAM, sortParticipants, teamNames } from './participantRules';
 
@@ -12,6 +13,7 @@ import { filterParticipants, hasTeamField, NO_TEAM, sortParticipants, teamNames 
  * - 목록 행: 아바타(이름 첫 글자) + 이름(+ 팀 배지) / 이메일. 태블릿 이상은 한 줄 가로 배치. 행을 누르면 수정, 행 끝 삭제
  * - 추가·수정(P01)과 삭제 확인(P02)은 대화상자(휴대폰 하단 시트). 편집 패널(2단)은 두지 않는다
  * - 팀(배지·거르기·입력)은 응답에 team이 있을 때만(Backend 팀 확장 #35 뒤) 보인다
+ * - CSV 일괄 등록(P03, #37)은 검색창 옆 원형 버튼 → 대화상자
  * - 결과·오류는 토스트(S-13)
  */
 
@@ -47,6 +49,7 @@ function ParticipantsBody({ target, setTarget }: { target: ParticipantFormTarget
   const [query, setQuery] = useState('');
   const [team, setTeam] = useState('');
   const [toDelete, setToDelete] = useState<Participant | null>(null);
+  const [csvOpen, setCsvOpen] = useState(false);
   const reload = useCallback(() => setAttempt((value) => value + 1), []);
 
   useEffect(() => {
@@ -96,6 +99,8 @@ function ParticipantsBody({ target, setTarget }: { target: ParticipantFormTarget
             <option value={NO_TEAM}>팀 없음</option>
           </SelectField>
         )}
+        {/* CSV 일괄 등록 (P03, #37) */}
+        <IconButton icon={FileUp} label="CSV로 일괄 등록" variant="surface" className="self-end tablet:self-auto" aria-haspopup="dialog" onClick={() => setCsvOpen(true)} />
       </div>
 
       <section aria-label="참석자" className="flex flex-col gap-3">
@@ -152,6 +157,18 @@ function ParticipantsBody({ target, setTarget }: { target: ParticipantFormTarget
           replace(mode === 'create' ? [...roster, saved] : roster.map((person) => (person.id === saved.id ? saved : person)));
           setTarget(null);
           toast({ message: mode === 'create' ? '참석자를 추가했습니다' : '참석자를 수정했습니다', tone: 'success' });
+        }}
+      />
+      <CsvImportDialog
+        open={csvOpen}
+        onClose={({ created, renamed }) => {
+          setCsvOpen(false);
+          if (created + renamed === 0) return;
+          reload();
+          toast({
+            message: renamed ? `참석자 ${created}명을 등록하고 ${renamed}명의 이름을 갱신했습니다` : `참석자 ${created}명을 등록했습니다`,
+            tone: 'success',
+          });
         }}
       />
       <DeleteParticipantDialog

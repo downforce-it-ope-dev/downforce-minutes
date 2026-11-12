@@ -105,3 +105,39 @@ test('PTC-01-P01: 회사 메일이 아니면 막고, 회사 메일이면 등록�
   await expect(page.getByRole('button', { name: '시험참석자 수정' })).toBeVisible();
   expect(posts).toEqual([{ name: '시험참석자', email: 'test.ptc@miinit.com' }]);
 });
+
+// 한국어 Excel "CSV(쉼표로 분리)" 저장 형식(CP949): 메일계정,이름 / hong@miinit.com,홍길동
+const CP949 = Buffer.from([184, 222, 192, 207, 176, 232, 193, 164, 44, 192, 204, 184, 167, 13, 10, 104, 111, 110, 103, 64, 109, 105, 105, 110, 105, 116, 46, 99, 111, 109, 44, 200, 171, 177, 230, 181, 191, 13, 10]);
+
+for (const size of [SIZES[0], SIZES[1]]) {
+  test(`PTC-01-P03 · ${size.label}: CP949 CSV를 읽어 확인 → 등록 → 결과, axe 심각 위반 0건`, async ({ page }) => {
+    const posts = await mock(page);
+    await page.setViewportSize(size);
+    await page.goto('/participants');
+    await page.getByRole('button', { name: 'CSV로 일괄 등록' }).click();
+    const dialog = page.getByRole('dialog', { name: 'CSV로 일괄 등록' });
+    await expect(dialog.getByRole('link', { name: '양식 내려받기' })).toBeVisible();
+    await expectAccessible(page);
+    await dialog.getByLabel('파일 선택').setInputFiles({ name: 'people.csv', mimeType: 'text/csv', buffer: CP949 });
+    const rows = dialog.getByRole('list', { name: 'CSV 행' });
+    await expect(rows.getByRole('listitem')).toHaveCount(1);
+    await expect(rows).toContainText('홍길동');
+    await expect(rows).toContainText('hong@miinit.com');
+    await expectAccessible(page);
+    await dialog.getByRole('button', { name: '1명 등록' }).click();
+    await expect(dialog.getByRole('button', { name: '완료' })).toBeVisible();
+    await expect(dialog.getByRole('definition').first()).toHaveText('1명');
+    await expectAccessible(page);
+    await dialog.getByRole('button', { name: '완료' }).click();
+    await expect(page.getByText('참석자 1명을 등록했습니다')).toBeVisible();
+    expect(posts).toEqual([{ name: '홍길동', email: 'hong@miinit.com' }]);
+  });
+}
+
+test('양식 파일은 UTF-8 BOM CSV(메일계정,이름)다', async ({ request }) => {
+  const response = await request.get('/participants-template.csv');
+  expect(response.ok()).toBe(true);
+  const body = await response.body();
+  expect([...body.subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
+  expect(body.subarray(3).toString('utf8').split(/\r?\n/)[0]).toBe('메일계정,이름');
+});

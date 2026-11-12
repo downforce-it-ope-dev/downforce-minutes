@@ -95,6 +95,7 @@
 - **참석자 (R7)**
   - 참석자 관리(`/participants`, `/settings/participants`)는 리뉴얼 라우트다(`src/participants/`). 입력 규칙(회사 메일 @miinit.com만, 수정은 이메일을 바꿀 때만)은 `participantRules.ts`이고 새 회의의 새 참석자 폼도 같이 쓴다.
   - 팀은 응답에 `team`이 있을 때만(Backend #35 뒤) 보인다(`hasTeamField`).
+  - CSV 일괄 등록(`CsvImportDialog.tsx`, 읽기·판정은 `csvImport.ts`)은 지금 메일계정·이름만 받는다. 팀은 #35 뒤에 넣는다. 양식은 `frontend/public/participants-template.csv`.
 - **회의록 (R6)**
   - 회의록 목록(`/meetings`)·상세(`/meetings/:documentId`)는 리뉴얼 라우트다(`src/meetings/`). 목록의 검색·기간·정렬 조건은 주소(`?q·from·to·sort`)에 두고, 상세의 "회의록 목록"은 그 조건으로 돌아간다(목록 행 링크의 `state.listSearch`).
   - 회의록 목록과 홈 최근 회의록은 내가 참석자인 회의만 보인다(`src/meetings/myMeetings.ts`의 `listMyMeetings`, 로그인 이메일과 같은 참석자). 회의 목록 API를 직접 쓰지 않는다.
