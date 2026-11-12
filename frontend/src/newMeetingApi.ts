@@ -116,7 +116,21 @@ export async function getDocumentAppConfig(): Promise<DocumentAppConfig> {
   return result.data;
 }
 
+/** 받아 둔 템플릿 목록 (로딩 개선 2026-11-12). 새 회의를 다시 열면 바로 보이고 뒤에서 새로 받는다. 테스트마다 fetch가 바뀌므로 fetch별로 기억한다 */
+const lastTemplates = new WeakMap<typeof fetch, MeetingTemplate[]>();
+
+export function peekMeetingTemplates(): MeetingTemplate[] | undefined {
+  return lastTemplates.get(fetch);
+}
+
 export async function listMeetingTemplates(): Promise<MeetingTemplate[]> {
+  const fetchImpl = fetch;
+  const items = await loadMeetingTemplates();
+  lastTemplates.set(fetchImpl, items);
+  return items;
+}
+
+async function loadMeetingTemplates(): Promise<MeetingTemplate[]> {
   const result = await get<{ data: { items: MeetingTemplate[] } }>('/templates');
   if (!Array.isArray(result.data?.items)) throw new NewMeetingApiError('INVALID_TEMPLATE_LIST');
   return result.data.items;
