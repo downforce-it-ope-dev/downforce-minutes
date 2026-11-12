@@ -137,8 +137,9 @@ function NewMeetingForm({
 
   return (
     <div className="flex flex-1 flex-col gap-4 tablet:min-h-0">
-      {/* 높이가 낮은 큰 태블릿 가로(low): 제목 · 날짜 · 템플릿을 한 줄로 모아 참석자 영역을 넓힌다(2026-11-12, S9 가로) */}
-      <Card as="section" aria-label="회의 정보" padding="none" className="flex shrink-0 flex-col gap-3 p-4 tablet:p-5 low:grid low:grid-cols-6 low:items-end low:gap-4 low:py-4">
+      {/* 큰 태블릿(가로): 왼쪽 회의 정보(제목 · 템플릿 · 날짜 위아래) + 오른쪽 참석자(사용자 결정 2026-11-12) */}
+      <div className="flex flex-col gap-4 tablet:min-h-0 tablet:flex-1 tablet-lg:flex-row">
+      <Card as="section" aria-label="회의 정보" padding="none" className="flex shrink-0 flex-col gap-3 p-4 tablet:p-5 tablet-lg:w-96 tablet-lg:gap-5 tablet-lg:self-start">
         <TextField
           label="회의 제목"
           inputSize="lg"
@@ -146,10 +147,8 @@ function NewMeetingForm({
           onChange={(event) => form.setTitle(event.target.value)}
           invalid={form.errors.title}
           required
-          className="low:col-span-2"
         />
-        <div className="grid gap-3 tablet:grid-cols-2 tablet:gap-4 low:col-span-4">
-          <DateField label="회의 날짜" value={form.meetingDate} onChange={form.setMeetingDate} invalid={form.errors.meetingDate} />
+        <div className="grid gap-3 tablet:grid-cols-2 tablet:gap-4 tablet-lg:grid-cols-1 tablet-lg:gap-5">
           <ChoiceGroup
             label="회의록 템플릿"
             value={form.templateId}
@@ -158,6 +157,7 @@ function NewMeetingForm({
             invalid={form.errors.templateId}
             options={templates.map((template) => ({ value: template.id, label: template.name, icon: FileText }))}
           />
+          <DateField label="회의 날짜" value={form.meetingDate} onChange={form.setMeetingDate} invalid={form.errors.meetingDate} />
         </div>
       </Card>
 
@@ -171,6 +171,7 @@ function NewMeetingForm({
           onToggle={form.toggleParticipant}
           onSetMany={form.setMany}
           className="tablet:min-h-0 tablet:flex-1"
+          singleColumn={tablet && addOpen}
           action={
             <IconButton
               ref={addButtonRef}
@@ -212,6 +213,8 @@ function NewMeetingForm({
             </Card>
           </div>
         )}
+      </div>
+
       </div>
 
       {/* 태블릿: 회의 시작은 맨 아래 가운데 */}

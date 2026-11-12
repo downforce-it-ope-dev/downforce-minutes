@@ -8,7 +8,7 @@ import { CardHeading } from './CardHeading';
 
 /*
  * SET-01 이메일 카드 (F02~F04, F08, F09).
- * - 설정됨: 발신 주소 + 마스킹한 클라이언트 ID·보안 키·연결 토큰을 값으로 보이고 "시험 메일 · 수정 · 삭제"
+ * - 설정됨: 발신 주소만 보이고 "시험 메일 · 수정 · 삭제"(클라이언트 ID·보안 키·연결 토큰은 수정할 때만, 2026-11-12)
  * - 설정 전·수정: 입력 4개(모두 필수, 앞뒤 공백 제거) + "저장"(수정이면 "취소"). 저장하면 바로 연결을 시험한다
  * - 삭제는 확인 대화상자를 거친다. 서버 설정이 비어 있으면 브라우저에 보관한 값으로 복구한다(D-09, restoreEmailSettings)
  * - 결과·오류는 토스트, 빈 입력은 테두리(S-13)
@@ -172,18 +172,11 @@ export function EmailCard({ state, refreshKey, onChanged }: { state?: Integratio
         </form>
       ) : (
         <>
-          <dl className="flex flex-col gap-3">
-            {[
-              ['발신 이메일 주소', settings?.senderAddress],
-              ['Google 클라이언트 ID', settings?.maskedClientId],
-              ['클라이언트 보안 키', settings?.maskedClientSecret],
-              ['연결 토큰', settings?.maskedRefreshToken],
-            ].map(([label, value]) => (
-              <div key={label} className="flex flex-col gap-0.5 tablet:flex-row tablet:items-baseline tablet:gap-4">
-                <dt className="text-caption text-text-muted tablet:w-40 tablet:shrink-0">{label}</dt>
-                <dd className="min-w-0 text-body break-all text-text">{value || '-'}</dd>
-              </div>
-            ))}
+          {/* 보기에서는 발신 주소만(2026-11-12): 클라이언트 ID·보안 키·연결 토큰은 수정할 때만 입력란으로 보인다 */}
+          <div className="flex flex-col gap-4 tablet:flex-row tablet:items-center">
+          <dl className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <dt className="text-caption text-text-muted">발신 이메일 주소</dt>
+            <dd className="min-w-0 text-title break-all text-text">{settings?.senderAddress || '-'}</dd>
           </dl>
           <div className="flex flex-wrap gap-2">
             <Button variant="secondary" shape="pill" icon={Send} loading={busy === 'test'} disabled={busy !== null} onClick={() => void test()}>
@@ -195,6 +188,7 @@ export function EmailCard({ state, refreshKey, onChanged }: { state?: Integratio
             <Button variant="danger-secondary" shape="pill" icon={Trash2} disabled={busy !== null} onClick={() => setConfirmDelete(true)}>
               삭제
             </Button>
+          </div>
           </div>
         </>
       )}

@@ -78,7 +78,8 @@ describe('설정 (SET-01)', () => {
     expect(within(documentCard).getByRole('link', { name: '변경' }).getAttribute('href')).toBe('/settings/document');
     const emailCard = screen.getByRole('region', { name: '이메일 (Gmail)' });
     expect(await within(emailCard).findByText('minutes@gmail.com')).toBeTruthy();
-    expect(within(emailCard).getByText('••••1234')).toBeTruthy();
+    // 보기에서는 발신 주소만 보인다(클라이언트 ID·보안 키·연결 토큰은 수정할 때만, 2026-11-12)
+    expect(within(emailCard).queryByText('••••1234')).toBeNull();
     expect(screen.queryByText(/Slack|알림/)).toBeNull();
   });
 

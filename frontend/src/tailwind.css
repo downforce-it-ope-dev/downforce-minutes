@@ -64,9 +64,13 @@
   *::-webkit-scrollbar {
     display: none;
   }
+  /*
+   * 최소 높이는 보이는 높이(dvh). 100vh는 Android Chrome에서 주소창이 숨었을 때의 높이라 실제 화면보다 커서,
+   * 앱 틀(h-dvh) 아래로 문서 전체가 스크롤되며 빈 바탕이 드러났다(2026-11-12, S9 실기기).
+   */
   body {
     min-width: 320px;
-    min-height: 100vh;
+    min-height: 100dvh;
   }
 }
 

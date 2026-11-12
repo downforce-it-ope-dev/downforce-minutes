@@ -17,6 +17,8 @@ export interface ParticipantPickerProps {
   /** 머리 오른쪽 동작 (새 참석자 등록 열기) */
   action?: ReactNode;
   className?: string;
+  /** 큰 태블릿에서도 한 단으로(옆에 새 참석자 패널이 열려 폭이 좁을 때) */
+  singleColumn?: boolean;
 }
 
 const collator = new Intl.Collator('ko');
@@ -37,6 +39,7 @@ export function ParticipantPicker({
   onSetMany,
   action,
   className,
+  singleColumn = false,
 }: ParticipantPickerProps) {
   const [query, setQuery] = useState('');
   const [view, setView] = useState<View>('all');
@@ -71,7 +74,7 @@ export function ParticipantPicker({
             {action}
           </div>
         </div>
-        <div className="flex flex-col gap-3 tablet-lg:flex-row tablet-lg:items-center">
+        <div className={cn('flex flex-col gap-3', !singleColumn && 'tablet-lg:flex-row tablet-lg:items-center')}>
           <TextField
             label="참석자 검색"
             hideLabel
@@ -132,7 +135,7 @@ export function ParticipantPicker({
             )}
           </div>
         ) : (
-          <ul aria-label="참석자 목록" className="flex flex-col gap-1 p-2 tablet-lg:block tablet-lg:columns-2 tablet-lg:gap-x-2">
+          <ul aria-label="참석자 목록" className={cn('flex flex-col gap-1 p-2', !singleColumn && 'tablet-lg:block tablet-lg:columns-2 tablet-lg:gap-x-2')}>
             {/* 큰 태블릿: 가나다순을 위에서 아래로 두 단에 나눠 한 번에 두 배를 보인다 */}
             {visible.map((item) => {
               const checked = selectedIds.includes(item.id);

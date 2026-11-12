@@ -11,12 +11,10 @@ import {
   Button,
   ButtonLink,
   Card,
-  cn,
   Dialog,
   DocumentStatusChip,
   Icon,
   MeetingFlowVisual,
-  Waveform,
   type DocumentStatus,
 } from '../ui';
 
@@ -107,18 +105,17 @@ export function HomePage() {
         <FailureBanner />
 
         {/* 안내 패널 + 새 회의 (태블릿 이상) */}
-        {/* 높이가 낮은 큰 태블릿 가로(low): 그림을 줄여 왼쪽, 단계·새 회의 버튼을 오른쪽에 두어 최근 회의록까지 한 화면에 들어오게 한다(2026-11-12) */}
-        <Card variant="panel" as="section" aria-label="새 회의" className="hidden flex-col items-center gap-8 py-8 tablet:flex low:flex-row low:justify-center low:gap-12 low:py-6">
+        {/* 높이가 낮은 큰 태블릿 가로(low): 그림을 줄여 왼쪽, 3단계를 오른쪽에 위에서 아래로 둔다(2026-11-12 사용자 확인: 가로 두 줄로 꺾이지 않게) */}
+        <Card variant="panel" as="section" aria-label="새 회의" className="hidden flex-col items-center gap-8 py-8 tablet:flex low:flex-row low:justify-center low:gap-16 low:py-5">
           <MeetingFlowVisual />
-          <div className="flex flex-col items-center gap-6">
-          <ol aria-label="회의록 만드는 순서" className="flex flex-wrap items-center justify-center gap-2">
+          <ol aria-label="회의록 만드는 순서" className="flex flex-wrap items-center justify-center gap-2 low:flex-col low:gap-1">
             {[
               { icon: Mic, label: '음성 녹음' },
               { icon: Sparkles, label: 'AI 회의록 생성' },
               { icon: Share2, label: '저장 · 공유' },
             ].map(({ icon, label }, index) => (
-              <li key={label} className="flex items-center gap-2">
-                {index > 0 && <Icon icon={ChevronRight} size="md" className="text-text-muted" />}
+              <li key={label} className="flex items-center gap-2 low:flex-col low:gap-1">
+                {index > 0 && <Icon icon={ChevronRight} size="md" className="text-text-muted low:rotate-90" />}
                 {/* 누를 수 없는 표시라 버튼처럼 보이지 않게 테두리·그림자 없이 둔다 */}
                 <span className="inline-flex h-11 items-center gap-2 rounded-full bg-bg-subtle px-4 text-label text-text">
                   <Icon icon={icon} size="md" className="text-brand-text" />
@@ -127,20 +124,12 @@ export function HomePage() {
               </li>
             ))}
           </ol>
-          <span className="hidden w-full low:flex">
-            <Button variant="hero" icon={Mic} className="w-full" onClick={() => navigate('/meetings/new')}>
-              새 회의
-            </Button>
-          </span>
-          </div>
         </Card>
-        {/* 시안처럼 새 회의 버튼 위아래 여백을 넉넉히 둔다. 높이가 낮은 큰 태블릿 가로는 위 카드 안에 둔다 */}
-        <div className="low:hidden">
-          <div className="hidden justify-center py-4 tablet:flex">
-            <Button variant="hero" icon={Mic} className="w-full max-w-form" onClick={() => navigate('/meetings/new')}>
-              새 회의
-            </Button>
-          </div>
+        {/* 새 회의는 안내 카드와 최근 회의록 사이 가운데(시안). 높이가 낮은 큰 태블릿 가로는 위아래 여백만 줄인다 */}
+        <div className="hidden justify-center py-4 tablet:flex low:py-0">
+          <Button variant="hero" icon={Mic} className="w-full max-w-form" onClick={() => navigate('/meetings/new')}>
+            새 회의
+          </Button>
         </div>
 
         <RecentMeetings />
@@ -229,10 +218,9 @@ function RecentMeetings() {
     };
   }, [attempt, sample]);
 
-  const tones = ['text-blue-500', 'text-pink-500', 'text-lavender-500'];
   return (
     // 최근 회의록은 별도 카드 구역으로, 태블릿에서는 화면 아래쪽에 붙인다
-    <section aria-labelledby="recent-title" className="flex flex-col gap-4 rounded-2xl bg-bg/60 p-4 shadow-card tablet:mt-auto tablet:p-6">
+    <section aria-labelledby="recent-title" className="flex flex-col gap-3 rounded-2xl bg-bg/60 p-4 shadow-card tablet:mt-auto tablet:px-5 tablet:py-4">
       <div className="flex items-center justify-between gap-4">
         <h2 id="recent-title" className="flex items-center gap-2 text-title text-text">
           <Icon icon={Clock} size="lg" className="text-text-muted" />
@@ -247,7 +235,7 @@ function RecentMeetings() {
       {meetings.status === 'loading' && (
         <ul aria-label="최근 회의록 불러오는 중" className="grid gap-3 tablet-lg:grid-cols-3">
           {[0, 1, 2].map((index) => (
-            <li key={index} className="h-19 animate-pulse rounded-xl bg-bg/70 motion-reduce:animate-none tablet-lg:h-36" />
+            <li key={index} className="h-18 animate-pulse rounded-xl bg-bg/70 motion-reduce:animate-none" />
           ))}
         </ul>
       )}
@@ -267,21 +255,13 @@ function RecentMeetings() {
 
       {meetings.status === 'ready' && meetings.data.length > 0 && (
         <ul className="grid gap-3 tablet-lg:grid-cols-3">
-          {meetings.data.map((meeting, index) => (
+          {meetings.data.map((meeting) => (
             <li key={meeting.documentId}>
               <Link
                 to={`/meetings/${encodeURIComponent(meeting.documentId)}`}
                 aria-label={`${meeting.title} 상세 보기`}
-                className={cn(
-                  'flex min-h-19 items-center gap-4 rounded-xl bg-bg px-4 py-3 shadow-card active:bg-bg-subtle',
-                  'tablet-lg:h-full tablet-lg:flex-col tablet-lg:items-start tablet-lg:gap-3 tablet-lg:p-5',
-                )}
+                className="flex h-full min-h-18 items-center gap-4 rounded-xl bg-bg px-4 py-3 shadow-card active:bg-bg-subtle"
               >
-                <span className={cn('flex h-10 w-14 shrink-0 items-center justify-center rounded-full bg-bg-subtle', tones[index % tones.length])}>
-                  <span className="h-6">
-                    <Waveform bars={7} />
-                  </span>
-                </span>
                 <span className="flex min-w-0 flex-1 flex-col gap-1">
                   <span className="truncate text-label text-text">{meeting.title}</span>
                   <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-text-muted">
