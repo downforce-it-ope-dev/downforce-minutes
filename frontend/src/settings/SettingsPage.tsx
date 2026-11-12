@@ -9,7 +9,7 @@ import { EmailCard } from './EmailCard';
 /*
  * SET-01 설정 (GitHub #39, docs/renewal/화면기획/SET-01_설정.md). Slack 설정은 없앴다(D-11).
  * - 카드 두 개: 문서 연결(연결 서비스·상태 → 문서 연결 관리), 이메일(Gmail 발신 설정 보기·수정·삭제·시험 메일)
- * - 태블릿 가로는 두 카드를 2단으로 나란히, 그 밖은 위아래. 섹션 목차는 두지 않는다
+ * - 모든 크기에서 위아래로 쌓고 본문 폭을 그대로 쓴다(사용자 결정 2026-11-12, 회의록 상세와 같은 배치). 섹션 목차는 두지 않는다
  * - 상단 바의 새로고침 아이콘으로 모든 연결 상태를 다시 불러온다
  * - 설명 문구 없이 제목·상태·값·버튼만(S-13). 결과·오류는 토스트
  */
@@ -79,7 +79,7 @@ function SettingsBody({ refreshKey }: { refreshKey: number }) {
   const provider = config.data?.document?.provider ?? health.data?.document?.provider ?? null;
 
   return (
-    <div className="grid items-start gap-4 tablet:gap-6 tablet-lg:grid-cols-2">
+    <div className="flex flex-col gap-4 tablet:gap-6">
       <Card as="section" aria-labelledby="settings-document" className="flex flex-col gap-5">
         <CardHeading id="settings-document" title="문서 연결" state={summary?.document.state} />
         {summary && (

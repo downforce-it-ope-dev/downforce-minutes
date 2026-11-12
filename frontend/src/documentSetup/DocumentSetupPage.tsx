@@ -220,7 +220,7 @@ function Wizard({
     ? provider ? 1 : 0
     : switchRunning ? 3 : setup.preparedTarget || setup.initializationInProgress || snapshot.operation ? 2 : provider ? 1 : 0;
   const title = setup.preparedTarget || switchRunning ? '문서 서비스 변경' : changing && !provider ? '문서 서비스 선택' : '문서 서비스 연결';
-  // 끝난 작업(완료)은 오른쪽에 따로 카드로 두지 않고 왼쪽 현재 연결에 함께 보인다
+  // 끝난 작업(완료)은 따로 카드로 두지 않고 위쪽 현재 연결에 함께 보인다
   const lastDone =
     setup.operationStatus === 'SUCCEEDED' && snapshot.operation
       ? snapshot.operation.type === 'SWITCH' ? '문서 서비스 변경 완료' : '문서 구조 준비 완료'
@@ -242,9 +242,9 @@ function Wizard({
 
   return (
     <AppShell title={title} focus back={exitToSettings}>
-      {/* 휴대폰·태블릿 세로: 한 열 / 태블릿 가로: 왼쪽 진행 상황(1) + 오른쪽 본문(2) */}
-      <div className="mx-auto flex w-full max-w-content flex-col gap-4 tablet-lg:grid tablet-lg:grid-cols-3 tablet-lg:items-start tablet-lg:gap-8">
-        <aside aria-label="진행 상황" className="flex flex-col gap-4 tablet-lg:sticky tablet-lg:top-0 tablet-lg:rounded-xl tablet-lg:bg-bg tablet-lg:p-6 tablet-lg:shadow-card">
+      {/* 모든 크기에서 위아래: 진행 상황(단계 + 현재 연결) 아래 본문, 본문 폭 그대로(사용자 결정 2026-11-12, 화면 통일) */}
+      <div className="mx-auto flex w-full max-w-content flex-col gap-4">
+        <aside aria-label="진행 상황" className="flex flex-col gap-4">
           <StepIndicator steps={steps} current={Math.min(stepIndex, steps.length - 1)} />
 
           {/* 변경·전환 중에도 어느 연결이 살아 있는지 보인다(원본 연결은 전환 완료 전까지 유지) */}
@@ -268,7 +268,7 @@ function Wizard({
 
         </aside>
 
-        <div className="flex flex-col gap-4 tablet-lg:col-span-2">
+        <div className="flex flex-col gap-4">
         {setup.consumerRefreshFailed && (
           <Button size="lg" shape="pill" variant="secondary" icon={RefreshCw} className="self-start" onClick={setup.retryConsumerRefresh}>
             연결 데이터 다시 확인
@@ -282,7 +282,7 @@ function Wizard({
           !(operation?.type === 'INITIALIZE' && operation.status === 'CANCELLED') &&
           // 전환 준비(자료 이전 선택) 단계에서는 끝난 준비 작업 카드를 숨긴다
           !(setup.preparedTarget && snapshot.operation.type === 'INITIALIZE' && setup.operationStatus === 'SUCCEEDED') &&
-          // 서비스를 고르는 중이면 끝난 작업은 왼쪽 현재 연결에만 보인다
+          // 서비스를 고르는 중이면 끝난 작업은 위쪽 현재 연결에만 보인다
           !(showChooser && setup.operationStatus === 'SUCCEEDED') && (
           <OperationCard setup={setup} onDone={goHome} refreshRef={progressRefreshRef} />
         )}

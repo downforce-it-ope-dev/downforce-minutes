@@ -56,7 +56,7 @@ for (const size of SIZES) {
   });
 }
 
-test('SET-01 태블릿 가로: 문서 연결과 이메일 카드를 2단으로, 상태 배지는 글자와 함께', async ({ page }) => {
+test('SET-01 태블릿 가로: 문서 연결 카드 아래 이메일 카드(위아래, 본문 전체 폭), 상태 배지는 글자와 함께', async ({ page }) => {
   await mock(page);
   await page.setViewportSize({ width: 1180, height: 820 });
   await page.goto('/settings');
@@ -64,10 +64,12 @@ test('SET-01 태블릿 가로: 문서 연결과 이메일 카드를 2단으로, 
   const emailCard = page.getByRole('region', { name: '이메일 (Gmail)' });
   await expect(documentCard.getByText('연결됨')).toBeVisible();
   await expect(emailCard.getByText('연결 불가')).toBeVisible();
-  const left = (await documentCard.boundingBox())!;
-  const right = (await emailCard.boundingBox())!;
-  expect(right.x).toBeGreaterThan(left.x + left.width);
-  expect(Math.abs(right.y - left.y)).toBeLessThanOrEqual(1);
+  const top = (await documentCard.boundingBox())!;
+  const bottom = (await emailCard.boundingBox())!;
+  expect(bottom.y).toBeGreaterThan(top.y + top.height);
+  expect(Math.abs(bottom.x - top.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(bottom.width - top.width)).toBeLessThanOrEqual(1);
+  expect(top.width).toBeGreaterThan(800);
 });
 
 test('SET-01 삭제 확인 대화상자', async ({ page }) => {
