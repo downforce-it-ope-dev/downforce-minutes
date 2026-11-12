@@ -21,13 +21,4 @@ body { min-width: 320px; min-height: 100vh; margin: 0; }
 button:where(:not([data-ui='renewal'], [data-ui='renewal'] *)), input:where(:not([data-ui='renewal'], [data-ui='renewal'] *)) { font: inherit; }
 button:where(:not([data-ui='renewal'], [data-ui='renewal'] *)) { cursor: pointer; }
 button:where(:not([data-ui='renewal'], [data-ui='renewal'] *)):disabled { cursor: not-allowed; opacity: .6; }
-.participants-page { width: min(100%, 868px); margin: 0 auto; padding: 38px 24px 82px; }
-.participants-heading-icon { width: 25px; height: 25px; flex: 0 0 25px; fill: none; stroke: #3b82f6; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.participants-create-dock { position: fixed; z-index: 6; right: 0; bottom: calc(68px + env(safe-area-inset-bottom)); left: 0; padding: 12px 24px; background: linear-gradient(0deg, #f7f8fa 72%, #f7f8fa00); }
 :where(:not([data-ui='renewal'], [data-ui='renewal'] *)):focus-visible { outline: 3px solid #3b82f6; outline-offset: 2px; }
-@media (max-width: 520px) {
-  .participants-page { padding: 28px 18px 82px; }
-  .participants-create-dock { padding-right: 18px; padding-left: 18px; }
-}
-.participants-main { display: flex; height: 100%; min-height: 0; flex: 1 1 auto; flex-direction: column; }
-.participants-page { display: flex; height: 100%; min-height: 0; flex: 1 1 auto; flex-direction: column; overflow: hidden; }

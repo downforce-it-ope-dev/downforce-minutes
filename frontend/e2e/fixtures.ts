@@ -61,12 +61,11 @@ export function requestCapture(): CapturedRequests {
 }
 
 // SCR-002 새 회의(#26)·SCR-003 회의 녹음(#27)·SCR-005 회의 처리(#28)·SCR-006 회의록 검토(#29)·SCR-008 회의 결과(#30)는 리뉴얼되어 기존 화면 검사에서 뺐다.
-// SCR-009 회의록 목록(#32)·SCR-010 회의록 상세(#33)도 리뉴얼되어 뺐다.
-// 검사는 e2e/new-meeting.spec.ts·recording.spec.ts·processing.spec.ts·review.spec.ts·complete.spec.ts·meetings.spec.ts. SCR-007 공유는 쓰지 않는 화면이라 뺐다(P-3)
+// SCR-009 회의록 목록(#32)·SCR-010 회의록 상세(#33)·SCR-012 참석자(#36)도 리뉴얼되어 뺐다.
+// 검사는 e2e/new-meeting.spec.ts·recording.spec.ts·processing.spec.ts·review.spec.ts·complete.spec.ts·meetings.spec.ts·participants.spec.ts. SCR-007 공유는 쓰지 않는 화면이라 뺐다(P-3)
 export const screens: Screen[] = [
   { id: 'SCR-001', route: '/', heading: /회의를 시작할까요\?/, headingLevel: 2, contentSelector: '.home-content', paddingSelector: '.home-page' },
   { id: 'SCR-011', route: '/settings', heading: /설정/, contentSelector: '.settings-page', paddingSelector: '.settings-page' },
-  { id: 'SCR-012', route: '/participants', heading: /참석자/, headingLevel: 2, contentSelector: '.participants-page', paddingSelector: '.participants-page' },
 ];
 
 export const widths = [360, 375, 390, 430, 768, 1280];

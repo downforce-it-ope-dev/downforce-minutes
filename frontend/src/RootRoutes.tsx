@@ -12,6 +12,7 @@ import { MeetingsPage } from './meetings/MeetingsPage';
 import { LEGACY_PATHS } from './legacyRoutes';
 import { NewMeetingPage } from './newMeeting/NewMeetingPage';
 import { NotFoundPage } from './notFound/NotFoundPage';
+import { ParticipantsPage } from './participants/ParticipantsPage';
 import { ProcessingRoute } from './processing/ProcessingPage';
 import { RecordingRoute } from './recording/RecordingPage';
 import { ReviewRoute } from './review/ReviewPage';
@@ -89,6 +90,20 @@ function AppRoutes() {
           </RequireAuth>
         }
       />
+      {/* 참석자 관리 (PTC-01, #36). 설정 아래 경로도 같은 화면 */}
+      {['/participants', '/settings/participants'].map((path) => (
+        <Route
+          key={path}
+          path={path}
+          element={
+            <RequireAuth>
+              <DocumentGate>
+                <ParticipantsPage />
+              </DocumentGate>
+            </RequireAuth>
+          }
+        />
+      ))}
       {/* 새 회의 (MTG-01, #26). 회의 생성 후 녹음 화면(기존 App)으로 세션을 넘긴다 */}
       <Route
         path="/meetings/new"

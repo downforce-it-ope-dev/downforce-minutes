@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { graceParticipant, installSyntheticApi, participant, screens, widths } from './fixtures';
+import { installSyntheticApi, screens, widths } from './fixtures';
 
 // SCR-012는 현재 화면과 제목이 맞지 않아 제외했다.
 for (const screen of screens.filter(({ id }) => !['SCR-001', 'SCR-012'].includes(id))) {
@@ -108,22 +108,4 @@ test('all app routes keep the brand and page heading visible during scrolling', 
     expect(await heading.evaluate((element) => element.getBoundingClientRect().top), `${route} page heading moved`).toBe(initialTop);
     expect(await page.evaluate(() => document.documentElement.scrollTop), `${route} should not scroll the document`).toBe(0);
   }
-});
-
-test('SCR-012 searches the roster and clears the query to restore both fixture participants', async ({ page }) => {
-  await page.setViewportSize({ width: 360, height: 800 });
-  await installSyntheticApi(page, screens[10], { participants: [participant, graceParticipant] });
-  await page.goto('/settings/participants');
-
-  const ada = page.locator('.participant-card').filter({ hasText: participant.email });
-  const grace = page.locator('.participant-card').filter({ hasText: graceParticipant.email });
-  await expect(ada).toBeVisible();
-  await expect(grace).toBeVisible();
-  await page.getByRole('searchbox', { name: '참석자 검색' }).fill('Grace');
-  await expect(grace).toBeVisible();
-  await expect(ada).toHaveCount(0);
-  await page.getByRole('button', { name: '검색 입력 지우기' }).click();
-  await expect(page.getByRole('searchbox', { name: '참석자 검색' })).toHaveValue('');
-  await expect(ada).toBeVisible();
-  await expect(grace).toBeVisible();
 });

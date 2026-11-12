@@ -129,8 +129,9 @@ describe('document service change', () => {
   });
   it('CHANGE-GATE reports a switch lock from an already open participant write form', async () => {
     const { fetchMock } = harness(); render(<MemoryRouter initialEntries={['/settings/participants']}><SetupTestRoutes /></MemoryRouter>);
-    fireEvent.click(await screen.findByRole('button', { name: '참석자 추가' })); fireEvent.change(screen.getByLabelText('이름'), { target: { value: 'Synthetic Grace' } }); fireEvent.change(screen.getByLabelText('이메일'), { target: { value: 'grace@example.test' } }); fireEvent.click(screen.getByRole('button', { name: '저장' }));
-    expect((await screen.findByRole('alert')).textContent).toMatch(/문서 서비스 변경 중.*쓰기.*다시/);
+    fireEvent.click(await screen.findByRole('button', { name: '참석자 추가' })); fireEvent.change(screen.getByLabelText('이름'), { target: { value: 'Synthetic Grace' } }); fireEvent.change(screen.getByLabelText('이메일'), { target: { value: 'grace@miinit.com' } }); fireEvent.click(screen.getByRole('button', { name: '저장' }));
+    // 참석자 관리 리뉴얼(#36): 오류는 토스트로 알린다
+    expect(await screen.findByText(/문서 서비스 변경 중.*쓰기.*다시/)).toBeTruthy();
     expect(writes(fetchMock, '/participants')).toHaveLength(1); expect(screen.getByRole('dialog')).toBeTruthy();
   });
   it('CHANGE-ACCESSIBILITY retry failure is announced and leaves a keyboard reachable recovery action', async () => {

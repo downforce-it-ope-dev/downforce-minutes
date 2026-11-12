@@ -6,6 +6,7 @@ import { filterMeetings, hasInvalidDateRange } from '../meetingFilters';
 import type { MeetingSummary } from '../meetingListApi';
 import {
   AppShell,
+  BottomDock,
   Button,
   Card,
   cn,
@@ -76,18 +77,12 @@ export function MeetingsPage() {
       }
     >
       <MeetingsBody />
-      {/* 새 회의: 화면 아래 가운데 고정(휴대폰은 탭 바 위). 목록 끝이 버튼에 가리지 않게 자리를 비운다. 낮은 화면은 본문 끝 */}
-      <div className="h-20 tablet:h-28 short:hidden" aria-hidden="true" />
-      {/* 바깥: 메뉴 폭만큼 비켜 본문 영역과 같은 가운데를 쓴다 */}
-      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 pb-safe tablet:pl-rail tablet-lg:pl-sidebar short:pointer-events-auto short:static short:mt-4 short:pb-0 short:pl-0">
-        <div className="flex justify-center px-4 tablet:px-6 short:px-0">
-          <div className="pointer-events-auto mb-20 w-full tablet:mb-6 tablet:max-w-form short:mb-0">
-            <Button variant="hero" icon={Mic} className="w-full" onClick={() => navigate('/meetings/new')}>
-              새 회의
-            </Button>
-          </div>
-        </div>
-      </div>
+      {/* 새 회의: 화면 아래 가운데 고정(휴대폰은 탭 바 위, 낮은 화면은 본문 끝) */}
+      <BottomDock>
+        <Button variant="hero" icon={Mic} className="w-full" onClick={() => navigate('/meetings/new')}>
+          새 회의
+        </Button>
+      </BottomDock>
     </AppShell>
   );
 }

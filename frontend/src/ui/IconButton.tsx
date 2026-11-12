@@ -3,7 +3,7 @@ import { LoaderCircle, type LucideIcon } from 'lucide-react';
 import { cn } from './cn';
 import { Icon } from './Icon';
 
-export type IconButtonVariant = 'plain' | 'surface' | 'primary';
+export type IconButtonVariant = 'plain' | 'surface' | 'primary' | 'danger';
 
 export interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'disabled' | 'aria-label'> {
   icon: LucideIcon;
@@ -13,6 +13,7 @@ export interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonEle
    * plain: 48×48 투명 (닫기, 뒤로 가기)
    * surface: 48×48 흰 원 + 카드 그림자 (상단 바 보조 동작)
    * primary: 64×64 분홍 원 + 빛 번짐 (로그인 화살표처럼 화면의 대표 동작)
+   * danger: 48×48 투명 + 위험 글자 색 (목록 행의 삭제)
    */
   variant?: IconButtonVariant;
   loading?: boolean;
@@ -24,6 +25,7 @@ const VARIANT: Record<IconButtonVariant, string> = {
   plain: 'size-12 text-text active:bg-bg-subtle aria-disabled:text-neutral-400',
   surface:
     'size-12 border border-border bg-bg text-text shadow-card active:bg-bg-subtle aria-disabled:text-neutral-400 aria-disabled:shadow-none',
+  danger: 'size-12 text-danger-text active:bg-danger-soft aria-disabled:text-neutral-400',
   primary:
     'size-16 bg-primary text-white shadow-primary active:bg-primary-hover aria-disabled:bg-neutral-100 aria-disabled:text-neutral-400 aria-disabled:shadow-none',
 };

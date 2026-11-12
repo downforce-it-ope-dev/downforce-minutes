@@ -59,8 +59,7 @@
   overflow: hidden;
 }
 .page-scroll-layout > header,
-.page-scroll-layout > .page-fixed-heading,
-.participants-page > .page-heading { position: relative; z-index: 4; flex: 0 0 auto; background: #f7f8fa; }
+.page-scroll-layout > .page-fixed-heading { position: relative; z-index: 4; flex: 0 0 auto; background: #f7f8fa; }
 .page-fixed-heading { display: grid; flex: 0 0 auto; align-content: start; }
 .page-scroll-content {
   display: block;

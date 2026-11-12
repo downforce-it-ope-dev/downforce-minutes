@@ -91,6 +91,10 @@
   - MTG-03에서 추가한 부품: `ButtonAnchor`(버튼 모양 앱 밖 링크, 파일 다운로드). 앱 안 이동은 `ButtonLink`.
   - `AppShell`: `fillHeight`(태블릿에서 본문 높이를 화면에 맞추고 영역 안만 스크롤, `"tablet-lg"`면 큰 태블릿만), `toastPlacement="top"`(아래쪽에 큰 동작 버튼이 있는 화면), `focusActions`(집중 모드 상단 바 오른쪽).
   - MTG-04에서 추가한 부품: `TextArea`(내용만큼 늘어나는 여러 줄 입력), `ChipRadioGroup`(칩 하나 고르기), `Tabs`, `TABLET_LG_QUERY`.
+  - R6·R7에서 추가한 부품: `BottomDock`(하단 가운데 고정 큰 주 동작, `toastPlacement="top"`과 함께), `TextField`의 `inside`(입력란 안 오른쪽, 예: 검색어 지우기), `SelectField`의 `hideLabel`, `IconButton variant="danger"`(목록 행 삭제), `Button variant="danger-secondary"`(위험 동작의 보조 버튼).
+- **참석자 (R7)**
+  - 참석자 관리(`/participants`, `/settings/participants`)는 리뉴얼 라우트다(`src/participants/`). 입력 규칙(회사 메일 @miinit.com만, 수정은 이메일을 바꿀 때만)은 `participantRules.ts`이고 새 회의의 새 참석자 폼도 같이 쓴다.
+  - 팀은 응답에 `team`이 있을 때만(Backend #35 뒤) 보인다(`hasTeamField`).
 - **회의록 (R6)**
   - 회의록 목록(`/meetings`)·상세(`/meetings/:documentId`)는 리뉴얼 라우트다(`src/meetings/`). 목록의 검색·기간·정렬 조건은 주소(`?q·from·to·sort`)에 두고, 상세의 "회의록 목록"은 그 조건으로 돌아간다(목록 행 링크의 `state.listSearch`).
   - 회의록 목록과 홈 최근 회의록은 내가 참석자인 회의만 보인다(`src/meetings/myMeetings.ts`의 `listMyMeetings`, 로그인 이메일과 같은 참석자). 회의 목록 API를 직접 쓰지 않는다.
