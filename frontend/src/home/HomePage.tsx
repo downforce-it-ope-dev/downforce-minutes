@@ -5,6 +5,7 @@ import { AccountButton, SidebarAccount } from '../auth/AccountMenu';
 import { getSetupSnapshot, type DocumentProvider, type SetupSnapshot } from '../documentSetupApi';
 import { listProcessingFailures, type MeetingSummary } from '../meetingListApi';
 import { listMyMeetings } from '../meetings/myMeetings';
+import { restoreEmailSettingsOnce } from '../emailSettingsApi';
 import {
   AppShell,
   Button,
@@ -63,6 +64,11 @@ export function HomePage() {
   const [connection, setConnection] = useState<Load<SetupSnapshot>>({ status: 'loading' });
   const [connectionAttempt, setConnectionAttempt] = useState(0);
   const [connectionOpen, setConnectionOpen] = useState(false);
+
+  // 서버 메일 설정이 비어 있으면 브라우저에 보관한 값으로 복구한다(D-09). 기존 레이아웃이 앱 시작 때 하던 일을 홈으로 옮겼다(#39)
+  useEffect(() => {
+    restoreEmailSettingsOnce();
+  }, []);
 
   useEffect(() => {
     let live = true;

@@ -97,7 +97,7 @@ test('all app routes keep the brand and page heading visible during scrolling', 
   }
 
   for (const route of ['/setup/document', '/settings/document']) {
-    await installSyntheticApi(page, screens.find((screen) => screen.id === 'SCR-011')!);
+    await installSyntheticApi(page, screens[0]);
     await page.goto(route);
     // 문서 연결은 리뉴얼 앱 틀(#20~#22): 제목은 상단 바(h1), 스크롤은 본문(#main-content)만
     const heading = page.getByRole('heading', { level: 1 }).first();

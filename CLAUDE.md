@@ -81,11 +81,11 @@
 ### 구현 기준 (0단계 기반 작업 결과)
 
 - **진입 파일**
-  - Tailwind 진입 CSS는 `frontend/src/tailwind.css` 하나다. `App.tsx`는 이 파일만 불러온다.
+  - Tailwind 진입 CSS는 `frontend/src/tailwind.css` 하나다. `RootRoutes.tsx`가 이 파일을 불러온다(기존 레이아웃 `App.tsx`는 R8 #39에서 지웠다).
   - layer 순서: `theme → base → legacy → components → utilities`.
 - **공통 부품과 라우트 (R1 결과)**
   - 공통 부품은 `frontend/src/ui/`에 있고 `../ui`(index)에서 불러온다. 같은 부품을 화면에 새로 만들지 않는다.
-  - 리뉴얼 화면 라우트는 `frontend/src/RootRoutes.tsx`에 추가한다. 여기 라우트는 기존 `App` 레이아웃(헤더·하단 탭 바·기존 CSS) 밖에서 그려진다.
+  - 화면 라우트는 `frontend/src/RootRoutes.tsx`에 추가한다. 모든 화면이 리뉴얼 화면이다(R8에서 기존 화면을 모두 옮겼다).
   - 부품 확인 화면 `/__ui`는 개발 서버와 Vercel Preview에서만 열린다(운영 빌드 제외). 새 부품을 만들면 여기에도 추가한다.
   - R5에서 추가한 부품: `SelectField`(선택 상자), `Checkbox`, `FilterChips`(보기 칩), `ChoiceGroup`(버튼으로 하나 고르기), `DateField`(큰 달력 대화상자), `RoundActionButton`(원형 녹음 버튼), `useMediaQuery`·`TABLET_QUERY`(크기마다 다른 방식으로 그릴 때만). `TextField`의 `inputSize="lg"`는 글자만 키우고 높이는 같다.
   - MTG-03에서 추가한 부품: `ButtonAnchor`(버튼 모양 앱 밖 링크, 파일 다운로드). 앱 안 이동은 `ButtonLink`.
@@ -96,6 +96,9 @@
   - 참석자 관리(`/participants`, `/settings/participants`)는 리뉴얼 라우트다(`src/participants/`). 입력 규칙(회사 메일 @miinit.com만, 수정은 이메일을 바꿀 때만)은 `participantRules.ts`이고 새 회의의 새 참석자 폼도 같이 쓴다.
   - 팀은 응답에 `team`이 있을 때만(Backend #35 뒤) 보인다(`hasTeamField`).
   - CSV 일괄 등록(`CsvImportDialog.tsx`, 읽기·판정은 `csvImport.ts`)은 지금 메일계정·이름만 받는다. 팀은 #35 뒤에 넣는다. 양식은 `frontend/public/participants-template.csv`.
+- **설정 (R8)**
+  - 설정(`/settings`)은 `src/settings/`. 카드 두 개(문서 연결, 이메일)이고 Slack 설정·코드는 없다(D-11).
+  - 메일 설정 브라우저 복구(D-09)는 설정 화면을 열 때와 홈에 처음 들어올 때 한 번(`restoreEmailSettingsOnce`) 한다.
 - **회의록 (R6)**
   - 회의록 목록(`/meetings`)·상세(`/meetings/:documentId`)는 리뉴얼 라우트다(`src/meetings/`). 목록의 검색·기간·정렬 조건은 주소(`?q·from·to·sort`)에 두고, 상세의 "회의록 목록"은 그 조건으로 돌아간다(목록 행 링크의 `state.listSearch`).
   - 회의록 목록과 홈 최근 회의록은 내가 참석자인 회의만 보인다(`src/meetings/myMeetings.ts`의 `listMyMeetings`, 로그인 이메일과 같은 참석자). 회의 목록 API를 직접 쓰지 않는다.

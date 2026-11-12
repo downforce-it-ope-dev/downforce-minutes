@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { StrictMode, type ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router';
-import { App } from './App';
+import { NotFoundPage } from './notFound/NotFoundPage';
 import { HomePage } from './home/HomePage';
 import { NewMeetingPage } from './newMeeting/NewMeetingPage';
 import { RecordingRoute } from './recording/RecordingPage';
@@ -32,7 +32,7 @@ function installFetchMock(fetchMock: (input: RequestInfo | URL, init?: RequestIn
   vi.stubGlobal('fetch', withHealthyBackend(vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const path = new URL(String(input), 'http://localhost').pathname;
     if (path.endsWith('/document-setup')) return Promise.resolve(readySetupResponse());
-    if (path.endsWith('/integrations/slack') || path.endsWith('/integrations/email')) {
+    if (path.endsWith('/integrations/email')) {
       return Promise.resolve(response({ data: { configured: false } }));
     }
     return fetchMock(input, init);
@@ -80,26 +80,25 @@ function renderHomeWithDestinationFixture() {
     <MemoryRouter initialEntries={['/']}>
       <Routes>
         <Route path="/meetings/new" element={<DestinationFixture />} />
-        {/* 홈은 새 화면(HOME-01, #24)이라 App 밖에서 그린다 */}
         <Route path="/" element={<HomePage />} />
-        <Route path="*" element={<App />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </MemoryRouter>,
   );
 }
 
-/** 실제 RootRoutes처럼 새 회의·녹음(리뉴얼)은 App 밖, 처리 이후는 App이 그린다 */
+/** 실제 RootRoutes처럼 새 회의·녹음 라우트를 둔다 */
 function RecordingRoutes({ mediaAdapter }: { mediaAdapter?: MediaRecorderAdapter }) {
   return (
     <Routes>
       <Route path="/meetings/new" element={<NewMeetingPage />} />
       <Route path="/meetings/:sessionId/recording" element={<RecordingRoute mediaAdapter={mediaAdapter} />} />
-      <Route path="*" element={<App />} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }
 
-/** 새 회의(리뉴얼, App 밖)에서 시작해 녹음 이후(기존 App)로 이어지는 흐름. 실제 RootRoutes처럼 두 라우트를 나란히 둔다 */
+/** 새 회의에서 시작해 녹음으로 이어지는 흐름. 실제 RootRoutes처럼 두 라우트를 나란히 둔다 */
 function renderNewMeetingFlow({ mediaAdapter, strict = false, extra }: { mediaAdapter?: MediaRecorderAdapter; strict?: boolean; extra?: ReactNode } = {}) {
   const tree = (
     <MemoryRouter initialEntries={['/meetings/new']}>
@@ -111,7 +110,7 @@ function renderNewMeetingFlow({ mediaAdapter, strict = false, extra }: { mediaAd
 }
 
 
-describe('Participants settings', () => {
+describe('새 회의와 홈 라우트', () => {
   it('creates a session with the loaded connection version and navigates with its runtime context', async () => {
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const path = new URL(String(input)).pathname;

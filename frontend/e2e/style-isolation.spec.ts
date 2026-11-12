@@ -20,13 +20,13 @@ const PROBE_MARKUP = `
 `;
 
 async function mountProbes(page: Page): Promise<void> {
-  // 기존 화면 하나 위에서 격리를 본다. 홈(SCR-001)·회의록(SCR-009)은 리뉴얼(#24·#32)되어 설정(SCR-011)을 쓴다
-  const legacy = screens.find(({ id }) => id === 'SCR-011')!;
-  await installSyntheticApi(page, legacy);
-  await page.goto(legacy.route);
+  // 모든 화면이 리뉴얼되어(#39) 기존 화면이 없다. 설정 화면을 열고 기존 영역 probe는 리뉴얼 루트 밖(body 바로 아래)에 둔다.
+  // 기존 CSS는 아직 전역으로 불러온다(삭제는 R9 #41)
+  await installSyntheticApi(page, screens[0]);
+  await page.goto('/settings');
   await expect(page.locator('main').first()).toBeVisible();
   // 진입 보호(#15) 확인 뒤 화면이 그려지고 데이터를 받아 다시 그려진다. 제목이 보인 뒤에 probe를 넣어야 사라지지 않는다
-  await expect(page.getByRole('heading', { name: legacy.heading, level: legacy.headingLevel ?? 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '설정', level: 1 })).toBeVisible();
   await page.evaluate(({ markup, rootClass }) => {
     const legacy = document.createElement('section');
     legacy.dataset.probeArea = 'legacy';
@@ -45,7 +45,8 @@ async function mountProbes(page: Page): Promise<void> {
     portal.className = rootClass;
     portal.innerHTML = markup;
 
-    document.querySelector('main')!.append(legacy, renewal);
+    document.body.append(legacy);
+    document.querySelector('main')!.append(renewal);
     document.body.append(portal);
   }, { markup: PROBE_MARKUP, rootClass: RENEWAL_ROOT_CLASS });
 }

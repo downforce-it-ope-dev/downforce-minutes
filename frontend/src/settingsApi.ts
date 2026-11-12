@@ -4,13 +4,11 @@ export type AppConfig = {
   company: { id: string; name: string; timezone: string };
   document?: { provider: string | null; configured: boolean; connectionVersion: number; rootUrl: string | null } | null;
   email?: { enabled: boolean; configured: boolean } | null;
-  notification?: { provider: string | null; enabled: boolean } | null;
 };
 
 export type IntegrationHealth = {
   document?: { provider: string | null; configured: boolean; reachable: boolean; rootAccessible: boolean } | null;
   email?: { configured: boolean; reachable: boolean } | null;
-  notification?: { provider: string | null; configured: boolean; reachable: boolean } | null;
 };
 
 export class SettingsApiError extends Error {
@@ -46,18 +44,16 @@ export function getIntegrationHealth(): Promise<IntegrationHealth> {
   return readData<IntegrationHealth>('/integrations/health');
 }
 
-export type IntegrationState = 'not-selected' | 'not-configured' | 'unreachable' | 'root-inaccessible' | 'available' | 'not-confirmed' | 'health-unknown';
+export type IntegrationState = 'not-selected' | 'not-configured' | 'unreachable' | 'root-inaccessible' | 'available' | 'health-unknown';
 export type SettingsSummary = {
   document: { provider: string | null; state: IntegrationState };
   email: { state: IntegrationState };
-  notification: { provider: string | null; state: IntegrationState };
 };
-type IntegrationConfig = Pick<AppConfig, 'document' | 'email' | 'notification'>;
+type IntegrationConfig = Pick<AppConfig, 'document' | 'email'>;
 
 function providerName(provider: string | null | undefined): string | null {
   if (provider === 'NOTION') return 'Notion';
   if (provider === 'CONFLUENCE') return 'Confluence Cloud';
-  if (provider === 'SLACK') return 'Slack';
   return null;
 }
 
@@ -71,21 +67,17 @@ function documentState(config: AppConfig['document'], health: IntegrationHealth[
   return 'available';
 }
 
-function optionalIntegrationState(enabled: boolean, configured: boolean, health: { configured: boolean; reachable: boolean } | null | undefined, notification = false): IntegrationState {
+function emailState(enabled: boolean, configured: boolean, health: { configured: boolean; reachable: boolean } | null | undefined): IntegrationState {
   if (!enabled || !configured) return 'not-configured';
   if (!health) return 'health-unknown';
   if (!health.configured) return 'not-configured';
-  if (!health.reachable) return notification ? 'not-confirmed' : 'unreachable';
+  if (!health.reachable) return 'unreachable';
   return 'available';
 }
 
 export function selectSettingsSummary(config: IntegrationConfig, health: IntegrationHealth | null): SettingsSummary {
   return {
     document: { provider: providerName(config.document?.provider), state: documentState(config.document, health?.document) },
-    email: { state: optionalIntegrationState(Boolean(config.email?.enabled), Boolean(config.email?.configured), health?.email) },
-    notification: {
-      provider: providerName(config.notification?.provider),
-      state: optionalIntegrationState(Boolean(config.notification?.enabled), Boolean(config.notification?.enabled), health?.notification, true),
-    },
+    email: { state: emailState(Boolean(config.email?.enabled), Boolean(config.email?.configured), health?.email) },
   };
 }
