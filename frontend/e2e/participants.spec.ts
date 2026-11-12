@@ -130,6 +130,8 @@ for (const size of [SIZES[0], SIZES[1]]) {
     await expectAccessible(page);
     await dialog.getByRole('button', { name: '완료' }).click();
     await expect(page.getByText('참석자 1명을 등록했습니다')).toBeVisible();
+    // 서버 목록이 아직 새 참석자를 주지 않아도(문서 서비스 조회 지연) 등록한 사람이 바로 보인다
+    await expect(page.getByRole('list', { name: '참석자 목록' }).getByText('hong@miinit.com')).toBeVisible();
     expect(posts).toEqual([{ name: '홍길동', email: 'hong@miinit.com' }]);
   });
 }

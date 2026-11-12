@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEvent, type DragEvent } from 'react';
 import { CircleAlert, CircleCheck, Download, FileUp, RotateCcw, Square, Upload } from 'lucide-react';
 import { NavigationLeaveGuard } from '../components/NavigationLeaveGuard';
-import { createParticipant, listParticipants, ParticipantApiError, updateParticipant } from '../participantsApi';
+import { createParticipant, listParticipants, ParticipantApiError, updateParticipant, type Participant } from '../participantsApi';
 import { Button, ButtonAnchor, cn, Dialog, FilterChips, Icon, ProgressBar } from '../ui';
 import { countByStatus, decodeCsv, parseCsv, planImport, readPeople, STATUS_LABEL, type ImportItem, type ImportStatus } from './csvImport';
 
@@ -14,7 +14,9 @@ import { countByStatus, decodeCsv, parseCsv, planImport, readPeople, STATUS_LABE
  */
 
 type Outcome = 'done' | 'failed' | 'stopped';
-type RunItem = ImportItem & { outcome?: Outcome; failure?: string };
+/** saved: 서버가 돌려준 참석자. 목록에 바로 넣는다(문서 서비스 조회는 방금 쓴 내용을 늦게 보여 줄 수 있다) */
+type RunItem = ImportItem & { outcome?: Outcome; failure?: string; saved?: Participant };
+export type CsvImportResult = { created: Participant[]; renamed: Participant[] };
 type Step = { name: 'pick'; error?: string } | { name: 'review' } | { name: 'run' } | { name: 'result' };
 type View = 'all' | ImportStatus;
 
@@ -35,7 +37,7 @@ function failureText(error: unknown): string {
   return '저장 실패';
 }
 
-export function CsvImportDialog({ open, onClose }: { open: boolean; onClose: (changed: { created: number; renamed: number }) => void }) {
+export function CsvImportDialog({ open, onClose }: { open: boolean; onClose: (result: CsvImportResult) => void }) {
   const [step, setStep] = useState<Step>({ name: 'pick' });
   const [items, setItems] = useState<RunItem[]>([]);
   const [view, setView] = useState<View>('all');
@@ -53,8 +55,10 @@ export function CsvImportDialog({ open, onClose }: { open: boolean; onClose: (ch
   };
   const close = () => {
     if (running) return;
-    const created = items.filter((item) => item.status === 'create' && item.outcome === 'done').length;
-    const renamed = items.filter((item) => item.status === 'rename' && item.outcome === 'done').length;
+    const saved = (status: ImportStatus) =>
+      items.filter((item) => item.status === status && item.outcome === 'done' && item.saved).map((item) => item.saved as Participant);
+    const created = saved('create');
+    const renamed = saved('rename');
     reset();
     onClose({ created, renamed });
   };
@@ -148,9 +152,13 @@ export function CsvImportDialog({ open, onClose }: { open: boolean; onClose: (ch
       }
       setProgress({ done: index, total: targets.length, current: item.name });
       try {
-        if (item.status === 'create') await createParticipant({ name: item.name, email: item.email }, `${job.current}:${item.email}`);
-        else if (item.existing) await updateParticipant(item.existing.id, { name: item.name });
-        update(item.line, { outcome: 'done', failure: undefined });
+        const saved =
+          item.status === 'create'
+            ? await createParticipant({ name: item.name, email: item.email }, `${job.current}:${item.email}`)
+            : item.existing
+              ? await updateParticipant(item.existing.id, { name: item.name })
+              : undefined;
+        update(item.line, { outcome: 'done', failure: undefined, saved });
       } catch (error) {
         update(item.line, { outcome: 'failed', failure: failureText(error) });
         if (error instanceof ParticipantApiError && FATAL.has(error.code)) fatal = true;

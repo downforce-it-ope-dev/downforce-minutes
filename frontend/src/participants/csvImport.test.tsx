@@ -130,7 +130,10 @@ describe('CSV 일괄 등록 대화상자', () => {
     expect(created).toEqual(['a@miinit.com', 'b@miinit.com']);
 
     fireEvent.click(within(dialog).getByRole('button', { name: '완료' }));
-    await waitFor(() => expect(onClose).toHaveBeenCalledWith({ created: 2, renamed: 1 }));
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+    const result = onClose.mock.calls[0][0];
+    expect(result.created.map(({ email }: Participant) => email)).toEqual(['a@miinit.com', 'b@miinit.com']);
+    expect(result.renamed).toEqual([{ id: 'k', name: '김철수 개명', email: 'kim@miinit.com' }]);
   });
 
   it('문서 연결이 바뀌는 오류가 나면 남은 행을 멈춘다', async () => {

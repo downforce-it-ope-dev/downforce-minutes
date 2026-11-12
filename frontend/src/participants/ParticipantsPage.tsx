@@ -163,10 +163,12 @@ function ParticipantsBody({ target, setTarget }: { target: ParticipantFormTarget
         open={csvOpen}
         onClose={({ created, renamed }) => {
           setCsvOpen(false);
-          if (created + renamed === 0) return;
-          reload();
+          if (created.length + renamed.length === 0) return;
+          // 다시 불러오지 않고 서버 응답을 목록에 바로 반영한다. 문서 서비스 조회는 방금 등록한 참석자를 늦게 보여 줄 수 있다
+          const changed = new Map([...created, ...renamed].map((person) => [person.id, person]));
+          replace([...roster.map((person) => changed.get(person.id) ?? person), ...created.filter((person) => !roster.some(({ id }) => id === person.id))]);
           toast({
-            message: renamed ? `참석자 ${created}명을 등록하고 ${renamed}명의 이름을 갱신했습니다` : `참석자 ${created}명을 등록했습니다`,
+            message: renamed.length ? `참석자 ${created.length}명을 등록하고 ${renamed.length}명의 이름을 갱신했습니다` : `참석자 ${created.length}명을 등록했습니다`,
             tone: 'success',
           });
         }}
