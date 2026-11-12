@@ -61,7 +61,7 @@ export function ChoiceGroup<T extends string>({ label, options, value, onChange,
               onClick={() => onChange(option.value)}
               onKeyDown={(event) => handleKeyDown(event, index)}
               className={cn(
-                'inline-flex h-12 min-w-0 flex-1 tablet:h-13 cursor-pointer items-center justify-center gap-2 rounded-md border px-4 text-label whitespace-nowrap',
+                'inline-flex h-12 min-w-0 flex-1 tablet:h-13 low:h-12 cursor-pointer items-center justify-center gap-2 rounded-md border px-4 text-label whitespace-nowrap',
                 'disabled:cursor-not-allowed disabled:bg-neutral-100 disabled:text-neutral-500',
                 selected ? 'border-2 border-primary bg-selected text-selected-text' : 'border-border-input bg-bg text-text active:bg-bg-subtle',
                 invalid && !selected && 'border-danger',

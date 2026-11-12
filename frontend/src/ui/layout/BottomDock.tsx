@@ -9,10 +9,10 @@ import type { ReactNode } from 'react';
 export function BottomDock({ children }: { children: ReactNode }) {
   return (
     <>
-      <div className="h-20 shrink-0 tablet:h-28 short:hidden" aria-hidden="true" />
+      <div className="h-20 shrink-0 tablet:h-28 low:h-20 short:hidden" aria-hidden="true" />
       <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 pb-safe tablet:pl-rail tablet-lg:pl-sidebar short:pointer-events-auto short:static short:mt-4 short:pb-0 short:pl-0">
         <div className="flex justify-center px-4 tablet:px-6 short:px-0">
-          <div className="pointer-events-auto mb-20 w-full tablet:mb-6 tablet:max-w-form short:mb-0">{children}</div>
+          <div className="pointer-events-auto mb-20 w-full tablet:mb-6 low:mb-4 tablet:max-w-form short:mb-0">{children}</div>
         </div>
       </div>
     </>

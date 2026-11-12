@@ -244,6 +244,8 @@
 /*
  * 글자 토큰 (검토 문서 8.3). 휴대폰 값이 기본이고 tablet(600px) 이상에서 커진다.
  * 크기·줄 높이·굵기·자간을 한 번에 지정한다.
+ * 높이가 낮은 큰 태블릿 가로(low)는 큰 글자(display·headline·title·body-lg)를 휴대폰 크기로 둔다(2026-11-12, S9 가로).
+ * label·caption·nav는 읽기 쉽게 태블릿 크기를 그대로 둔다.
  */
 @utility text-display {
   font-size: 3rem;
@@ -255,6 +257,10 @@
     font-size: 4rem;
     line-height: 4.5rem;
   }
+  @variant low {
+    font-size: 3rem;
+    line-height: 3.5rem;
+  }
 }
 @utility text-headline {
   font-size: 1.5rem;
@@ -264,6 +270,10 @@
   @variant tablet {
     font-size: 1.75rem;
     line-height: 2.25rem;
+  }
+  @variant low {
+    font-size: 1.5rem;
+    line-height: 2rem;
   }
 }
 @utility text-title {
@@ -275,6 +285,10 @@
     font-size: 1.25rem;
     line-height: 1.75rem;
   }
+  @variant low {
+    font-size: 1.125rem;
+    line-height: 1.625rem;
+  }
 }
 @utility text-body-lg {
   font-size: 1.0625rem;
@@ -283,6 +297,10 @@
   @variant tablet {
     font-size: 1.125rem;
     line-height: 1.875rem;
+  }
+  @variant low {
+    font-size: 1.0625rem;
+    line-height: 1.75rem;
   }
 }
 @utility text-body {

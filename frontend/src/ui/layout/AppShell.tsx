@@ -75,7 +75,7 @@ export function AppShell({ title, hideTitle = false, back, actions, focus = fals
           <main id="main-content" tabIndex={0} aria-label="본문" className="min-h-0 flex-1 overflow-y-auto">
             <div
               className={cn(
-                'mx-auto flex min-h-full w-full max-w-content flex-col px-4 pt-2 pb-8 tablet:px-6 tablet-lg:px-8 short:pb-4',
+                'mx-auto flex min-h-full w-full max-w-content flex-col px-4 pt-2 pb-8 tablet:px-6 tablet-lg:px-8 low:pb-4 short:pb-4',
                 fillHeight === true && 'tablet:h-full tablet:pb-4 short:h-auto',
                 fillHeight === 'tablet-lg' && 'tablet-lg:h-full tablet-lg:pb-4 short:h-auto',
               )}
@@ -158,7 +158,7 @@ function TopBar({ title, hideTitle, back, actions }: Pick<AppShellProps, 'title'
   const navigate = useNavigate();
   return (
     <header className="shrink-0 pt-safe">
-      <div className="mx-auto flex h-14 w-full max-w-content items-center gap-2 px-4 tablet:h-20 tablet:px-6 tablet-lg:px-8 short:h-12 short:tablet:h-14">
+      <div className="mx-auto flex h-14 w-full max-w-content items-center gap-2 px-4 tablet:h-20 low:h-16 tablet:px-6 tablet-lg:px-8 short:h-12 short:tablet:h-14">
         {back && (
           // 뒤로 가기는 흰 원형 버튼(시안의 상단 바 보조 동작과 같은 모양)
           <IconButton

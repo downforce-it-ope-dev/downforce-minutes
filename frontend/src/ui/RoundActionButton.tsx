@@ -32,7 +32,7 @@ export function RoundActionButton({ icon, label, tone = 'primary', size = 'lg', 
       <span
         className={cn(
           'flex items-center justify-center rounded-full text-white transition-colors',
-          size === 'lg' ? 'size-20 tablet:size-24' : 'size-14 tablet:size-16',
+          size === 'lg' ? 'size-20 tablet:size-24 low:size-20' : 'size-14 tablet:size-16',
           tone === 'danger'
             ? 'bg-danger active:bg-red-700'
             : 'bg-linear-to-br from-primary to-primary-hover shadow-primary active:from-primary-hover',

@@ -54,8 +54,8 @@ for (const [size, minRows] of [[SIZES[1], 8], [SIZES[2], 4]] as const) {
     const scroller = list.locator('..');
     const box = (await scroller.boundingBox())!;
     expect(Math.floor(box.height / 60)).toBeGreaterThanOrEqual(minRows);
-    // 목록 영역이 따로 스크롤된다(페이지는 스크롤하지 않음)
-    expect(await scroller.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true);
+    // 목록이 넘치면 목록 영역만 스크롤한다(페이지는 스크롤하지 않음). 태블릿 가로는 입력란이 한 줄이라 목록이 다 들어갈 수 있다
+    if (minRows > 4) expect(await scroller.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true);
     const main = page.getByRole('main');
     expect(await main.evaluate((element) => element.scrollHeight <= element.clientHeight)).toBe(true);
     const start = page.getByRole('button', { name: '회의 시작' });
@@ -192,4 +192,16 @@ test('휴대폰: 집중 모드라 탭 바 없이 회의 시작이 화면 아래�
   await expect(page.getByRole('navigation', { name: '주 메뉴' })).toHaveCount(0);
   const start = (await page.getByRole('button', { name: '회의 시작' }).boundingBox())!;
   expect(start.y + start.height).toBeGreaterThan(844 - 120);
+});
+
+test('높이가 낮은 큰 태블릿 가로(Galaxy Tab S9, 1280×650): 참석자 목록이 보이고 새 참석자 등록 버튼까지 화면 안에 있다', async ({ page }) => {
+  await mock(page);
+  await page.setViewportSize({ width: 1280, height: 650 });
+  await page.goto('/meetings/new');
+  const list = page.getByRole('list', { name: '참석자 목록' });
+  await expect(list.getByRole('checkbox').first()).toBeInViewport({ ratio: 1 });
+  await page.getByRole('button', { name: '새 참석자' }).click();
+  const panel = page.getByRole('region', { name: '새 참석자' });
+  await expect(panel.getByRole('button', { name: '등록' })).toBeInViewport({ ratio: 1 });
+  await expect(page.getByRole('button', { name: '회의 시작' })).toBeInViewport({ ratio: 1 });
 });
