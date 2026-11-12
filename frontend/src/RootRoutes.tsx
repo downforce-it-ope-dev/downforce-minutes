@@ -7,6 +7,8 @@ import { VerifyPage } from './auth/VerifyPage';
 import { DocumentGate } from './documentGate/DocumentGate';
 import { DocumentSetupPage } from './documentSetup/DocumentSetupPage';
 import { HomePage } from './home/HomePage';
+import { MeetingDetailRoute } from './meetings/MeetingDetailPage';
+import { MeetingsPage } from './meetings/MeetingsPage';
 import { LEGACY_PATHS } from './legacyRoutes';
 import { NewMeetingPage } from './newMeeting/NewMeetingPage';
 import { NotFoundPage } from './notFound/NotFoundPage';
@@ -67,6 +69,23 @@ function AppRoutes() {
             <DocumentGate>
               <HomePage />
             </DocumentGate>
+          </RequireAuth>
+        }
+      />
+      {/* 회의록 목록 (MIN-01, #32)·상세 (MIN-02, #33) */}
+      <Route
+        path="/meetings"
+        element={
+          <RequireAuth>
+            <MeetingsPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/meetings/:documentId"
+        element={
+          <RequireAuth>
+            <MeetingDetailRoute />
           </RequireAuth>
         }
       />

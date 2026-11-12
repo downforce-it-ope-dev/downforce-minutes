@@ -29,8 +29,5 @@ button:where(:not([data-ui='renewal'], [data-ui='renewal'] *)):disabled { cursor
   .participants-page { padding: 28px 18px 82px; }
   .participants-create-dock { padding-right: 18px; padding-left: 18px; }
 }
-.meeting-filters { display: grid; gap: 8px; margin: 0; }
-.meeting-filters input { width: 100%; min-width: 0; min-height: 44px; border: 1px solid #dce2ea; border-radius: 9px; padding: 0 10px; color: #293548; background: #fff; font: inherit; }
-.meeting-filters input:focus-visible { outline: 3px solid #3b82f6; outline-offset: 2px; }
 .participants-main { display: flex; height: 100%; min-height: 0; flex: 1 1 auto; flex-direction: column; }
 .participants-page { display: flex; height: 100%; min-height: 0; flex: 1 1 auto; flex-direction: column; overflow: hidden; }

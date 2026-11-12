@@ -13,14 +13,17 @@ const SIZES = [
 const ready = { version: 1, status: 'READY', active: { provider: 'NOTION', connectionVersion: 2, rootUrl: 'https://notion.example' }, draft: null, operation: null, canCreateMeeting: true };
 const meetings = [
   { documentId: 'd1', title: 'AX 개발 미팅', meetingAt: '2026-11-05T10:00:00+09:00', participants: [{ id: 'p1', name: 'Ada' }, { id: 'p2', name: 'Grace' }], documentUrl: null },
-  { documentId: 'd2', title: 'IAM 설계 리뷰', meetingAt: '2026-11-04T14:00:00+09:00', participants: [{ id: 'p3', name: 'Linus' }], documentUrl: null },
-  { documentId: 'd3', title: 'GCP 인프라 논의', meetingAt: '2026-11-03T09:30:00+09:00', participants: [], documentUrl: null },
+  { documentId: 'd2', title: 'IAM 설계 리뷰', meetingAt: '2026-11-04T14:00:00+09:00', participants: [{ id: 'p1', name: 'Ada' }, { id: 'p3', name: 'Linus' }], documentUrl: null },
+  { documentId: 'd3', title: 'GCP 인프라 논의', meetingAt: '2026-11-03T09:30:00+09:00', participants: [{ id: 'p1', name: 'Ada' }], documentUrl: null },
 ];
+// 최근 회의는 로그인한 사람(Ada, meet@miinit.com)이 참석한 회의만 보인다
+const roster = [{ id: 'p1', name: 'Ada', email: 'meet@miinit.com' }];
 
 async function mock(page: Page) {
   await page.route('**/api/v1/document-setup', (route) => route.fulfill({ json: { data: ready } }));
   await page.route('**/api/v1/meeting-sessions/processing-failures', (route) => route.fulfill({ json: { data: { items: [] } } }));
-  await page.route('**/api/v1/meetings?limit=3', (route) => route.fulfill({ json: { data: { items: meetings } } }));
+  await page.route('**/api/v1/meetings', (route) => route.fulfill({ json: { data: { items: meetings } } }));
+  await page.route('**/api/v1/participants', (route) => route.fulfill({ json: { data: { items: roster } } }));
   await page.addInitScript(() => localStorage.setItem('ma-auth-email', 'meet@miinit.com'));
 }
 

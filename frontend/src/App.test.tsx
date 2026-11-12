@@ -436,7 +436,7 @@ describe('Participants settings', () => {
     const navigation = within(screen.getByRole('navigation', { name: '주 메뉴' }));
     expect(navigation.getAllByRole('listitem').map((item) => item.textContent)).toEqual(['홈', '회의록', '참석자', '설정']);
     expect(await screen.findByText('회의 기록이 없습니다')).toBeTruthy();
-    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/api/v1/meetings?limit=3'))).toBe(true);
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/api/v1/meetings'))).toBe(true);
   });
 
   it('navigates the Home CTA to the New Meeting route fixture', async () => {

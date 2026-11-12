@@ -13,7 +13,13 @@ function json(data: unknown, status = 200) {
 const ready = { version: 1, status: 'READY', active: { provider: 'NOTION', connectionVersion: 2, rootUrl: 'https://notion.example' }, draft: null, operation: null, canCreateMeeting: true };
 const meetings = [
   { documentId: 'd1', title: '주간 회의', meetingAt: '2026-11-05T10:00:00+09:00', participants: [{ id: 'p1', name: 'Ada' }, { id: 'p2', name: 'Grace' }, { id: 'p3', name: 'Linus' }, { id: 'p4', name: 'Ken' }], documentUrl: null },
-  { documentId: 'd2', title: '설계 리뷰', meetingAt: '2026-11-04T14:00:00+09:00', participants: [], documentUrl: null },
+  { documentId: 'd2', title: '설계 리뷰', meetingAt: '2026-11-04T14:00:00+09:00', participants: [{ id: 'p1', name: 'Ada' }], documentUrl: null },
+  // 로그인한 사람(p1)이 참석하지 않은 회의는 보이지 않는다
+  { documentId: 'd3', title: '다른 팀 회의', meetingAt: '2026-11-03T14:00:00+09:00', participants: [{ id: 'p2', name: 'Grace' }], documentUrl: null },
+];
+const roster = [
+  { id: 'p1', name: 'Ada', email: 'Meet@miinit.com' },
+  { id: 'p2', name: 'Grace', email: 'grace@miinit.com' },
 ];
 
 function install({ list = meetings, failures = [] as unknown[], listFails = 0 } = {}) {
@@ -22,6 +28,7 @@ function install({ list = meetings, failures = [] as unknown[], listFails = 0 } 
     const path = new URL(String(input)).pathname;
     if (path.endsWith('/document-setup')) return json(ready);
     if (path.endsWith('/processing-failures')) return json({ items: failures });
+    if (path.endsWith('/participants')) return json({ items: roster });
     if (path.endsWith('/meetings')) {
       listCalls += 1;
       return listCalls <= listFails ? json({ error: { code: 'DOCUMENT_FAILED', message: 'x' } }, 502) : json({ items: list });
@@ -60,7 +67,8 @@ describe('HOME-01 메인 (#24)', () => {
     renderHome();
     const first = await screen.findByRole('link', { name: '주간 회의 상세 보기' });
     expect(first.textContent).toContain('Ada, Grace, Linus, 외 1명');
-    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/meetings?limit=3'))).toBe(true);
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/api/v1/meetings'))).toBe(true);
+    expect(screen.queryByRole('link', { name: '다른 팀 회의 상세 보기' })).toBeNull();
     fireEvent.click(first);
     expect(await screen.findByRole('heading', { name: '회의록 상세' })).toBeTruthy();
   });

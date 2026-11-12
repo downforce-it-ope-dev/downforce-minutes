@@ -5,8 +5,6 @@
  */
 export const LEGACY_PATHS = [
   '/settings',
-  '/meetings',
-  '/meetings/:documentId',
   '/participants',
   '/settings/participants',
 ] as const;

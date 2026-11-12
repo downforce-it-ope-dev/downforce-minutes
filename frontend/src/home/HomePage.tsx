@@ -3,7 +3,8 @@ import { Link, useNavigate } from 'react-router';
 import { CalendarDays, ChevronRight, Clock, Mic, RefreshCw, Share2, Sparkles, TriangleAlert, Users } from 'lucide-react';
 import { AccountButton, SidebarAccount } from '../auth/AccountMenu';
 import { getSetupSnapshot, type DocumentProvider, type SetupSnapshot } from '../documentSetupApi';
-import { listMeetings, listProcessingFailures, type MeetingSummary } from '../meetingListApi';
+import { listProcessingFailures, type MeetingSummary } from '../meetingListApi';
+import { listMyMeetings } from '../meetings/myMeetings';
 import {
   AppShell,
   Button,
@@ -191,7 +192,7 @@ function useSample() {
   return __UI_PREVIEW__ && typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('sample');
 }
 
-/** 최근 회의 3건 (HOME-01-F02·F03) */
+/** 최근 회의 3건 (HOME-01-F02·F03). 회의록 목록과 같이 내가 참석자인 회의만 */
 function RecentMeetings() {
   const sample = useSample();
   const [meetings, setMeetings] = useState<Load<MeetingSummary[]>>(sample ? { status: 'ready', data: SAMPLE_MEETINGS } : { status: 'loading' });
@@ -199,7 +200,7 @@ function RecentMeetings() {
   useEffect(() => {
     if (sample) return;
     let live = true;
-    listMeetings(3)
+    listMyMeetings(3)
       .then((items) => live && setMeetings({ status: 'ready', data: items }))
       .catch(() => live && setMeetings({ status: 'error' }));
     return () => {

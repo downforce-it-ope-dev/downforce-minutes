@@ -8,6 +8,7 @@ import { AppShell, Button, ButtonLink, Card, cn, Dialog, IconButton, ProgressBar
 import { MinutesSectionPanel, ReviewSectionNav, type ReviewSectionKey } from './MinutesEditor';
 import { installSampleReviewApi } from './sampleReviewApi';
 import { SpeakerMappingSection } from './SpeakerMappingSection';
+import { speakerColorAt } from './speakerColors';
 import { speakerDisplayLabel } from './speakerPreview';
 import { TranscriptList } from './TranscriptList';
 import { useReviewSession, type MappingChange } from './useReviewSession';
@@ -23,7 +24,6 @@ import { useReviewSession, type MappingChange } from './useReviewSession';
  * - 작업 결과·오류는 토스트, 발송을 막는 이유와 미지정 화자 확인만 대화상자(P02)
  */
 
-const SPEAKER_COLORS = ['bg-pink-500', 'bg-lavender-500', 'bg-blue-500', 'bg-pink-700', 'bg-lavender-700', 'bg-blue-700', 'bg-neutral-500'];
 
 export function ReviewRoute() {
   const { sessionId } = useParams();
@@ -113,7 +113,7 @@ function speakerName(review: Review, speaker: ReviewSpeaker) {
 
 function speakerColor(review: Review, speakerId: string) {
   const index = review.review?.speakers.findIndex((speaker) => speaker.speakerId === speakerId) ?? -1;
-  return SPEAKER_COLORS[Math.max(0, index) % SPEAKER_COLORS.length];
+  return speakerColorAt(index);
 }
 
 function ReviewBody({ sessionId, review, onShowInTranscript }: { sessionId: string; review: Review; onShowInTranscript: (segmentId: string) => void }) {

@@ -20,8 +20,8 @@ const PROBE_MARKUP = `
 `;
 
 async function mountProbes(page: Page): Promise<void> {
-  // 기존 화면 하나 위에서 격리를 본다. 홈(SCR-001)은 리뉴얼(#24)되어 회의 기록(SCR-009)을 쓴다
-  const legacy = screens.find(({ id }) => id === 'SCR-009')!;
+  // 기존 화면 하나 위에서 격리를 본다. 홈(SCR-001)·회의록(SCR-009)은 리뉴얼(#24·#32)되어 설정(SCR-011)을 쓴다
+  const legacy = screens.find(({ id }) => id === 'SCR-011')!;
   await installSyntheticApi(page, legacy);
   await page.goto(legacy.route);
   await expect(page.locator('main').first()).toBeVisible();
