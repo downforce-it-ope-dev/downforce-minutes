@@ -119,13 +119,19 @@ test('태블릿 가로: 등록 아이콘으로 오른쪽에서 밀려 나오는 
   await expect.poll(async () => Math.round((await picker.boundingBox())!.width)).toBe(Math.round(fullWidth));
 });
 
-test('회의 시작은 맨 아래 가운데에 있다 (태블릿 가로)', async ({ page }) => {
+test('태블릿 가로: 왼쪽 회의 정보(제목·템플릿·날짜 위아래), 오른쪽 참석자, 회의 시작은 맨 아래 가운데', async ({ page }) => {
   await mock(page);
   await page.setViewportSize({ width: 1180, height: 820 });
   await page.goto('/meetings/new');
-  const start = (await page.getByRole('button', { name: '회의 시작' }).boundingBox())!;
+  const info = (await page.getByRole('region', { name: '회의 정보' }).boundingBox())!;
   const picker = (await page.getByRole('region', { name: '참석자', exact: true }).boundingBox())!;
-  expect(Math.abs(start.x + start.width / 2 - (picker.x + picker.width / 2))).toBeLessThanOrEqual(1);
+  expect(picker.x).toBeGreaterThan(info.x + info.width);
+  const title = (await page.getByRole('textbox', { name: '회의 제목' }).boundingBox())!;
+  const date = (await page.getByRole('button', { name: '회의 날짜' }).boundingBox())!;
+  expect(date.y).toBeGreaterThan(title.y + title.height);
+  const start = (await page.getByRole('button', { name: '회의 시작' }).boundingBox())!;
+  const main = (await page.locator('#main-content').boundingBox())!;
+  expect(Math.abs(start.x + start.width / 2 - (main.x + main.width / 2))).toBeLessThanOrEqual(1);
   expect(start.y).toBeGreaterThan(picker.y + picker.height);
 });
 

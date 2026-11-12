@@ -80,24 +80,26 @@ function SettingsBody({ refreshKey }: { refreshKey: number }) {
 
   return (
     <div className="flex flex-col gap-4 tablet:gap-6">
-      <Card as="section" aria-labelledby="settings-document" className="flex flex-col gap-5">
+      <Card as="section" aria-labelledby="settings-document" className="flex flex-col gap-4">
         <CardHeading id="settings-document" title="문서 연결" state={summary?.document.state} />
-        {summary && (
-          <div className="flex items-center gap-4">
-            <span className="flex size-12 shrink-0 items-center justify-center rounded-md bg-bg shadow-card">
-              {provider === 'NOTION' || provider === 'CONFLUENCE' ? (
-                <img src={provider === 'NOTION' ? '/assets/notion.ico' : '/assets/confluence.svg'} alt="" className="size-7" />
-              ) : (
-                <Icon icon={FolderCog} size="lg" className="text-text-muted" />
-              )}
-            </span>
-            <span className="text-title text-text">{summary.document.provider ?? '연결 안 됨'}</span>
-          </div>
-        )}
-        {/* 바로 서비스 선택(변경 모드)으로 간다. 중간 문서 연결 화면은 없앴다(2026-11-12) */}
-        <ButtonLink to="/settings/document" variant="secondary" shape="pill" icon={Repeat} className="self-start">
-          변경
-        </ButtonLink>
+        {/* 서비스 표시 오른쪽에 변경(2026-11-12): 카드 높이를 줄인다. 누르면 바로 서비스 선택(변경 모드) */}
+        <div className="flex flex-wrap items-center gap-4">
+          {summary && (
+            <>
+              <span className="flex size-12 shrink-0 items-center justify-center rounded-md bg-bg shadow-card">
+                {provider === 'NOTION' || provider === 'CONFLUENCE' ? (
+                  <img src={provider === 'NOTION' ? '/assets/notion.ico' : '/assets/confluence.svg'} alt="" className="size-7" />
+                ) : (
+                  <Icon icon={FolderCog} size="lg" className="text-text-muted" />
+                )}
+              </span>
+              <span className="min-w-0 flex-1 text-title text-text">{summary.document.provider ?? '연결 안 됨'}</span>
+            </>
+          )}
+          <ButtonLink to="/settings/document" variant="secondary" shape="pill" icon={Repeat} className="ml-auto">
+            변경
+          </ButtonLink>
+        </div>
       </Card>
       <EmailCard state={summary?.email.state} refreshKey={refreshKey} onChanged={reload} />
     </div>
