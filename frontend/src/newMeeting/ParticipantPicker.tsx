@@ -26,7 +26,7 @@ const collator = new Intl.Collator('ko');
 /**
  * 참석자 선택 영역 (MTG-01-F04, 기획 3.1 표).
  * 머리(제목·선택 수·검색·보기 필터)는 고정하고 태블릿에서는 목록만 따로 스크롤한다. 휴대폰은 페이지 스크롤.
- * 검색어를 바꿔도 선택은 유지하고, 선택해도 행 순서는 바뀌지 않는다(이름 가나다순).
+ * 검색어를 바꿔도 선택은 유지한다. 선택한 참석자를 앞쪽에 두고, 선택한 사람끼리·안 한 사람끼리는 이름 가나다순이다(사용자 결정 2026-11-12).
  * 새 참석자 등록은 화면(NewMeetingPage)이 오른쪽 패널·대화상자로 붙인다. 팀 배지·팀 거르기·CSV 일괄 등록은 Backend 팀 확장(#35)과 #37 뒤에 붙인다.
  */
 export function ParticipantPicker({
@@ -44,7 +44,10 @@ export function ParticipantPicker({
   const [query, setQuery] = useState('');
   const [view, setView] = useState<View>('all');
 
-  const sorted = useMemo(() => [...participants].sort((a, b) => collator.compare(a.name, b.name)), [participants]);
+  const sorted = useMemo(() => {
+    const chosen = new Set(selectedIds);
+    return [...participants].sort((a, b) => Number(chosen.has(b.id)) - Number(chosen.has(a.id)) || collator.compare(a.name, b.name));
+  }, [participants, selectedIds]);
   const keyword = query.trim().toLowerCase();
   const visible = sorted.filter(
     (item) =>

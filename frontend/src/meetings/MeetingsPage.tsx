@@ -89,7 +89,14 @@ export function MeetingsPage() {
 
 function MeetingsBody() {
   const toast = useToast();
-  const { filters, update, search } = useListFilters();
+  const { filters: urlFilters, update: updateUrl, search } = useListFilters();
+  // 검색어 입력란은 화면 안 값으로 둔다. 주소 값을 입력란에 바로 묶으면 한글 조합 중 값이 늦게 되돌아와 조합이 깨진다(2026-11-12)
+  const [queryText, setQueryText] = useState(urlFilters.query);
+  const filters = { ...urlFilters, query: queryText };
+  const update = (patch: Partial<MeetingListFilters>) => {
+    if (patch.query !== undefined) setQueryText(patch.query);
+    updateUrl(patch);
+  };
   // 이미 받아 둔 목록이 있으면 바로 보이고 뒤에서 새로 받는다(로딩 개선 2026-11-12)
   const [load, setLoad] = useState<Load>(() => {
     const cached = peekMyMeetings();
@@ -142,7 +149,17 @@ function MeetingsBody() {
           value={filters.query}
           onChange={(event) => update({ query: event.target.value })}
           className="min-w-0 flex-1"
-          inside={filters.query && <IconButton icon={X} label="검색어 지우기" onClick={() => update({ query: '' })} />}
+inside={
+            // 지우기 버튼은 늘 자리를 두고 검색어가 있을 때만 보인다(입력 중 입력란 구조가 바뀌면 Android 한글 조합이 깨질 수 있다)
+            <IconButton
+              icon={X}
+              label="검색어 지우기"
+              className={filters.query ? undefined : 'invisible'}
+              tabIndex={filters.query ? undefined : -1}
+              aria-hidden={filters.query ? undefined : true}
+              onClick={() => update({ query: '' })}
+            />
+          }
         />
         <div className="flex shrink-0 items-center gap-2 tablet:gap-3">
           <RoundButton

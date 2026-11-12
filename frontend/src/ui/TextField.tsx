@@ -22,7 +22,10 @@ export interface TextFieldProps extends Omit<InputHTMLAttributes<HTMLInputElemen
   inputSize?: 'md' | 'lg';
   /** 입력란 오른쪽에 붙일 요소(입력란과 세로 가운데 정렬). 예: 로그인 화살표 버튼 */
   trailing?: ReactNode;
-  /** 입력란 안 오른쪽에 둘 요소(예: 검색어 지우기 ×). 입력 글자가 가리지 않게 오른쪽 여백을 넓힌다 */
+  /**
+   * 입력란 안 오른쪽에 둘 요소(예: 검색어 지우기 ×). 입력 글자가 가리지 않게 오른쪽 여백을 넓힌다.
+   * 입력 중에 나타났다 사라지게 하지 말고 늘 넘긴 뒤 보이기만 바꾼다(입력란 구조가 바뀌면 Android 한글 조합이 깨질 수 있다)
+   */
   inside?: ReactNode;
   ref?: Ref<HTMLInputElement>;
 }
@@ -77,11 +80,11 @@ export function TextField({
             'disabled:cursor-not-allowed disabled:bg-neutral-100 disabled:text-neutral-500',
             shape === 'pill' ? 'rounded-full px-5 shadow-card' : 'rounded-md px-3.5',
             icon && (shape === 'pill' ? 'pl-14' : 'pl-12'),
-            Boolean(inside) && 'pr-14',
+            inside !== undefined && 'pr-14',
             isInvalid ? 'border-danger' : 'border-border-input',
           )}
         />
-        {inside && <span className="absolute inset-y-0 right-1 flex items-center">{inside}</span>}
+        {inside !== undefined && <span className="absolute inset-y-0 right-1 flex items-center">{inside}</span>}
       </div>
       {trailing}
       </div>

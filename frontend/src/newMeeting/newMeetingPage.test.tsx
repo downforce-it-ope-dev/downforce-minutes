@@ -85,14 +85,37 @@ describe('새 회의 (MTG-01)', () => {
     expect(self).toHaveProperty('checked', true);
   });
 
-  it('이름 가나다순으로 보이고, 선택해도 순서가 바뀌지 않는다', async () => {
+  it('선택한 참석자가 앞쪽에 오고, 그 안과 나머지는 이름 가나다순이다(2026-11-12)', async () => {
     mockApi();
     renderPage();
     await screen.findByRole('list', { name: '참석자 목록' });
     const names = () => list().getAllByRole('checkbox').map((item) => item.getAttribute('aria-label')?.split(' ')[0]);
-    expect(names()).toEqual(['김철수', '이영희', '홍길동']);
+    // 로그인한 사람(이영희)은 자동 선택이라 맨 앞
+    expect(names()).toEqual(['이영희', '김철수', '홍길동']);
     fireEvent.click(box(/홍길동/));
-    expect(names()).toEqual(['김철수', '이영희', '홍길동']);
+    expect(names()).toEqual(['이영희', '홍길동', '김철수']);
+    fireEvent.click(box(/홍길동/));
+    expect(names()).toEqual(['이영희', '김철수', '홍길동']);
+  });
+
+  it('다른 화면에서 받아 둔 참석자·템플릿이 있으면 바로 보이고 뒤에서 새로 받는다', async () => {
+    const fetchMock = mockApi();
+    renderPage();
+    await screen.findByRole('list', { name: '참석자 목록' });
+    cleanup();
+    // 두 번째 열기: 참석자·템플릿 요청이 끝나기 전에도 목록과 템플릿이 보인다
+    const base = fetchMock.getMockImplementation()!;
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    fetchMock.mockImplementation(async (input, init) => {
+      const path = new URL(String(input), 'http://localhost').pathname;
+      if (path.endsWith('/participants') || path.endsWith('/templates')) await gate;
+      return base(input, init);
+    });
+    renderPage();
+    expect(screen.getByRole('list', { name: '참석자 목록' })).toBeTruthy();
+    expect(screen.getByRole('radio', { name: '기본 회의록' })).toBeTruthy();
+    release();
   });
 
   it('검색어를 바꿔도 선택이 유지되고, 선택됨 보기로 다시 확인한다', async () => {

@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { Participant } from '../participantsApi';
+import { peekParticipants, rememberParticipants, type Participant } from '../participantsApi';
 import {
   getDocumentAppConfig,
   listMeetingParticipants,
   listMeetingTemplates,
+  peekMeetingTemplates,
   NewMeetingApiError,
   type DocumentAppConfig,
   type MeetingDraft,
@@ -65,11 +66,22 @@ export function useNewMeetingForm({
   notify: (notice: NewMeetingNotice) => void;
 }) {
   const [config, setConfig] = useState<Resource<DocumentAppConfig>>({ status: 'loading' });
-  const [templates, setTemplates] = useState<Resource<MeetingTemplate[]>>({ status: 'loading' });
-  const [participants, setParticipants] = useState<Resource<Participant[]>>({ status: 'loading' });
+  const [templates, setTemplates] = useState<Resource<MeetingTemplate[]>>(() => {
+    const cached = peekMeetingTemplates();
+    return cached ? { status: 'ready', data: cached } : { status: 'loading' };
+  });
+  // 다른 화면에서 받아 둔 참석자 목록이 있으면 바로 보이고 뒤에서 새로 받는다(로딩 개선 2026-11-12)
+  const [participants, setParticipants] = useState<Resource<Participant[]>>(() => {
+    const cached = peekParticipants();
+    return cached ? { status: 'ready', data: cached } : { status: 'loading' };
+  });
   const [title, setTitle] = useState(initialDraft?.title ?? '');
   const [meetingDate, setMeetingDate] = useState(initialDraft?.meetingDate ?? localDateString());
-  const [templateId, setTemplateId] = useState(initialDraft?.templateId ?? 'default.md');
+  const [templateId, setTemplateId] = useState(() => {
+    const wanted = initialDraft?.templateId ?? 'default.md';
+    const cached = peekMeetingTemplates();
+    return cached ? pickTemplate(cached, wanted) : wanted;
+  });
   const [chosenIds, setChosenIds] = useState<string[]>([...(initialDraft?.participantIds ?? [])]);
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -155,7 +167,8 @@ export function useNewMeetingForm({
       .then((items) => active && setParticipants({ status: 'ready', data: items }))
       .catch(() => {
         if (!active) return;
-        setParticipants({ status: 'error' });
+        // 받아 둔 목록으로 이미 보이고 있으면 그대로 두고 알리기만 한다
+        setParticipants((current) => (current.status === 'ready' ? current : { status: 'error' }));
         notifyRef.current('participants-failed');
       });
     return () => {
@@ -188,10 +201,12 @@ export function useNewMeetingForm({
 
   /** 이 화면에서 새로 등록한 참석자를 목록에 넣고 바로 선택한다 (MTG-01-F09) */
   function addParticipant(participant: Participant) {
-    setParticipants((current) => ({
-      status: 'ready',
-      data: [...(current.data ?? []).filter((item) => item.id !== participant.id), participant],
-    }));
+    setParticipants((current) => {
+      const next = [...(current.data ?? []).filter((item) => item.id !== participant.id), participant];
+      // 다른 화면이 기억한 목록에도 넣는다
+      rememberParticipants(next);
+      return { status: 'ready', data: next };
+    });
     setChosenIds((current) => (current.includes(participant.id) ? current : [...current, participant.id]));
   }
 

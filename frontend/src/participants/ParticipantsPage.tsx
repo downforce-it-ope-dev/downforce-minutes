@@ -93,7 +93,17 @@ function ParticipantsBody({ target, setTarget }: { target: ParticipantFormTarget
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           className="min-w-0 flex-1"
-          inside={query && <IconButton icon={X} label="검색어 지우기" onClick={() => setQuery('')} />}
+          inside={
+            // 지우기 버튼은 늘 자리를 두고 검색어가 있을 때만 보인다(입력 중 입력란 구조가 바뀌면 Android 한글 조합이 깨질 수 있다)
+            <IconButton
+              icon={X}
+              label="검색어 지우기"
+              className={query ? undefined : 'invisible'}
+              tabIndex={query ? undefined : -1}
+              aria-hidden={query ? undefined : true}
+              onClick={() => setQuery('')}
+            />
+          }
         />
         {teamEnabled && (
           <SelectField label="팀" hideLabel value={team} onChange={(event) => setTeam(event.target.value)} className="tablet:w-56">
