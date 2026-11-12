@@ -149,7 +149,7 @@ describe('AUTH-02 인증 코드', () => {
 
   it('이메일 정보 없이 들어오면 로그인 화면으로 돌려보낸다', async () => {
     renderAt('/login/verify');
-    expect(await screen.findByRole('heading', { name: '회사 이메일로 로그인' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: '회사 이메일로 로그인하세요.' })).toBeTruthy();
   });
 
   it('6자리를 채우면 검증하고 원래 가려던 화면으로 간다', async () => {
@@ -175,7 +175,7 @@ describe('AUTH-02 인증 코드', () => {
     expect(await screen.findByText('시도 횟수를 초과했습니다. 5분 뒤에 다시 시도해 주세요.')).toBeTruthy();
     expect(screen.getByRole('button', { name: /코드 다시 받기/ }).getAttribute('aria-disabled')).toBe('true');
     fireEvent.click(screen.getByRole('button', { name: '처음으로' }));
-    expect(await screen.findByRole('heading', { name: '회사 이메일로 로그인' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: '회사 이메일로 로그인하세요.' })).toBeTruthy();
     expect((screen.getByLabelText('회사 이메일') as HTMLInputElement).value).toBe('meet@miinit.com');
   });
 
@@ -221,7 +221,7 @@ describe('진입 보호 (#15)', () => {
     getSession.mockResolvedValue({ status: 'unauthenticated' });
     requestOtp.mockResolvedValue({ ok: true, expiresInSeconds: 60, resendAfterSeconds: 60 });
     renderGate('/meetings?tab=done');
-    expect(await screen.findByRole('heading', { name: '회사 이메일로 로그인' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: '회사 이메일로 로그인하세요.' })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: '기존 화면' })).toBeNull();
   });
 

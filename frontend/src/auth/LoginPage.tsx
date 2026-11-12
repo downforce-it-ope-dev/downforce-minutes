@@ -98,12 +98,13 @@ export function LoginPage() {
     <AuthLayout illustration={<RecordToMinutesIllustration className="w-full" />}>
       <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between gap-4">
-          <h1 className="text-headline text-text">회사 이메일로 로그인</h1>
+          <h1 className="text-headline text-text">회사 이메일로 로그인하세요.</h1>
           {mailMissing && <IconButton icon={Settings} label="메일 설정" variant="surface" onClick={() => setMailDialog(true)} />}
         </div>
         <form onSubmit={submit} noValidate>
           <TextField
             label="회사 이메일"
+            hideLabel
             type="email"
             inputMode="email"
             autoComplete="email"

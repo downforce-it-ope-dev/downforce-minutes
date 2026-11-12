@@ -43,7 +43,7 @@ for (const size of SIZES) {
   test(`AUTH-01 · ${size.label}: axe 심각 위반 0건, 가로 넘침 없음`, async ({ page }) => {
     await page.setViewportSize(size);
     await page.goto('/login');
-    await expect(page.getByRole('heading', { level: 1, name: '회사 이메일로 로그인' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: '회사 이메일로 로그인하세요.' })).toBeVisible();
     await expectAccessibleWithoutOverflow(page);
   });
 
@@ -59,7 +59,7 @@ test('회사 도메인이 아니면 코드를 요청하지 않는다', async ({ 
   await page.getByLabel('회사 이메일').fill('meet@gmail.com');
   await page.getByRole('button', { name: '인증 코드 받기' }).click();
   await expect(page.getByText('회사 이메일 주소(@miinit.com)로만 로그인할 수 있습니다.')).toBeVisible();
-  await expect(page.getByRole('heading', { level: 1, name: '회사 이메일로 로그인' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: '회사 이메일로 로그인하세요.' })).toBeVisible();
 });
 
 test('메인 화면에 들어가면 로그인이 먼저 나오고, 로그인하면 메인 화면으로 돌아간다', async ({ page }) => {
@@ -76,7 +76,7 @@ test('메인 화면에 들어가면 로그인이 먼저 나오고, 로그인하�
   await page.getByRole('textbox', { name: '1번째 자리' }).fill('1');
   await page.keyboard.type('23456');
   await expect(page).toHaveURL(/127\.0\.0\.1:\d+\/$/);
-  await expect(page.getByRole('heading', { level: 1, name: '회사 이메일로 로그인' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { level: 1, name: '회사 이메일로 로그인하세요.' })).toHaveCount(0);
 
   // 로그인 상태는 새로고침 뒤에도 남고, 로그인 화면에 다시 오면 메인으로 보낸다
   await page.reload();
@@ -102,7 +102,7 @@ for (const size of [SIZES[0], SIZES[2]]) {
     await page.getByLabel('회사 이메일').fill('meet@miinit.com');
     await page.getByRole('button', { name: '인증 코드 받기' }).click();
     await expect(page.getByText('인증 코드를 보낼 메일 설정이 필요합니다.')).toBeVisible();
-    await expect(page.getByRole('heading', { level: 1, name: '회사 이메일로 로그인' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: '회사 이메일로 로그인하세요.' })).toBeVisible();
     await expectAccessibleWithoutOverflow(page);
 
     await page.getByRole('button', { name: '메일 설정', exact: true }).first().click();
@@ -150,7 +150,7 @@ test('세션이 만료되면 로그인 화면으로 보내고 토스트로 알�
 test('낮은 화면(short)에서는 인증 화면의 로고와 일러스트를 숨긴다', async ({ page }) => {
   await page.setViewportSize({ width: 844, height: 390 });
   await page.goto('/login');
-  await expect(page.getByRole('heading', { level: 1, name: '회사 이메일로 로그인' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: '회사 이메일로 로그인하세요.' })).toBeVisible();
   await expect(page.getByRole('img', { name: 'Downforce' })).toBeHidden();
   await page.setViewportSize({ width: 1180, height: 820 });
   await expect(page.getByRole('img', { name: 'Downforce' })).toBeVisible();
