@@ -44,11 +44,8 @@ const SCREENS = [
     return page.getByLabel('Notion 내부 연결 토큰', { exact: true });
   } },
   { name: 'SET-05 진행', snapshot: running, path: '/setup/document', ready: (page: Page) => page.getByRole('list', { name: '문서 페이지 생성 진행 상황' }) },
-  { name: 'SET-02 연결 관리', snapshot: ready, path: '/settings/document', ready: (page: Page) => page.getByRole('heading', { level: 1, name: '문서 연결' }) },
-  { name: 'SET-06 자료 이전', snapshot: prepared, path: '/settings/document', ready: async (page: Page) => {
-    await page.getByRole('button', { name: '문서 서비스 변경' }).click();
-    return page.getByRole('heading', { name: '자료 이전 방식' });
-  } },
+  { name: 'SET-03 변경 선택 (설정에서)', snapshot: ready, path: '/settings/document', ready: (page: Page) => page.getByRole('heading', { level: 1, name: '문서 서비스 선택' }) },
+  { name: 'SET-06 자료 이전', snapshot: prepared, path: '/settings/document', ready: (page: Page) => page.getByRole('heading', { name: '자료 이전 방식' }) },
 ];
 
 for (const screen of SCREENS) {
@@ -63,19 +60,20 @@ for (const screen of SCREENS) {
   }
 }
 
-test('문서 연결 화면은 메뉴 없이 상단 바 뒤로 가기로 이동한다', async ({ page }) => {
+test('설정의 변경은 중간 화면 없이 바로 서비스 선택이고, 뒤로 가기는 설정이다', async ({ page }) => {
   await mock(page, ready);
-  await page.goto('/settings/document');
-  await expect(page.getByRole('navigation', { name: '주 메뉴' })).toHaveCount(0);
-  await expect(page.getByRole('button', { name: '설정으로 돌아가기' })).toBeVisible();
-  await page.getByRole('button', { name: '문서 서비스 변경' }).click();
+  await page.route('**/api/v1/app-config', (route) => route.fulfill({ json: { data: { company: { id: 'c', name: 'E', timezone: 'Asia/Seoul' }, document: { provider: 'NOTION', configured: true, connectionVersion: 4, rootUrl: 'https://n' }, email: { enabled: false, configured: false } } } }));
+  await page.route('**/api/v1/integrations/**', (route) => route.fulfill({ json: { data: { configured: false } } }));
+  await page.goto('/settings');
+  await page.getByRole('link', { name: '변경' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: '문서 서비스 선택' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Notion 선택' })).toBeVisible();
   await expect(page.getByRole('navigation', { name: '주 메뉴' })).toHaveCount(0);
   await expect(page.getByText('현재 연결: Notion')).toBeVisible();
 
-  // 변경 흐름에서 나가기는 상단 바 원형 뒤로 가기
-  await page.getByRole('button', { name: '문서 서비스 설정으로 돌아가기' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: '문서 연결' })).toBeVisible();
+  // 변경 흐름에서 나가기는 상단 바 원형 뒤로 가기 → 설정
+  await page.getByRole('button', { name: '설정으로 돌아가기' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: '설정' })).toBeVisible();
 });
 
 test('비밀 입력은 보기 버튼으로 확인하고, 빈 칸은 오류 테두리와 토스트로 알린다', async ({ page }) => {

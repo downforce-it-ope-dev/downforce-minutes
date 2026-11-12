@@ -94,11 +94,12 @@ describe('document setup wizard', () => {
     expect(screen.getByRole('heading', { name: '저장소 설정을 확인할 수 없습니다' })).toBeTruthy();
   });
 
-  it('shows document connection status with clear settings navigation', async () => {
+  it('설정에서 들어오면 중간 화면 없이 바로 서비스 선택(변경)이고, 뒤로 가기는 설정이다(2026-11-12)', async () => {
     vi.stubGlobal('fetch', withHealthyBackend(vi.fn().mockResolvedValue(response({ version: 5, status: 'READY', active: { provider: 'NOTION', connectionVersion: 2, rootUrl: 'https://notion.example' }, draft: null, operation: null, canCreateMeeting: true }))));
     render(<MemoryRouter initialEntries={['/settings/document']}><SetupTestRoutes /></MemoryRouter>);
 
-    await screen.findByRole('heading', { name: '문서 연결' });
+    await screen.findByRole('heading', { name: '문서 서비스 선택' });
+    expect(screen.getByText('현재 연결: Notion')).toBeTruthy();
 
     // 공용 설정이라 연결된 문서 열기는 두지 않는다(사용자 결정 2026-11-10)
     expect(screen.queryByRole('link', { name: /연결된 문서 열기/ })).toBeNull();
@@ -123,10 +124,7 @@ describe('document setup wizard', () => {
     vi.stubGlobal('fetch', withHealthyBackend(fetchMock));
     render(<MemoryRouter initialEntries={['/settings/document']}><SetupTestRoutes /></MemoryRouter>);
 
-    expect(await screen.findByRole('heading', { name: '문서 연결' })).toBeTruthy();
-    expect(screen.getByRole('heading', { name: 'Notion' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: '문서 서비스 변경' }));
-    expect(screen.getByRole('heading', { name: '문서 서비스 선택' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: '문서 서비스 선택' })).toBeTruthy();
     expect(screen.getByText('현재 연결: Notion')).toBeTruthy();
     expect(screen.getByText(/연결 버전: 2/)).toBeTruthy();
     expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false);
@@ -483,7 +481,7 @@ describe('브라우저 백업 (2026-11-10)', () => {
       throw new Error(`Unexpected request: ${path}`);
     })));
     render(<MemoryRouter initialEntries={['/settings/document']}><SetupTestRoutes /></MemoryRouter>);
-    await screen.findByRole('heading', { name: '문서 연결' });
+    await screen.findByText(/현재 연결: Notion/);
     await new Promise((resolve) => setTimeout(resolve, 300));
     expect(screen.queryByText(/연결 정보가 이 브라우저에 저장되지 않았습니다/)).toBeNull();
   });

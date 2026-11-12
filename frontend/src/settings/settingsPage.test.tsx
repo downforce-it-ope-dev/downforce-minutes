@@ -74,7 +74,8 @@ describe('설정 (SET-01)', () => {
     const documentCard = await screen.findByRole('region', { name: '문서 연결' });
     expect(await within(documentCard).findByText('Notion')).toBeTruthy();
     expect(within(documentCard).getByText('연결됨')).toBeTruthy();
-    expect(within(documentCard).getByRole('link', { name: '문서 연결 관리' }).getAttribute('href')).toBe('/settings/document');
+    // 중간 문서 연결 화면 없이 바로 서비스 선택으로 간다(2026-11-12)
+    expect(within(documentCard).getByRole('link', { name: '변경' }).getAttribute('href')).toBe('/settings/document');
     const emailCard = screen.getByRole('region', { name: '이메일 (Gmail)' });
     expect(await within(emailCard).findByText('minutes@gmail.com')).toBeTruthy();
     expect(within(emailCard).getByText('••••1234')).toBeTruthy();

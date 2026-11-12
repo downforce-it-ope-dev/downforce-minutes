@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { CalendarDays, ChevronRight, Clock, Mic, RefreshCw, Share2, Sparkles, TriangleAlert, Users } from 'lucide-react';
+import { CalendarDays, ChevronRight, Clock, Mic, RefreshCw, Repeat, Share2, Sparkles, TriangleAlert, Users } from 'lucide-react';
 import { AccountButton, SidebarAccount } from '../auth/AccountMenu';
 import { getSetupSnapshot, type DocumentProvider, type SetupSnapshot } from '../documentSetupApi';
 import { listProcessingFailures, type MeetingSummary } from '../meetingListApi';
@@ -338,12 +338,14 @@ function ConnectionDialog({
               size="lg"
               shape="pill"
               fullWidth
+              icon={Repeat}
               onClick={() => {
                 onOpenChange(false);
+                // 바로 서비스 선택(변경)으로 간다. 중간 문서 연결 화면은 없앴다(2026-11-12)
                 navigate('/settings/document');
               }}
             >
-              문서 연결 관리
+              변경
             </Button>
           </>
         )}

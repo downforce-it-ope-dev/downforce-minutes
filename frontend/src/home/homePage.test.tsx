@@ -47,7 +47,7 @@ function renderHome() {
         <Route path="/meetings" element={<h1>회의록 목록</h1>} />
         <Route path="/meetings/new" element={<h1>새 회의 화면</h1>} />
         <Route path="/meetings/:id" element={<h1>회의록 상세</h1>} />
-        <Route path="/settings/document" element={<h1>문서 연결 관리</h1>} />
+        <Route path="/settings/document" element={<h1>문서 서비스 선택</h1>} />
         <Route path="/login" element={<h1>로그인 화면</h1>} />
       </Routes>
     </MemoryRouter>,
@@ -96,14 +96,14 @@ describe('HOME-01 메인 (#24)', () => {
     expect(await screen.findByRole('heading', { name: '새 회의 화면' })).toBeTruthy();
   });
 
-  it('문서 연결 상태 칩으로 팝업을 열고 문서 연결 관리로 간다', async () => {
+  it('문서 연결 상태 칩으로 팝업을 열고 변경을 누르면 서비스 선택으로 간다', async () => {
     install();
     renderHome();
     fireEvent.click(await screen.findByRole('button', { name: /Notion 연결됨/ }));
     const dialog = screen.getByRole('dialog', { name: '문서 연결 상태' });
     expect(within(dialog).getByText('연결됨 · 버전 2')).toBeTruthy();
-    fireEvent.click(within(dialog).getByRole('button', { name: '문서 연결 관리' }));
-    expect(await screen.findByRole('heading', { name: '문서 연결 관리' })).toBeTruthy();
+    fireEvent.click(within(dialog).getByRole('button', { name: '변경' }));
+    expect(await screen.findByRole('heading', { name: '문서 서비스 선택' })).toBeTruthy();
   });
 
   it('계정에 로그인 이메일을 보이고, 로그아웃을 확인하면 이메일을 지우고 로그인 화면으로 간다', async () => {

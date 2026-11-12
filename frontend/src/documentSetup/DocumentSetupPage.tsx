@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { useNavigate } from 'react-router';
-import { ArrowLeft, ArrowRight, CircleCheck, Eye, EyeOff, Info, LoaderCircle, RefreshCw, Repeat, TriangleAlert } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CircleCheck, Eye, EyeOff, Info, LoaderCircle, RefreshCw, TriangleAlert } from 'lucide-react';
 import {
   AppShell,
   Button,
-  ButtonLink,
   Card,
   cn,
   Dialog,
@@ -116,6 +115,14 @@ function DocumentSetupScreens({ settings }: { settings: boolean }) {
   const setup = useDocumentSetup(settings, notify, { formRef, progressRefreshRef });
   const { snapshot, error, notice } = setup;
 
+  // SET-02 문서 연결 관리 화면(정상 연결 상태의 중간 화면)은 없앴다(사용자 결정 2026-11-12). 설정 카드의 "변경"이 바로
+  // 서비스 선택으로 오므로, 설정 경로에서 정상 연결이고 진행 중 작업이 없으면 예전 "문서 서비스 변경" 버튼처럼 변경을 시작한다
+  const readyToChange = settings && snapshot?.status === 'READY' && !setup.changing && !setup.hasBlockingOperation;
+  const { beginChange } = setup;
+  useEffect(() => {
+    if (readyToChange) beginChange();
+  }, [readyToChange, beginChange]);
+
   // 오류·안내는 화면 대신 토스트로 알린다(S-13)
   useEffect(() => {
     if (error) toast({ message: error, tone: 'danger' });
@@ -156,42 +163,6 @@ function DocumentSetupScreens({ settings }: { settings: boolean }) {
     );
   }
 
-  // SET-02 문서 연결 관리. 설정의 하위 화면이라 메뉴 없이 뒤로 가기(설정)만 둔다(결정 2026-11-10)
-  if (snapshot.status === 'READY' && settings && !setup.changing) {
-    const active = snapshot.active;
-    return (
-      <AppShell title="문서 연결" focus back={{ to: '/settings', label: '설정으로 돌아가기' }}>
-        <div className="mx-auto flex w-full max-w-content flex-col gap-4">
-          {active && (
-            <Card as="section" aria-label="현재 문서 연결" className="flex flex-col gap-6 tablet:flex-row tablet:items-center">
-              <div className="flex flex-1 flex-wrap items-center gap-4">
-                <ProviderIcon provider={active.provider} size="lg" />
-                <h2 className="text-title text-text">{providerLabel(active.provider)}</h2>
-                <span className="inline-flex h-8 items-center gap-1.5 rounded-full bg-success-soft px-3 text-label text-success-text">
-                  <Icon icon={CircleCheck} size="sm" />
-                  연결됨
-                </span>
-              </div>
-              <Button size="lg" shape="pill" variant="secondary" icon={Repeat} onClick={setup.beginChange}>
-                문서 서비스 변경
-              </Button>
-            </Card>
-          )}
-          {setup.consumerRefreshFailed && (
-            <Button size="lg" shape="pill" variant="secondary" icon={RefreshCw} onClick={setup.retryConsumerRefresh} className="self-start">
-              연결 데이터 다시 확인
-            </Button>
-          )}
-          {setup.returnTo && (
-            <ButtonLink to={setup.returnTo} size="lg" shape="pill" variant="secondary" icon={ArrowLeft} className="self-start">
-              이전 화면으로
-            </ButtonLink>
-          )}
-        </div>
-      </AppShell>
-    );
-  }
-
   return <Wizard setup={setup} navigate={navigate} formRef={formRef} progressRefreshRef={progressRefreshRef} />;
 }
 
@@ -225,15 +196,16 @@ function Wizard({
     setup.operationStatus === 'SUCCEEDED' && snapshot.operation
       ? snapshot.operation.type === 'SWITCH' ? '문서 서비스 변경 완료' : '문서 구조 준비 완료'
       : null;
-  // 변경 흐름에서 나가기: 상단 바 원형 뒤로 가기(SET-02와 같은 자리). 연결이 있을 때만
+  // 변경 흐름에서 나가기: 상단 바 원형 뒤로 가기. 연결이 있을 때만. 회의 화면에서 왔으면 그 화면으로, 아니면 설정으로
   const exitToSettings =
     snapshot.status === 'READY'
       ? {
-          label: '문서 서비스 설정으로 돌아가기',
+          label: setup.returnTo ? '이전 화면으로' : '설정으로 돌아가기',
           onClick: () => {
             setup.setChanging(false);
             setup.clearCredentials();
-            navigate('/settings/document');
+            if (setup.returnTo) navigate(setup.returnTo, { state: setup.returnState?.returnState });
+            else navigate('/settings');
           },
         }
       : undefined;

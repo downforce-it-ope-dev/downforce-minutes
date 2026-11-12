@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { FolderCog, RefreshCw } from 'lucide-react';
+import { FolderCog, RefreshCw, Repeat } from 'lucide-react';
 import { AccountButton, SidebarAccount } from '../auth/AccountMenu';
 import { getAppConfig, getIntegrationHealth, selectSettingsSummary, type AppConfig, type IntegrationHealth } from '../settingsApi';
 import { AppShell, Button, ButtonLink, Card, Icon, IconButton, useToast } from '../ui';
@@ -8,7 +8,7 @@ import { EmailCard } from './EmailCard';
 
 /*
  * SET-01 설정 (GitHub #39, docs/renewal/화면기획/SET-01_설정.md). Slack 설정은 없앴다(D-11).
- * - 카드 두 개: 문서 연결(연결 서비스·상태 → 문서 연결 관리), 이메일(Gmail 발신 설정 보기·수정·삭제·시험 메일)
+ * - 카드 두 개: 문서 연결(연결 서비스·상태 → 변경: 바로 서비스 선택), 이메일(Gmail 발신 설정 보기·수정·삭제·시험 메일)
  * - 모든 크기에서 위아래로 쌓고 본문 폭을 그대로 쓴다(사용자 결정 2026-11-12, 회의록 상세와 같은 배치). 섹션 목차는 두지 않는다
  * - 상단 바의 새로고침 아이콘으로 모든 연결 상태를 다시 불러온다
  * - 설명 문구 없이 제목·상태·값·버튼만(S-13). 결과·오류는 토스트
@@ -94,8 +94,9 @@ function SettingsBody({ refreshKey }: { refreshKey: number }) {
             <span className="text-title text-text">{summary.document.provider ?? '연결 안 됨'}</span>
           </div>
         )}
-        <ButtonLink to="/settings/document" variant="secondary" shape="pill" className="self-start">
-          문서 연결 관리
+        {/* 바로 서비스 선택(변경 모드)으로 간다. 중간 문서 연결 화면은 없앴다(2026-11-12) */}
+        <ButtonLink to="/settings/document" variant="secondary" shape="pill" icon={Repeat} className="self-start">
+          변경
         </ButtonLink>
       </Card>
       <EmailCard state={summary?.email.state} refreshKey={refreshKey} onChanged={reload} />
