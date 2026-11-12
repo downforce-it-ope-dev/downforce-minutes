@@ -107,8 +107,10 @@ export function HomePage() {
         <FailureBanner />
 
         {/* 안내 패널 + 새 회의 (태블릿 이상) */}
-        <Card variant="panel" as="section" aria-label="새 회의" className="hidden flex-col items-center gap-8 py-8 tablet:flex">
+        {/* 높이가 낮은 큰 태블릿 가로(low): 그림을 줄여 왼쪽, 단계·새 회의 버튼을 오른쪽에 두어 최근 회의록까지 한 화면에 들어오게 한다(2026-11-12) */}
+        <Card variant="panel" as="section" aria-label="새 회의" className="hidden flex-col items-center gap-8 py-8 tablet:flex low:flex-row low:justify-center low:gap-12 low:py-6">
           <MeetingFlowVisual />
+          <div className="flex flex-col items-center gap-6">
           <ol aria-label="회의록 만드는 순서" className="flex flex-wrap items-center justify-center gap-2">
             {[
               { icon: Mic, label: '음성 녹음' },
@@ -125,12 +127,20 @@ export function HomePage() {
               </li>
             ))}
           </ol>
+          <span className="hidden w-full low:flex">
+            <Button variant="hero" icon={Mic} className="w-full" onClick={() => navigate('/meetings/new')}>
+              새 회의
+            </Button>
+          </span>
+          </div>
         </Card>
-        {/* 시안처럼 새 회의 버튼 위아래 여백을 넉넉히 둔다 */}
-        <div className="hidden justify-center py-4 tablet:flex">
-          <Button variant="hero" icon={Mic} className="w-full max-w-form" onClick={() => navigate('/meetings/new')}>
-            새 회의
-          </Button>
+        {/* 시안처럼 새 회의 버튼 위아래 여백을 넉넉히 둔다. 높이가 낮은 큰 태블릿 가로는 위 카드 안에 둔다 */}
+        <div className="low:hidden">
+          <div className="hidden justify-center py-4 tablet:flex">
+            <Button variant="hero" icon={Mic} className="w-full max-w-form" onClick={() => navigate('/meetings/new')}>
+              새 회의
+            </Button>
+          </div>
         </div>
 
         <RecentMeetings />

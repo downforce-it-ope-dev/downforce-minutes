@@ -9,25 +9,25 @@ import { Waveform } from './Waveform';
  */
 export function MeetingFlowVisual({ className }: { className?: string }) {
   return (
-    <div aria-hidden="true" className={cn('flex items-center justify-center gap-3 tablet-lg:gap-6', className)}>
-      <span className="h-12 text-lavender-400 tablet-lg:h-14">
+    <div aria-hidden="true" className={cn('flex items-center justify-center gap-3 tablet-lg:gap-6 low:gap-3', className)}>
+      <span className="h-12 text-lavender-400 tablet-lg:h-14 low:h-10">
         <Waveform bars={5} />
       </span>
       {/* 마이크: 연분홍 빛 번짐 + 분홍 원 */}
-      <span className="flex size-32 shrink-0 items-center justify-center rounded-full bg-pink-100 tablet-lg:size-40">
-        <span className="flex size-24 items-center justify-center rounded-full bg-pink-200 tablet-lg:size-30">
-          <span className="flex size-18 items-center justify-center rounded-full bg-linear-to-br from-pink-400 to-pink-600 text-white shadow-primary tablet-lg:size-22">
+      <span className="flex size-32 shrink-0 items-center justify-center rounded-full bg-pink-100 tablet-lg:size-40 low:size-28">
+        <span className="flex size-24 items-center justify-center rounded-full bg-pink-200 tablet-lg:size-30 low:size-21">
+          <span className="flex size-18 items-center justify-center rounded-full bg-linear-to-br from-pink-400 to-pink-600 text-white shadow-primary tablet-lg:size-22 low:size-16">
             <Icon icon={Mic} size="xl" />
           </span>
         </span>
       </span>
-      <span className="h-12 text-lavender-400 tablet-lg:h-14">
+      <span className="h-12 text-lavender-400 tablet-lg:h-14 low:h-10">
         <Waveform bars={5} />
       </span>
       <Icon icon={ArrowRight} size="xl" className="mx-2 shrink-0 text-lavender-500" />
       {/* 회의록 카드 + AI 배지 */}
-      <span className="relative mt-6 shrink-0">
-        <span className="flex w-40 -rotate-3 flex-col gap-3 rounded-xl bg-bg p-5 shadow-card tablet-lg:w-48">
+      <span className="relative mt-6 shrink-0 low:mt-4">
+        <span className="flex w-40 -rotate-3 flex-col gap-3 rounded-xl bg-bg p-5 shadow-card tablet-lg:w-48 low:w-36 low:gap-2 low:p-4">
           <span className="h-2.5 w-3/4 rounded-full bg-lavender-200" />
           {[0, 1, 2].map((row) => (
             <span key={row} className="flex items-center gap-2">

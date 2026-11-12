@@ -50,6 +50,7 @@
     - `tablet-lg`: 960px 이상
   - Tailwind 기본 기준(`sm`·`md`·`lg`·`xl`·`2xl`)은 쓰지 않는다.
   - 높이 560px 이하는 `short` 조건으로 줄인다.
+  - 높이가 낮은 큰 태블릿 가로(폭 960 이상·높이 860 이하, 예: Galaxy Tab S9 가로 Chrome)는 `low` 조건이다. 홈처럼 위아래로 쌓은 화면이 한 화면에 들어오도록 줄일 때만 쓴다.
   - 글자는 토큰만 쓴다: `display`·`headline`·`title`·`body-lg`·`body`·`label`·`caption`·`nav`.
   - 입력란 글자는 16px 이상, 일반 글자는 13px 이상으로 쓴다.
   - 글꼴은 Pretendard Variable 하나만 쓴다.
@@ -127,7 +128,7 @@
   - 그림자: `shadow-card`(카드·패널·입력란)·`shadow-primary`(화면의 대표 주 동작 1개)·`shadow-overlay`(대화상자·시트·토스트·메뉴)
   - 최대 폭: `max-w-auth`(480)·`max-w-dialog`(560)·`max-w-form`(640)·`max-w-reading`(720)·`max-w-content`(1040)
   - 메뉴 폭: `w-rail`(88, `tablet`)·`w-sidebar`(240, `tablet-lg`)
-  - 화면 조건: `tablet:`·`tablet-lg:`·`short:`
+  - 화면 조건: `tablet:`·`tablet-lg:`·`short:`·`low:`
   - 간격·크기: Tailwind 기본 단위(4px)를 쓴다 (예: `h-12` = 48px, `w-22` = 88px)
 - **검사:** `npm run lint`가 스타일 규칙(`frontend/scripts/check-styles.mjs`)을 함께 검사한다. 새 CSS 파일(`src/tailwind.css` 외)과 임의값 클래스는 오류다.
 - **기본 규칙 검사:** `npm run test:styles`(`frontend/e2e/base-rules.spec.ts`)가 Tailwind 초기화·기본 규칙·글자 토큰·상단 바 고정을 검사한다.

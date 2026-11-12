@@ -17,6 +17,12 @@
 @custom-variant short (@media (max-height: 560px));
 
 /*
+ * 높이가 낮은 큰 태블릿 가로 (예: Galaxy Tab S9 가로 Chrome 1280×약 650~710, 2026-11-12 사용자 확인).
+ * 홈처럼 위아래로 쌓은 화면이 한 화면에 들어오도록 줄일 때만 쓴다.
+ */
+@custom-variant low (@media (min-width: 60rem) and (max-height: 53.75rem));
+
+/*
  * 안전 영역(노치·홈 표시줄) 여백. env()는 Tailwind 클래스로 표현할 수 없는 브라우저 전용 표기다(CLAUDE.md).
  * 상단 바·하단 탭 바·하단 고정 버튼·하단 시트가 쓴다. 값이 없는 기기에서는 0이다.
  */
