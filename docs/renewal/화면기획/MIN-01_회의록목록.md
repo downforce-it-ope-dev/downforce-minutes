@@ -168,3 +168,4 @@ Preview 확인 전 구현 구성이다. 3·4장과 다르면 이 장이 우선�
 
 - 기존 `MeetingHistory.tsx`·`ProcessingFailureList.tsx`·테스트, `pages/meetings.css`·`pages/home.css`(홈 리뉴얼 뒤 남은 규칙 포함), 공통 CSS의 회의록 전용 규칙(`meeting-filters`·`back-link`·`transcript-drawer`)을 지웠다. 기존 화면 계산 스타일 차이는 뺀 화면(SCR-009·010)뿐이다.
 - 서버 검색·페이지 나누기(5장 확인 필요)는 하지 않았다. 지금처럼 최근 100건을 받아 화면에서 거른다.
+- 수정(2026-11-12, 사용자 결정): 태블릿 이상 한 줄 행의 순서를 일시 | 회의명 | 참석자로 바꿨다. 일시는 폭이 고정이라 맨 앞에 두고, 길어질 수 있는 회의명이 남는 폭을 쓴다. 휴대폰 2줄 행은 그대로다.

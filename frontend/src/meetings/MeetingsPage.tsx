@@ -238,15 +238,16 @@ inside={
 
 /**
  * 회의 목록. 행 전체가 상세 링크다.
- * 휴대폰: 2줄 행 72(회의명 / 일시 · 참석자). 태블릿 이상: 한 줄 행 60에 회의명 | 일시 | 참석자를 가로로 늘어놓고 위에 열 이름을 둔다
+ * 휴대폰: 2줄 행 72(회의명 / 일시 · 참석자). 태블릿 이상: 한 줄 행 60에 일시 | 회의명 | 참석자를 가로로 늘어놓고 위에 열 이름을 둔다.
+ * 일시는 폭이 고정이라 맨 앞에, 길어질 수 있는 회의명은 남는 폭을 쓴다(사용자 결정 2026-11-12)
  */
 function MeetingRows({ meetings, listSearch }: { meetings: readonly MeetingSummary[]; listSearch: string }) {
   return (
     <Card as="div" padding="none" className="overflow-hidden">
       {/* 열 이름 (보기용). 행마다 같은 순서라 화면 읽기 프로그램은 행 내용만 읽는다 */}
       <div aria-hidden="true" className="hidden h-12 items-center gap-4 border-b border-border bg-bg-subtle px-5 text-caption text-text-muted tablet:flex">
-        <span className="min-w-0 flex-1">회의명</span>
         <span className="w-36 shrink-0">일시</span>
+        <span className="min-w-0 flex-1">회의명</span>
         <span className="w-48 shrink-0 tablet-lg:w-72">참석자</span>
         <span className="w-6 shrink-0" />
       </div>
@@ -262,14 +263,15 @@ function MeetingRows({ meetings, listSearch }: { meetings: readonly MeetingSumma
                 className="flex min-h-18 items-center gap-3 px-4 py-3 active:bg-selected tablet:min-h-15 tablet:gap-4 tablet:px-5"
               >
                 <span className="flex min-w-0 flex-1 flex-col gap-1 tablet:flex-row tablet:items-center tablet:gap-4">
+                  {/* 태블릿 이상: 맨 앞 일시 열 */}
+                  <span className="hidden w-36 shrink-0 text-body text-text-muted tabular-nums tablet:block">{when}</span>
                   <span className="truncate text-label text-text tablet:min-w-0 tablet:flex-1">{meeting.title}</span>
                   {/* 휴대폰: 둘째 줄 "일시 · 참석자" */}
                   <span className="truncate text-caption text-text-muted tablet:hidden">
                     <span className="tabular-nums">{when}</span>
                     {people && ` · ${people}`}
                   </span>
-                  {/* 태블릿 이상: 열 */}
-                  <span className="hidden w-36 shrink-0 text-body text-text-muted tabular-nums tablet:block">{when}</span>
+                  {/* 태블릿 이상: 참석자 열 */}
                   <span className="hidden w-48 shrink-0 truncate text-body text-text-muted tablet:block tablet-lg:w-72">{people || '-'}</span>
                 </span>
                 <Icon icon={ChevronRight} size="lg" className="shrink-0 text-text-muted" />
@@ -288,7 +290,7 @@ function ListSkeleton() {
       {[0, 1, 2, 3, 4].map((row) => (
         <div key={row} className="flex h-18 flex-col justify-center gap-2 border-b border-border px-4 last:border-b-0 tablet:h-15 tablet:flex-row tablet:items-center tablet:gap-4 tablet:px-5">
           <span className="h-3 w-1/2 animate-pulse rounded-full bg-bg-subtle motion-reduce:animate-none tablet:w-auto tablet:flex-1" />
-          <span className="h-3 w-1/3 animate-pulse rounded-full bg-bg-subtle motion-reduce:animate-none tablet:w-36" />
+          <span className="h-3 w-1/3 animate-pulse rounded-full bg-bg-subtle motion-reduce:animate-none tablet:order-first tablet:w-36" />
         </div>
       ))}
     </Card>
