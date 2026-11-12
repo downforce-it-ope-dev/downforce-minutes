@@ -1,9 +1,10 @@
 import { getApiBaseUrl } from './apiBase';
 import { apiFetch } from './apiFetch';
-export type Participant = { id: string; name: string; email: string };
-export type ParticipantInput = { name: string; email: string };
+/** team은 Backend 팀 확장(#35) 뒤에만 응답에 온다. 없으면(undefined) 팀 기능을 숨긴다. null은 팀 없음 */
+export type Participant = { id: string; name: string; email: string; team?: string | null };
+export type ParticipantInput = { name: string; email: string; team?: string | null };
 export type ParticipantPatch = Partial<ParticipantInput>;
-export type ParticipantField = keyof ParticipantInput;
+export type ParticipantField = 'name' | 'email' | 'team';
 
 type ApiErrorBody = {
   error?: {
@@ -59,7 +60,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     const code = error?.error?.code || 'REQUEST_FAILED';
     const fieldErrors: Partial<Record<ParticipantField, string>> = {};
     for (const fieldError of error?.error?.details?.fieldErrors ?? []) {
-      if (fieldError.field === 'name' || fieldError.field === 'email') {
+      if (fieldError.field === 'name' || fieldError.field === 'email' || fieldError.field === 'team') {
         fieldErrors[fieldError.field] = fieldError.code || 'INVALID';
       }
     }

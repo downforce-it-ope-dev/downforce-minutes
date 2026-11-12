@@ -43,3 +43,4 @@ export { NotFoundIllustration } from './art/NotFoundIllustration';
 export { AppCanvas, type AppCanvasProps } from './layout/AppCanvas';
 export { AuthLayout, type AuthLayoutProps } from './layout/AuthLayout';
 export { AppShell, type AppShellProps } from './layout/AppShell';
+export { BottomDock } from './layout/BottomDock';

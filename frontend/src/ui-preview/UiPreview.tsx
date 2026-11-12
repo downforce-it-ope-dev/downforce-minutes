@@ -153,6 +153,9 @@ function ButtonsSection() {
         <Button variant="danger" icon={Trash2}>
           삭제
         </Button>
+        <Button variant="danger-secondary" icon={Trash2}>
+          삭제(보조)
+        </Button>
       </Row>
       <p className="text-caption text-text-muted tabular-nums" aria-live="polite">
         주 동작을 누른 횟수: {count}
@@ -188,8 +191,9 @@ function ButtonsSection() {
 function IconButtonsSection() {
   return (
     <Section title="아이콘 버튼">
-      <Row label="plain 48 · surface 48 · primary 64 · 비활성">
+      <Row label="plain 48 · surface 48 · danger 48 · primary 64 · 비활성">
         <IconButton icon={X} label="닫기" />
+        <IconButton icon={Trash2} label="삭제" variant="danger" />
         <IconButton icon={Bell} label="알림" variant="surface" />
         <IconButton icon={ArrowRight} label="인증 코드 받기" variant="primary" />
         <IconButton icon={ArrowRight} label="인증 코드 받기 (비활성)" variant="primary" disabled />

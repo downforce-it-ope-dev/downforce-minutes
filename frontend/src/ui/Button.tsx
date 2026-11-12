@@ -4,7 +4,7 @@ import { LoaderCircle, type LucideIcon } from 'lucide-react';
 import { cn } from './cn';
 import { Icon } from './Icon';
 
-export type ButtonVariant = 'primary' | 'hero' | 'secondary' | 'ghost' | 'danger';
+export type ButtonVariant = 'primary' | 'hero' | 'secondary' | 'ghost' | 'danger' | 'danger-secondary';
 export type ButtonSize = 'lg' | 'md' | 'sm';
 
 export interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'disabled'> {
@@ -47,6 +47,9 @@ const VARIANT: Record<ButtonVariant, string> = {
     'border border-border bg-bg text-text active:bg-bg-subtle aria-disabled:bg-neutral-100 aria-disabled:text-neutral-400',
   ghost: 'bg-transparent text-link active:bg-accent-soft aria-disabled:text-neutral-400 aria-disabled:bg-transparent',
   danger: 'bg-danger text-white active:bg-red-700 aria-disabled:bg-neutral-100 aria-disabled:text-neutral-400',
+  // 위험 동작의 보조 버튼(예: 수정 폼의 삭제). 확인 대화상자를 거쳐 실제 삭제는 danger로 한다
+  'danger-secondary':
+    'border border-border bg-bg text-danger-text active:bg-danger-soft aria-disabled:bg-neutral-100 aria-disabled:text-neutral-400',
 };
 
 /** 공통 버튼 (시안 적용 기준 4.1, 스타일 검토 8.5) */

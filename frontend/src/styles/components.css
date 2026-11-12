@@ -30,8 +30,6 @@
 .button-primary:hover { background: #16457f; }
 .button-secondary { border-color: #dce1e8; color: #344054; background: #fff; }
 .button-secondary:hover { background: #f8f9fb; border-color: #b9c1cd; }
-.participants-create-dock .button { display: flex; width: min(100%, 820px); min-height: 58px; margin: 0 auto; font-size: 17px; font-weight: 750; }
-.participants-create-dock .button span { font-size: 20px; line-height: 1; }
 .app-toast { position: fixed; z-index: 20; top: calc(72px + env(safe-area-inset-top)); left: 50%; display: flex; align-items: center; gap: 10px; width: max-content; max-width: min(440px, calc(100vw - 32px)); margin: 0; border: 1px solid #c8e7d4; border-radius: 12px; padding: 12px 16px; color: #245b3c; background: #f5fbf7; box-shadow: 0 8px 28px #18223020; font-size: 14px; font-weight: 600; line-height: 1.45; text-align: left; overflow-wrap: anywhere; pointer-events: none; transform: translateX(-50%); animation: app-toast-in .18s ease-out both; }
 .app-toast-check { display: grid; width: 20px; height: 20px; flex: 0 0 20px; place-items: center; border-radius: 50%; color: #fff; background: #31845a; font-size: 12px; line-height: 1; }
 .app-toast-error { border-color: #f0c7c7; color: #842c2c; background: #fff7f7; }
@@ -59,9 +57,6 @@
 .icon-button:hover { background: #f1f3f7; }
 .field-error { margin: -2px 0 0; color: #b13e3e; font-size: 12px; }
 .visually-hidden { position: absolute; overflow: hidden; width: 1px; height: 1px; clip: rect(0, 0, 0, 0); white-space: nowrap; clip-path: inset(50%); }
-@media (max-width: 520px) {
-  .participants-create-dock .button { width: 100%; min-height: 56px; font-size: 16px; }
-}
 .review-select-control select { appearance: none; padding-right: 48px; }
 .button-danger { color: #fff; background: #b93838; box-shadow: 0 2px 5px #b9383826; }
 .button-danger:hover { background: #a22f2f; }

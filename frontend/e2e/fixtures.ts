@@ -61,12 +61,10 @@ export function requestCapture(): CapturedRequests {
 }
 
 // SCR-002 새 회의(#26)·SCR-003 회의 녹음(#27)·SCR-005 회의 처리(#28)·SCR-006 회의록 검토(#29)·SCR-008 회의 결과(#30)는 리뉴얼되어 기존 화면 검사에서 뺐다.
-// SCR-009 회의록 목록(#32)·SCR-010 회의록 상세(#33)도 리뉴얼되어 뺐다.
-// 검사는 e2e/new-meeting.spec.ts·recording.spec.ts·processing.spec.ts·review.spec.ts·complete.spec.ts·meetings.spec.ts. SCR-007 공유는 쓰지 않는 화면이라 뺐다(P-3)
+// SCR-009 회의록 목록(#32)·SCR-010 회의록 상세(#33)·SCR-012 참석자(#36)·SCR-011 설정(#39)도 리뉴얼되어 뺐다. 남은 기존 화면은 없다(목록 정리는 R9 #41).
+// 검사는 e2e/new-meeting.spec.ts·recording.spec.ts·processing.spec.ts·review.spec.ts·complete.spec.ts·meetings.spec.ts·participants.spec.ts·settings.spec.ts. SCR-007 공유는 쓰지 않는 화면이라 뺐다(P-3)
 export const screens: Screen[] = [
   { id: 'SCR-001', route: '/', heading: /회의를 시작할까요\?/, headingLevel: 2, contentSelector: '.home-content', paddingSelector: '.home-page' },
-  { id: 'SCR-011', route: '/settings', heading: /설정/, contentSelector: '.settings-page', paddingSelector: '.settings-page' },
-  { id: 'SCR-012', route: '/participants', heading: /참석자/, headingLevel: 2, contentSelector: '.participants-page', paddingSelector: '.participants-page' },
 ];
 
 export const widths = [360, 375, 390, 430, 768, 1280];
@@ -86,13 +84,13 @@ export async function installSyntheticApi(page: Page, screen: Screen, options: S
       data = {
         company: { id: 'fixture-company', name: '예시 회사', timezone: 'Asia/Seoul' },
         document: { provider: 'NOTION', configured: true, connectionVersion: 1, rootUrl: 'https://example.test' },
-        email: { enabled: true, configured: true }, notification: { provider: 'SLACK', enabled: true, configured: true },
+        email: { enabled: true, configured: true },
         setup: { status: 'READY', required: false, canCreateMeeting: true, operationId: null },
       };
     } else if (path.endsWith('/integrations/health')) {
       data = {
         document: { provider: 'NOTION', configured: true, reachable: true, rootAccessible: true },
-        email: { configured: true, reachable: true }, notification: { provider: 'SLACK', configured: true, reachable: true },
+        email: { configured: true, reachable: true },
       };
     } else if (path.endsWith('/templates')) {
       data = { items: [{ id: 'weekly', name: '주간 회의', version: '1' }] };

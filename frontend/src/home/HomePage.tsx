@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { CalendarDays, ChevronRight, Clock, Mic, RefreshCw, Share2, Sparkles, TriangleAlert, Users } from 'lucide-react';
+import { CalendarDays, ChevronRight, Clock, Mic, RefreshCw, Repeat, Share2, Sparkles, TriangleAlert, Users } from 'lucide-react';
 import { AccountButton, SidebarAccount } from '../auth/AccountMenu';
 import { getSetupSnapshot, type DocumentProvider, type SetupSnapshot } from '../documentSetupApi';
 import { listProcessingFailures, type MeetingSummary } from '../meetingListApi';
 import { listMyMeetings } from '../meetings/myMeetings';
+import { restoreEmailSettingsOnce } from '../emailSettingsApi';
 import {
   AppShell,
   Button,
@@ -63,6 +64,11 @@ export function HomePage() {
   const [connection, setConnection] = useState<Load<SetupSnapshot>>({ status: 'loading' });
   const [connectionAttempt, setConnectionAttempt] = useState(0);
   const [connectionOpen, setConnectionOpen] = useState(false);
+
+  // 서버 메일 설정이 비어 있으면 브라우저에 보관한 값으로 복구한다(D-09). 기존 레이아웃이 앱 시작 때 하던 일을 홈으로 옮겼다(#39)
+  useEffect(() => {
+    restoreEmailSettingsOnce();
+  }, []);
 
   useEffect(() => {
     let live = true;
@@ -332,12 +338,14 @@ function ConnectionDialog({
               size="lg"
               shape="pill"
               fullWidth
+              icon={Repeat}
               onClick={() => {
                 onOpenChange(false);
+                // 바로 서비스 선택(변경)으로 간다. 중간 문서 연결 화면은 없앴다(2026-11-12)
                 navigate('/settings/document');
               }}
             >
-              문서 연결 관리
+              변경
             </Button>
           </>
         )}

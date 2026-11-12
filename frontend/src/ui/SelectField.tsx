@@ -8,6 +8,8 @@ export interface SelectFieldProps extends Omit<SelectHTMLAttributes<HTMLSelectEl
   label: ReactNode;
   /** 오류 상태(테두리·aria-invalid). 오류 내용은 토스트로 알린다(S-13) */
   invalid?: boolean;
+  /** 이름표를 화면에서 숨기고 화면 읽기 프로그램에만 남긴다(검색창 옆 거르기처럼 뜻이 분명할 때) */
+  hideLabel?: boolean;
   ref?: Ref<HTMLSelectElement>;
   children: ReactNode;
 }
@@ -16,12 +18,12 @@ export interface SelectFieldProps extends Omit<SelectHTMLAttributes<HTMLSelectEl
  * 공통 선택 상자 (MTG-01 회의록 템플릿, 스타일 검토 8.5).
  * 기기 기본 선택 목록을 그대로 쓰고 모양만 입력란(높이 48, 태블릿 52)과 맞춘다.
  */
-export function SelectField({ label, invalid = false, id, className, children, ...rest }: SelectFieldProps) {
+export function SelectField({ label, invalid = false, hideLabel = false, id, className, children, ...rest }: SelectFieldProps) {
   const autoId = useId();
   const selectId = id ?? `select-${autoId}`;
   return (
     <div className={cn('flex flex-col gap-2', className)}>
-      <label htmlFor={selectId} className="text-label text-text">
+      <label htmlFor={selectId} className={hideLabel ? 'sr-only' : 'text-label text-text'}>
         {label}
       </label>
       <div className="relative">

@@ -1,9 +1,8 @@
 import { useRef, useState, type FormEvent } from 'react';
 import { UserPlus } from 'lucide-react';
 import { createParticipant, ParticipantApiError, type Participant, type ParticipantField } from '../participantsApi';
+import { validateParticipant } from '../participants/participantRules';
 import { Button, TextField, useToast } from '../ui';
-
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function createKey(): string {
   return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -11,7 +10,7 @@ function createKey(): string {
 
 /**
  * 새 참석자 등록 (MTG-01-F09, PTC-01-P01과 같은 API-004). 등록한 사람은 바로 이 회의 참석자로 선택된다.
- * 입력 오류는 테두리, 알림은 토스트로만 보인다(S-13). 같은 입력의 재시도는 같은 멱등 키를 쓴다.
+ * 입력 규칙은 참석자 관리와 같다(회사 메일 @miinit.com만, participantRules). 입력 오류는 테두리, 알림은 토스트로만 보인다(S-13). 같은 입력의 재시도는 같은 멱등 키를 쓴다.
  * 태블릿은 참석자 영역 오른쪽 패널, 휴대폰은 대화상자 안에 그린다.
  */
 export function NewParticipantForm({ onCreated, autoFocus = false }: { onCreated: (participant: Participant) => void; autoFocus?: boolean }) {
@@ -29,10 +28,11 @@ export function NewParticipantForm({ onCreated, autoFocus = false }: { onCreated
     event.stopPropagation();
     if (busy) return;
     const payload = { name: name.trim(), email: email.trim() };
-    const errors = { name: !payload.name, email: !EMAIL.test(payload.email) };
-    setInvalid(errors);
-    if (errors.name || errors.email) {
-      toast({ message: errors.name ? '이름을 입력해 주세요.' : '올바른 이메일 주소를 입력해 주세요.', tone: 'danger' });
+    const errors = validateParticipant(payload);
+    setInvalid({ name: Boolean(errors.name), email: Boolean(errors.email) });
+    const message = errors.name ?? errors.email;
+    if (message) {
+      toast({ message, tone: 'danger' });
       return;
     }
     const signature = JSON.stringify(payload);

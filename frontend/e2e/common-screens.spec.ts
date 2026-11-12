@@ -107,7 +107,7 @@ for (const size of SIZES) {
   });
 }
 
-test('문서 연결 확인이 다시 확인으로 통과하면 요청한 화면과 기존 메뉴가 보인다', async ({ page }) => {
+test('문서 연결 확인이 다시 확인으로 통과하면 요청한 화면과 메뉴가 보인다', async ({ page }) => {
   const mode = { fail: true };
   await documentSetup(page, mode);
   await page.goto('/participants');
@@ -115,6 +115,8 @@ test('문서 연결 확인이 다시 확인으로 통과하면 요청한 화면�
   mode.fail = false;
   await page.getByRole('button', { name: '다시 확인' }).click();
   await expect(page.getByRole('heading', { level: 1, name: '문서 연결 상태를 확인할 수 없습니다' })).toHaveCount(0);
-  await expect(page.getByRole('link', { name: 'Windsoft Minutes 홈' })).toBeVisible();
+  // 참석자 화면은 리뉴얼(#36)되어 새 앱 틀의 주 메뉴가 보인다
+  await expect(page.getByRole('heading', { level: 1, name: '참석자' })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: '주 메뉴' })).toBeVisible();
   await expect(page).toHaveURL(/\/participants$/);
 });

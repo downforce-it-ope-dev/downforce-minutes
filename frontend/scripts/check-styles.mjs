@@ -21,8 +21,6 @@ const LEGACY_CSS_FILES = new Set([
   'src/styles/base.css',
   'src/styles/layout.css',
   'src/styles/components.css',
-  'src/styles/pages/participants.css',
-  'src/styles/pages/settings.css',
 ]);
 const TAILWIND_ENTRY = 'src/tailwind.css';
 

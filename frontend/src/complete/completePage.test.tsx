@@ -16,7 +16,6 @@ const CONFIG = {
   company: { id: 'c', name: 'E', timezone: 'Asia/Seoul' },
   document: { provider: 'NOTION', configured: true, connectionVersion: 2, rootUrl: 'https://notion.example' },
   email: { enabled: true, configured: true },
-  notification: { provider: 'SLACK', enabled: true },
 };
 
 type Snapshot = Record<string, unknown>;

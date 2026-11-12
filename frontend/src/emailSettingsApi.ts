@@ -67,6 +67,20 @@ export async function restoreEmailSettings(): Promise<EmailSettings> {
   return stored ? saveEmailSettings(stored) : current;
 }
 
+/** 발신 주소로 실제 시험 메일을 보낸다 (API-037) */
+export async function sendTestEmail(): Promise<{ sent: boolean; message: string }> {
+  return (await request<{ data: { sent: boolean; message: string } }>('/test-message', { method: 'POST' })).data;
+}
+
+let restoredOnce: Promise<unknown> | null = null;
+
+/** 앱을 연 뒤 한 번만 복구한다(D-09, SET-01-F08). 실패해도 화면에는 알리지 않는다 */
+export function restoreEmailSettingsOnce(): void {
+  restoredOnce ??= restoreEmailSettings().catch(() => {
+    restoredOnce = null;
+  });
+}
+
 export async function verifyEmailConnection(): Promise<{ connected: boolean; message: string }> {
   return (await request<{ data: { connected: boolean; message: string } }>('/test', { method: 'POST' })).data;
 }
