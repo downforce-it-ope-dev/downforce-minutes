@@ -1,9 +1,0 @@
-/*
- * 스타일 진입점. 순서가 적용 우선순위이므로 바꾸지 않는다.
- * legacy-reset → base → layout → components → 화면별(pages) 순서다.
- * src/tailwind.css에서 legacy layer로 불러온다.
- */
-@import './legacy-reset.css';
-@import './base.css';
-@import './layout.css';
-@import './components.css';

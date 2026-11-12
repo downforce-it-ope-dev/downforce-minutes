@@ -1,6 +1,6 @@
 import { getApiBaseUrl } from './apiBase';
 import { apiFetch } from './apiFetch';
-import type { Participant } from './participantsApi';
+import { listParticipants, ParticipantApiError, type Participant } from './participantsApi';
 
 export type MeetingTemplate = { id: string; name: string; version: string };
 export type CompanyConfig = { id: string; name: string; timezone: string };
@@ -122,8 +122,11 @@ export async function listMeetingTemplates(): Promise<MeetingTemplate[]> {
   return result.data.items;
 }
 
+/** 참석자 목록. 참석자 관리·회의록과 같은 요청 합치기·기억을 쓴다(participantsApi, 로딩 개선 2026-11-12) */
 export async function listMeetingParticipants(): Promise<Participant[]> {
-  const result = await get<{ data: { items: Participant[] } }>('/participants');
-  if (!Array.isArray(result.data?.items)) throw new NewMeetingApiError('INVALID_PARTICIPANT_LIST');
-  return result.data.items;
+  try {
+    return await listParticipants();
+  } catch (error) {
+    throw new NewMeetingApiError(error instanceof ParticipantApiError ? error.code : 'REQUEST_FAILED');
+  }
 }

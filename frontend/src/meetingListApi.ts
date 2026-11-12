@@ -49,9 +49,25 @@ function isMeetingSummary(value: unknown): value is MeetingSummary {
     && (typeof item.documentUrl === 'string' || item.documentUrl === null);
 }
 
-export function listMeetings(limit?: number): Promise<MeetingSummary[]> {
+/*
+ * 회의 목록 기억 (회의록 로딩 문제, 2026-11-12). 받은 목록을 주소별로 기억해 두고 화면은 먼저 그것을 보인 뒤 뒤에서 새로 받는다.
+ * 진행 중인 같은 요청은 함께 기다린다(아래 pendingMeetingLists). 느린 목록이 15초에 끊기지 않게 제한 시간은 60초.
+ */
+const LIST_TIMEOUT_MS = 60_000;
+const lastMeetingLists = new WeakMap<typeof fetch, Map<string, MeetingSummary[]>>();
+
+function meetingListUrl(limit?: number) {
   const query = limit === undefined ? '' : `?limit=${encodeURIComponent(String(limit))}`;
-  const url = `${baseUrl()}/api/v1/meetings${query}`;
+  return `${baseUrl()}/api/v1/meetings${query}`;
+}
+
+/** 마지막으로 받은 회의 목록(없으면 undefined) */
+export function peekMeetings(limit?: number): MeetingSummary[] | undefined {
+  return lastMeetingLists.get(fetch)?.get(meetingListUrl(limit));
+}
+
+export function listMeetings(limit?: number): Promise<MeetingSummary[]> {
+  const url = meetingListUrl(limit);
   const fetchImpl = fetch;
   let requestsForClient = pendingMeetingLists.get(fetchImpl);
   if (!requestsForClient) {
@@ -61,7 +77,15 @@ export function listMeetings(limit?: number): Promise<MeetingSummary[]> {
   const pending = requestsForClient.get(url);
   if (pending) return pending;
 
-  const request = requestMeetingList(url, fetchImpl).finally(() => {
+  const request = requestMeetingList(url, fetchImpl).then((items) => {
+    let last = lastMeetingLists.get(fetchImpl);
+    if (!last) {
+      last = new Map();
+      lastMeetingLists.set(fetchImpl, last);
+    }
+    last.set(url, items);
+    return items;
+  }).finally(() => {
     if (requestsForClient?.get(url) === request) requestsForClient.delete(url);
   });
   requestsForClient.set(url, request);
@@ -110,7 +134,7 @@ function isProcessingFailureSummary(value: unknown): value is ProcessingFailureS
 
 async function requestMeetingList(url: string, fetchImpl: typeof fetch): Promise<MeetingSummary[]> {
   try {
-    const response = await apiFetch(url, { headers: { Accept: 'application/json' } }, {}, fetchImpl);
+    const response = await apiFetch(url, { headers: { Accept: 'application/json' } }, { timeoutMs: LIST_TIMEOUT_MS }, fetchImpl);
     const body: unknown = await response.json();
     if (!response.ok || typeof body !== 'object' || body === null || !('data' in body)) {
       throw new MeetingListApiError(normalizeApiError(body, response.status));

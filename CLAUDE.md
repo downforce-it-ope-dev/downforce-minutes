@@ -7,17 +7,11 @@
 - 코드, 명령어, 파일 경로, 커밋 메시지, 고유 이름(API·라이브러리 이름 등)은 원래 표기를 그대로 둔다.
 - 긴 작업 뒤 보고나 대화 요약 직후처럼 언어가 바뀌기 쉬운 순간에도 첫 문장부터 한국어로 쓴다.
 
-## 스타일 방식: 신규·리뉴얼 화면은 Tailwind CSS로만 작성 (필수)
+## 스타일 방식: 모든 화면은 Tailwind CSS로만 작성 (필수)
 
-화면 전체를 한 번에 바꾸지 않는다. 신규 화면을 만들거나 기존 화면을 리뉴얼할 때 그 화면을 Tailwind CSS로 작성한다. 근거와 세부 원칙은 [스타일 방식 검토](docs/renewal/스타일_전환_검토.md)를 따른다.
+모든 화면을 Tailwind CSS로 리뉴얼했고 기존 CSS(`frontend/src/styles/`)와 `legacy` layer는 R9(#41)에서 지웠다. 근거와 세부 원칙은 [스타일 방식 검토](docs/renewal/스타일_전환_검토.md)를 따른다.
 
-### 공존 원칙: 한 화면에는 한 가지 방식만
-
-- 한 화면(라우트)과 그 화면이 쓰는 컴포넌트는 Tailwind 아니면 기존 CSS, 둘 중 하나로만 스타일을 입힌다.
-- 같은 화면이나 같은 컴포넌트 안에서 Tailwind 클래스와 기존 CSS 클래스(`frontend/src/styles/`에 정의된 클래스)를 섞지 않는다.
-- 리뉴얼 화면에서 기존 컴포넌트가 필요하면 기존 컴포넌트를 고치지 않고 Tailwind로 새 컴포넌트를 만든다.
-
-### 신규·리뉴얼 화면 작성 규칙
+### 화면 작성 규칙
 
 - **도구 (결정, 검토 문서 6장)**
   - Tailwind CSS v4와 Vite 플러그인을 쓴다.
@@ -27,7 +21,7 @@
   - 화면이나 컴포넌트 전용 CSS 클래스·파일을 새로 만들지 않는다.
   - Tailwind 진입 CSS 파일에는 `@theme` 디자인 토큰, 토큰 수준 `@utility`(글자 토큰), `@custom-variant`(화면 조건), `@keyframes`, Tailwind로 표현할 수 없는 브라우저 전용 표기만 둔다.
   - 안전 영역 여백은 진입 파일의 `pt-safe`·`pb-safe` 유틸리티를 쓴다(`env(safe-area-inset-*)`, 브라우저 전용 표기).
-  - 예외(#5 결정): 리뉴얼 영역 기본 규칙 2개를 진입 파일 `@layer base`에 둔다. 키보드 포커스 표시(`focus` 색 2px 외곽선)와 스크롤바 숨김이다. 이 밖의 기본 규칙은 추가하지 않는다.
+  - 예외(#5 결정, R9에서 화면 전체로): 진입 파일 `@layer base`에 기본 규칙을 둔다. 키보드 포커스 표시(`focus` 색 2px 외곽선), 스크롤바 숨김, `html` 글자 렌더링·바탕색과 `body` 최소 크기(기존 CSS에서 옮긴 값)다. 이 밖의 기본 규칙은 추가하지 않는다.
 - **아이콘**
   - `lucide-react`를 쓰되 화면에서 직접 불러오지 않고 공통 `Icon` 컴포넌트로만 쓴다.
   - 장식 아이콘은 `aria-hidden`, 의미가 있는 아이콘은 레이블을 둔다. 크기는 24 기준.
@@ -56,6 +50,9 @@
     - `tablet-lg`: 960px 이상
   - Tailwind 기본 기준(`sm`·`md`·`lg`·`xl`·`2xl`)은 쓰지 않는다.
   - 높이 560px 이하는 `short` 조건으로 줄인다.
+  - 높이가 낮은 큰 태블릿 가로(폭 960 이상·높이 860 이하, 예: Galaxy Tab S9 가로 Chrome 1280×약 650)는 `low` 조건이다. 기준 기기라 화면이 한 화면에 들어오는지 이 크기로 확인한다.
+    - 공통(2026-11-12): 큰 글자 토큰(display·headline·title·body-lg)은 휴대폰 크기, 상단 바 64, 입력란·선택 상자·날짜 칸 48, 큰 주 버튼(hero) 56, 원형 녹음 버튼 80, 하단 고정 버튼 여백을 줄인다. 공통 부품에 이미 들어 있으므로 화면에서 다시 지정하지 않는다.
+    - 화면별: 홈(안내 카드 안에 새 회의), 새 회의(제목·날짜·템플릿 한 줄), 녹음(파형·간격 축소).
   - 글자는 토큰만 쓴다: `display`·`headline`·`title`·`body-lg`·`body`·`label`·`caption`·`nav`.
   - 입력란 글자는 16px 이상, 일반 글자는 13px 이상으로 쓴다.
   - 글꼴은 Pretendard Variable 하나만 쓴다.
@@ -78,11 +75,11 @@
   - 작업 순서와 완료 기준은 GitHub 로드맵 이슈 #3과 각 이슈 본문을 따른다.
   - 화면 묶음이 완성되면 `develop` → `main` PR로 합친다.
 
-### 구현 기준 (0단계 기반 작업 결과)
+### 구현 기준
 
 - **진입 파일**
   - Tailwind 진입 CSS는 `frontend/src/tailwind.css` 하나다. `RootRoutes.tsx`가 이 파일을 불러온다(기존 레이아웃 `App.tsx`는 R8 #39에서 지웠다).
-  - layer 순서: `theme → base → legacy → components → utilities`.
+  - layer 순서: `theme → base → components → utilities`. Tailwind 초기화(Preflight)는 화면 전체에 적용된다.
 - **공통 부품과 라우트 (R1 결과)**
   - 공통 부품은 `frontend/src/ui/`에 있고 `../ui`(index)에서 불러온다. 같은 부품을 화면에 새로 만들지 않는다.
   - 화면 라우트는 `frontend/src/RootRoutes.tsx`에 추가한다. 모든 화면이 리뉴얼 화면이다(R8에서 기존 화면을 모두 옮겼다).
@@ -114,13 +111,10 @@
   - `/login`·`/__ui`를 뺀 모든 경로는 `RequireAuth`(`src/auth/AuthGate.tsx`)를 거친다. 로그인하지 않았으면 로그인 화면으로 보낸다.
   - 개발 서버와 Vercel Preview는 인증 목업(`src/auth/authMock.ts`)을 쓴다. 메일을 보내지 않고, 인증 코드는 `123456`이다. Backend가 Preview 출처를 허용하면 Vercel Preview 환경 변수 `AUTH_MOCK=0`으로 끈다. Vercel Production에서는 값과 관계없이 꺼진다.
   - 기존 화면 e2e는 목업 세션(`e2e/authSession.ts`)을 넣어 진입 보호를 통과한다. 로그인 화면 e2e는 세션 없이 실행한다.
-- **리뉴얼 화면 루트**
-  - 리뉴얼 화면(또는 새 레이아웃)의 가장 바깥 요소에 `data-ui="renewal"`을 붙인다.
-  - 이 영역 안에서만 Tailwind 초기화(Preflight)가 적용된다. 밖의 기존 화면은 `src/styles/legacy-reset.css`가 브라우저 기본값을 유지한다.
-  - 루트 요소에는 `font-sans text-body text-text bg-bg`를 지정한다(바탕 그라데이션을 쓰는 레이아웃 루트는 `bg-bg` 대신 바탕 그라데이션). `html`·`body`의 글꼴과 색은 기존 CSS가 정한다.
-  - **Portal:** 대화상자·토스트·메뉴처럼 `body` 바로 아래에 그려지는 요소는 리뉴얼 루트 밖에 놓인다. Portal로 그리는 가장 바깥 요소(Radix `Dialog.Overlay`·`Dialog.Content` 등)에도 `data-ui="renewal"`과 루트 클래스를 붙인다. 빠뜨리면 그 요소는 기존 화면으로 취급된다.
-  - 기존 `base.css`의 요소 전체 규칙(스크롤바 숨김, 버튼 커서·비활성 투명도, 포커스 외곽선)은 리뉴얼 영역에 적용되지 않는다.
-  - 리뉴얼 영역의 포커스 표시와 스크롤바 숨김은 진입 파일 기본 규칙이 맡는다. 다른 포커스 모양이 필요할 때만 컴포넌트에서 유틸리티로 덮어쓴다. 비활성 표시(커서·색·`aria-disabled`)는 컴포넌트에서 직접 지정한다.
+- **화면 루트와 Portal**
+  - 화면의 가장 바깥 요소는 `AppCanvas`(또는 이를 쓰는 `AppShell`·`AuthLayout`)다. 바탕 그라데이션과 글자 기본값을 정한다.
+  - `html`·`body`에는 글꼴·색을 두지 않았다. 대화상자·토스트·메뉴처럼 `body` 바로 아래에 Portal로 그리는 가장 바깥 요소에는 글자 기본값 `ROOT_TEXT_CLASS`(`font-sans text-body text-text`)를 붙인다. 빠뜨리면 브라우저 기본 글꼴·색이 된다.
+  - 포커스 표시와 스크롤바 숨김은 진입 파일 기본 규칙이 맡는다. 다른 포커스 모양이 필요할 때만 컴포넌트에서 유틸리티로 덮어쓴다. 비활성 표시(커서·색·`aria-disabled`)는 컴포넌트에서 직접 지정한다.
 - **색 클래스:** 용도별 토큰 이름을 우선 쓴다.
   - 배경: `bg-bg`·`bg-bg-subtle`·`bg-primary`·`bg-primary-hover`(눌림)·`bg-primary-soft`·`bg-brand`·`bg-brand-soft`·`bg-selected`·`bg-accent`·`bg-accent-soft`·`bg-danger`·`bg-danger-soft`·`bg-success-soft`·`bg-warning-soft`
   - 바탕 그라데이션(레이아웃 전용): `bg-linear-to-br from-canvas-start via-canvas-mid to-canvas-end`
@@ -136,33 +130,9 @@
   - 그림자: `shadow-card`(카드·패널·입력란)·`shadow-primary`(화면의 대표 주 동작 1개)·`shadow-overlay`(대화상자·시트·토스트·메뉴)
   - 최대 폭: `max-w-auth`(480)·`max-w-dialog`(560)·`max-w-form`(640)·`max-w-reading`(720)·`max-w-content`(1040)
   - 메뉴 폭: `w-rail`(88, `tablet`)·`w-sidebar`(240, `tablet-lg`)
-  - 화면 조건: `tablet:`·`tablet-lg:`·`short:`
+  - 화면 조건: `tablet:`·`tablet-lg:`·`short:`·`low:`
   - 간격·크기: Tailwind 기본 단위(4px)를 쓴다 (예: `h-12` = 48px, `w-22` = 88px)
-- **검사:** `npm run lint`가 스타일 규칙(`frontend/scripts/check-styles.mjs`)을 함께 검사한다.
-  - 다음은 오류로 처리한다.
-    - 새 CSS 파일, 임의값 클래스
-    - 한 파일에 두 방식을 섞음 (`className` 식과 `cn`·`clsx`·`cva`·`twMerge`·`tv` 인자 안의 문자열을 모두 본다)
-    - `data-ui="renewal"` 파일의 기존 클래스 사용
-    - Tailwind 파일이 기존 CSS를 쓰는 컴포넌트를 불러옴
-  - `src/styles` 변경(커밋하지 않은 변경과 `main` 이후 커밋)은 경고한다.
-  - 기존 CSS를 지우면 이 스크립트의 파일 목록에서도 지운다.
-- **격리 검사:** `npm run test:styles`(`frontend/e2e/style-isolation.spec.ts`)가 리뉴얼 영역과 기존 화면의 격리를 검사한다.
-- **기존 화면 비교:** `legacy-reset.css`·`tailwind.css`·기존 CSS를 고칠 때는 고치기 전후 계산 스타일을 비교해 기존 화면에 차이가 없음을 확인한다. 방법은 `frontend/scripts/compare-legacy-styles.mjs` 머리말을 따른다.
-
-### 기존 CSS(`frontend/src/styles/`) 규칙
-
-- **동결**
-  - 기존 CSS는 리뉴얼 전 화면을 유지하는 용도로만 남긴다.
-  - 새 기능·새 화면을 위한 스타일을 추가하지 않는다. 버그 수정만 허용한다.
-- **우선순위 고정**
-  - 기존 CSS는 Tailwind 유틸리티보다 우선순위가 낮은 cascade layer(`@layer legacy`) 안에 둔다.
-  - 기존 CSS가 리뉴얼 화면의 Tailwind 스타일을 덮어쓰면 안 된다.
-- **리뉴얼 완료 시 삭제**
-  - 화면을 리뉴얼하면 그 화면 전용 파일(`frontend/src/styles/pages/*.css`)을 같은 작업에서 삭제한다.
-  - 공통 파일(`base`·`layout`·`components.css`)의 규칙은 그 클래스를 쓰는 기존 화면이 하나도 없을 때 삭제한다.
-- **기존 화면을 리뉴얼 라우트로 옮길 때 함께 고칠 곳 (MTG-02·03에서 정리)**
-  - 라우트: `RootRoutes.tsx`에 추가하고, `App.tsx`의 `<Route>`와 `legacyRoutes.ts`의 `LEGACY_PATHS`에서 지운다. `App.tsx`에서 그 화면만 쓰던 상태·import도 지운다.
-  - 기존 CSS: 화면 전용 `styles/pages/*.css` 파일을 지우고, `styles/index.css`의 `@import`와 `scripts/check-styles.mjs`의 `LEGACY_CSS_FILES` 목록에서도 지운다.
-  - 기존 화면 파일과 테스트: 기존 `*.tsx`·`*.test.tsx`를 지우고, 테스트는 새 화면 폴더로 옮긴다. `App.test.tsx`에 그 경로를 그리는 테스트가 있으면 함께 옮긴다.
-  - e2e: `e2e/fixtures.ts`의 `screens`에서 그 화면(SCR-xxx)을 빼고, 새 화면 e2e(axe·가로 넘침, 4개 크기)를 `e2e/<화면>.spec.ts`로 만든다.
-  - 확인: 기존 화면 계산 스타일 비교(`compare-legacy-styles.mjs`)를 고치기 전후로 돌린다. 차이는 뺀 화면(SCR-xxx)만 있어야 한다.
+- **검사:** `npm run lint`가 스타일 규칙(`frontend/scripts/check-styles.mjs`)을 함께 검사한다. 새 CSS 파일(`src/tailwind.css` 외)과 임의값 클래스는 오류다.
+- **기본 규칙 검사:** `npm run test:styles`(`frontend/e2e/base-rules.spec.ts`)가 Tailwind 초기화·기본 규칙·글자 토큰·상단 바 고정을 검사한다.
+- **화면 스타일 비교:** 진입 파일(`tailwind.css`)·공통 부품처럼 여러 화면에 걸친 것을 바꿀 때는 바꾸기 전후 모든 화면의 계산 스타일을 비교해 의도하지 않은 차이가 없음을 확인한다. 방법은 `frontend/scripts/compare-styles.mjs` 머리말을 따른다(`e2e/style-snapshot.spec.ts`).
+- **화면 e2e:** 화면마다 `e2e/<화면>.spec.ts`에 axe 심각 위반 0건·가로 넘침 없음을 4가지 크기(휴대폰 390×844, 태블릿 세로 820×1180, 태블릿 가로 1180×820, 낮은 화면 844×390)로 검사한다(`npm run test:a11y`). 새 화면 e2e는 `playwright.a11y.config.ts`의 목록에도 넣는다.

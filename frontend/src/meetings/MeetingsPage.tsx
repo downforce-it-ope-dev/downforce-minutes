@@ -19,7 +19,7 @@ import {
 } from '../ui';
 import { formatChipDate, formatMeetingAt, participantSummary } from './meetingFormat';
 import { sortMeetings } from './meetingView';
-import { listMyMeetings } from './myMeetings';
+import { listMyMeetings, peekMyMeetings } from './myMeetings';
 import { ProcessingFailures } from './ProcessingFailures';
 
 /*
@@ -90,7 +90,11 @@ export function MeetingsPage() {
 function MeetingsBody() {
   const toast = useToast();
   const { filters, update, search } = useListFilters();
-  const [load, setLoad] = useState<Load>({ status: 'loading' });
+  // 이미 받아 둔 목록이 있으면 바로 보이고 뒤에서 새로 받는다(로딩 개선 2026-11-12)
+  const [load, setLoad] = useState<Load>(() => {
+    const cached = peekMyMeetings();
+    return cached ? { status: 'ready', data: cached } : { status: 'loading' };
+  });
   const [attempt, setAttempt] = useState(0);
   const [periodOpen, setPeriodOpen] = useState(false);
 

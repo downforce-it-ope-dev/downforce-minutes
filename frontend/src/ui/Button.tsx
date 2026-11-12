@@ -42,7 +42,7 @@ const VARIANT: Record<ButtonVariant, string> = {
   primary:
     'bg-primary text-white active:bg-primary-hover aria-disabled:bg-neutral-100 aria-disabled:text-neutral-400',
   hero:
-    'h-14 tablet:h-18 px-8 rounded-full text-title bg-linear-to-r from-primary to-primary-hover text-white shadow-primary aria-disabled:bg-none aria-disabled:bg-neutral-100 aria-disabled:text-neutral-400 aria-disabled:shadow-none',
+    'h-14 tablet:h-18 low:h-14 px-8 rounded-full text-title bg-linear-to-r from-primary to-primary-hover text-white shadow-primary aria-disabled:bg-none aria-disabled:bg-neutral-100 aria-disabled:text-neutral-400 aria-disabled:shadow-none',
   secondary:
     'border border-border bg-bg text-text active:bg-bg-subtle aria-disabled:bg-neutral-100 aria-disabled:text-neutral-400',
   ghost: 'bg-transparent text-link active:bg-accent-soft aria-disabled:text-neutral-400 aria-disabled:bg-transparent',

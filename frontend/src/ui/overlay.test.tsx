@@ -38,12 +38,13 @@ describe('Dialog', () => {
     expect(document.getElementById(describedBy)?.textContent).toBe('인증 코드를 보낼 Gmail을 연결합니다.');
   });
 
-  it('Portal 바깥 요소에 리뉴얼 영역 표시를 붙인다', () => {
+  it('Portal 바깥 요소에 글자 기본값을 붙인다', () => {
     render(<DialogHarness />);
     fireEvent.click(screen.getByRole('button', { name: '메일 설정' }));
     const dialog = screen.getByRole('dialog');
-    expect(dialog.getAttribute('data-ui')).toBe('renewal');
-    expect(dialog.parentElement?.getAttribute('data-ui')).toBe('renewal');
+    // Portal이라 가장 바깥에 글자 기본값을 붙인다
+    expect(dialog.className).toContain('font-sans');
+    expect(dialog.parentElement?.className).toContain('font-sans');
   });
 
   it('Esc와 닫기 버튼으로 닫힌다', () => {
@@ -89,7 +90,7 @@ describe('Toast', () => {
     fireEvent.click(screen.getByRole('button', { name: '재발송' }));
     const region = screen.getByRole('status');
     expect(region.textContent).toContain('새 인증 코드를 보냈습니다.');
-    expect(region.closest('[data-ui="renewal"]')).not.toBeNull();
+    expect(region.closest('.font-sans')).not.toBeNull();
     act(() => {
       vi.advanceTimersByTime(5000);
     });

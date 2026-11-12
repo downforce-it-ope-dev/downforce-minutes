@@ -135,7 +135,7 @@ function RecordingBody({
 
   return (
     <div className="flex flex-1 flex-col gap-6 tablet-lg:flex-row">
-      <Card variant="panel" as="section" aria-label="녹음" className="flex flex-1 flex-col items-center gap-5 py-8 text-center tablet:gap-6 tablet:py-10">
+      <Card variant="panel" as="section" aria-label="녹음" className="flex flex-1 flex-col items-center gap-5 py-8 text-center tablet:gap-6 tablet:py-10 low:gap-3 low:py-5">
         <h2 className="line-clamp-2 max-w-reading text-title text-text tablet-lg:sr-only">{session.title}</h2>
         <StatusBadge snapshot={snapshot} />
         <p aria-label="경과 시간" className="text-display text-text tabular-nums">
@@ -191,7 +191,7 @@ function RecordingBody({
         )}
 
         {/* 녹음 버튼은 아래쪽에 둘만 둔다. 다른 누르는 요소와 떨어뜨려 잘못 누르지 않게 한다 */}
-        <div className="mt-auto flex items-start justify-center gap-8 pt-4 tablet:gap-12">
+        <div className="mt-auto flex items-start justify-center gap-8 pt-4 tablet:gap-12 low:pt-2">
           {snapshot.state === 'Ready' && !snapshot.completed && !endFailed && (
             <RoundActionButton
               icon={Mic}
@@ -335,7 +335,7 @@ function LevelWaveform({ level, state }: { level: number; state: RecordingSnapsh
     <div
       aria-hidden="true"
       className={cn(
-        'flex h-20 w-full max-w-form items-center justify-center gap-1 tablet:h-28 tablet:gap-1.5',
+        'flex h-20 w-full max-w-form items-center justify-center gap-1 tablet:h-28 tablet:gap-1.5 low:h-16',
         state !== 'Recording' && 'opacity-50',
       )}
     >

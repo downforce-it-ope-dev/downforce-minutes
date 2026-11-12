@@ -117,3 +117,11 @@ test('녹음 → 일시정지 → 재개 → 종료 확인(계속 녹음이 기�
   await expect(page).toHaveURL(/\/meetings\/s-e2e\/processing$/, { timeout: 15_000 });
   expect(processBody).toMatchObject({ mimeType: expect.stringContaining('audio/') });
 });
+
+test('높이가 낮은 큰 태블릿 가로(Galaxy Tab S9, 1280×650): 녹음 버튼과 이름이 화면 안에 있다', async ({ page }) => {
+  await mock(page);
+  await page.setViewportSize({ width: 1280, height: 650 });
+  await page.goto('/meetings/s-e2e/recording');
+  await expect(page.getByRole('button', { name: '녹음 시작' })).toBeInViewport({ ratio: 1 });
+  expect(await page.locator('#main-content').evaluate((element) => element.scrollHeight - element.clientHeight)).toBeLessThanOrEqual(0);
+});

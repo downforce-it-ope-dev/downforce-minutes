@@ -34,7 +34,7 @@ describe('서버 연결 복구 (CMN-02, #18)', () => {
     renderAt('/meetings');
     void recoverBackendAvailability(down);
     const dialog = await screen.findByRole('dialog', { name: '서버 연결을 확인하고 있어요' });
-    expect(dialog.closest('[data-ui="renewal"]')).toBeTruthy();
+    expect(dialog.closest('.font-sans')).toBeTruthy();
     expect(document.activeElement).toBe(screen.getByRole('button', { name: '복구 대기 닫기' }));
     expect(screen.getByRole('button', { name: '다시 확인' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '화면으로 돌아가기' }));

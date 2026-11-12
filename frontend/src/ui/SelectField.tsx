@@ -32,7 +32,7 @@ export function SelectField({ label, invalid = false, hideLabel = false, id, cla
           {...rest}
           aria-invalid={invalid || undefined}
           className={cn(
-            'h-12 w-full cursor-pointer appearance-none rounded-md border bg-bg pr-12 pl-3.5 text-body text-text tablet:h-13',
+            'h-12 w-full cursor-pointer appearance-none rounded-md border bg-bg pr-12 pl-3.5 text-body text-text tablet:h-13 low:h-12',
             'disabled:cursor-not-allowed disabled:bg-neutral-100 disabled:text-neutral-500',
             invalid ? 'border-danger' : 'border-border-input',
           )}

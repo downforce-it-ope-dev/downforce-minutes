@@ -4,7 +4,7 @@ import { CalendarDays, ChevronRight, Clock, Mic, RefreshCw, Repeat, Share2, Spar
 import { AccountButton, SidebarAccount } from '../auth/AccountMenu';
 import { getSetupSnapshot, type DocumentProvider, type SetupSnapshot } from '../documentSetupApi';
 import { listProcessingFailures, type MeetingSummary } from '../meetingListApi';
-import { listMyMeetings } from '../meetings/myMeetings';
+import { listMyMeetings, peekMyMeetings } from '../meetings/myMeetings';
 import { restoreEmailSettingsOnce } from '../emailSettingsApi';
 import {
   AppShell,
@@ -107,8 +107,10 @@ export function HomePage() {
         <FailureBanner />
 
         {/* 안내 패널 + 새 회의 (태블릿 이상) */}
-        <Card variant="panel" as="section" aria-label="새 회의" className="hidden flex-col items-center gap-8 py-8 tablet:flex">
+        {/* 높이가 낮은 큰 태블릿 가로(low): 그림을 줄여 왼쪽, 단계·새 회의 버튼을 오른쪽에 두어 최근 회의록까지 한 화면에 들어오게 한다(2026-11-12) */}
+        <Card variant="panel" as="section" aria-label="새 회의" className="hidden flex-col items-center gap-8 py-8 tablet:flex low:flex-row low:justify-center low:gap-12 low:py-6">
           <MeetingFlowVisual />
+          <div className="flex flex-col items-center gap-6">
           <ol aria-label="회의록 만드는 순서" className="flex flex-wrap items-center justify-center gap-2">
             {[
               { icon: Mic, label: '음성 녹음' },
@@ -125,12 +127,20 @@ export function HomePage() {
               </li>
             ))}
           </ol>
+          <span className="hidden w-full low:flex">
+            <Button variant="hero" icon={Mic} className="w-full" onClick={() => navigate('/meetings/new')}>
+              새 회의
+            </Button>
+          </span>
+          </div>
         </Card>
-        {/* 시안처럼 새 회의 버튼 위아래 여백을 넉넉히 둔다 */}
-        <div className="hidden justify-center py-4 tablet:flex">
-          <Button variant="hero" icon={Mic} className="w-full max-w-form" onClick={() => navigate('/meetings/new')}>
-            새 회의
-          </Button>
+        {/* 시안처럼 새 회의 버튼 위아래 여백을 넉넉히 둔다. 높이가 낮은 큰 태블릿 가로는 위 카드 안에 둔다 */}
+        <div className="low:hidden">
+          <div className="hidden justify-center py-4 tablet:flex">
+            <Button variant="hero" icon={Mic} className="w-full max-w-form" onClick={() => navigate('/meetings/new')}>
+              새 회의
+            </Button>
+          </div>
         </div>
 
         <RecentMeetings />
@@ -201,14 +211,19 @@ function useSample() {
 /** 최근 회의 3건 (HOME-01-F02·F03). 회의록 목록과 같이 내가 참석자인 회의만 */
 function RecentMeetings() {
   const sample = useSample();
-  const [meetings, setMeetings] = useState<Load<MeetingSummary[]>>(sample ? { status: 'ready', data: SAMPLE_MEETINGS } : { status: 'loading' });
+  // 이미 받아 둔 목록이 있으면 바로 보이고 뒤에서 새로 받는다(로딩 개선 2026-11-12)
+  const [meetings, setMeetings] = useState<Load<MeetingSummary[]>>(() => {
+    if (sample) return { status: 'ready', data: SAMPLE_MEETINGS };
+    const cached = peekMyMeetings(3);
+    return cached ? { status: 'ready', data: cached } : { status: 'loading' };
+  });
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     if (sample) return;
     let live = true;
     listMyMeetings(3)
       .then((items) => live && setMeetings({ status: 'ready', data: items }))
-      .catch(() => live && setMeetings({ status: 'error' }));
+      .catch(() => live && setMeetings((current) => (current.status === 'ready' ? current : { status: 'error' })));
     return () => {
       live = false;
     };

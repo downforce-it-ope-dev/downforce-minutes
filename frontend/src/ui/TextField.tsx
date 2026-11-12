@@ -73,7 +73,7 @@ export function TextField({
           aria-describedby={describedByIds}
           className={cn(
             'w-full border bg-bg text-text placeholder:text-text-muted',
-            'h-12 tablet:h-13', inputSize === 'lg' ? 'text-title' : 'text-body',
+            'h-12 tablet:h-13 low:h-12', inputSize === 'lg' ? 'text-title' : 'text-body',
             'disabled:cursor-not-allowed disabled:bg-neutral-100 disabled:text-neutral-500',
             shape === 'pill' ? 'rounded-full px-5 shadow-card' : 'rounded-md px-3.5',
             icon && (shape === 'pill' ? 'pl-14' : 'pl-12'),

@@ -28,7 +28,7 @@ export { DocumentStatusChip, type DocumentStatus, type DocumentStatusChipProps }
 export { ToastProvider, type ToastPlacement } from './Toast';
 export { useToast, type ToastOptions, type ToastTone } from './toastContext';
 export { ToastBridge, type ToastFunction } from './ToastBridge';
-export { RENEWAL_ROOT_CLASS } from './renewalRoot';
+export { ROOT_TEXT_CLASS } from './rootText';
 // 그림 부품 (S-12, 단순화 SVG. 원본을 받으면 같은 자리에서 교체)
 export { Logo, type LogoProps } from './art/Logo';
 export { LogoSymbol, type LogoSymbolProps } from './art/LogoSymbol';

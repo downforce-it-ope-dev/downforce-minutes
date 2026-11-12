@@ -68,3 +68,12 @@ test('휴대폰: 계정 버튼으로 로그아웃하면 로그인 화면으로 �
   await page.goto('/');
   await expect(page).toHaveURL(/\/login$/);
 });
+
+test('높이가 낮은 큰 태블릿 가로(Galaxy Tab S9, 1280×650): 새 회의와 최근 회의록이 스크롤 없이 한 화면에 보인다', async ({ page }) => {
+  await mock(page);
+  await page.setViewportSize({ width: 1280, height: 650 });
+  await page.goto('/');
+  await expect(page.getByRole('link', { name: 'AX 개발 미팅 상세 보기' })).toBeInViewport({ ratio: 1 });
+  await expect(page.getByRole('button', { name: '새 회의' }).first()).toBeInViewport({ ratio: 1 });
+  expect(await page.locator('#main-content').evaluate((element) => element.scrollHeight - element.clientHeight)).toBeLessThanOrEqual(0);
+});

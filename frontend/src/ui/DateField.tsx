@@ -47,7 +47,7 @@ export function DateField({ label, value, onChange, invalid = false, disabled = 
         disabled={disabled}
         onClick={() => setOpen(true)}
         className={cn(
-          'flex h-12 w-full cursor-pointer items-center gap-3 rounded-md border bg-bg px-4 tablet:h-13 text-left text-body-lg text-text',
+          'flex h-12 w-full cursor-pointer items-center gap-3 rounded-md border bg-bg px-4 tablet:h-13 low:h-12 text-left text-body-lg text-text',
           'disabled:cursor-not-allowed disabled:bg-neutral-100 disabled:text-neutral-500',
           invalid ? 'border-danger' : 'border-border-input',
         )}

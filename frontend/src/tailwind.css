@@ -3,19 +3,24 @@
  * 근거: docs/renewal/스타일_전환_검토.md 7.4(색), 8(크기·글자·컴포넌트),
  *       docs/renewal/시안_적용_기준.md (시안 반영: 색 역할·바탕·그림자·메뉴 폭, S-09~S-12)
  *
- * layer 순서: theme → base(Tailwind 초기화) → legacy(기존 CSS) → components → utilities
- * - 기존 CSS는 legacy layer에 가두어 Tailwind 유틸리티보다 항상 낮은 우선순위를 갖는다.
+ * layer 순서: theme → base(Tailwind 초기화) → components → utilities
+ * - 기존 CSS와 legacy layer는 모든 화면을 리뉴얼한 뒤 지웠다(R9 #41).
  * - 이 파일에는 디자인 토큰(@theme), 토큰 수준 유틸리티(@utility), 사용자 조건(@custom-variant)만 둔다.
  *   화면·컴포넌트 전용 스타일은 만들지 않는다(CLAUDE.md).
  */
-@layer theme, base, legacy, components, utilities;
+@layer theme, base, components, utilities;
 
 @import 'tailwindcss';
 @import 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css';
-@import './styles/index.css' layer(legacy);
 
 /* 높이가 낮은 화면(휴대폰 가로, 화면 키보드 열림) */
 @custom-variant short (@media (max-height: 560px));
+
+/*
+ * 높이가 낮은 큰 태블릿 가로 (예: Galaxy Tab S9 가로 Chrome 1280×약 650~710, 2026-11-12 사용자 확인).
+ * 홈처럼 위아래로 쌓은 화면이 한 화면에 들어오도록 줄일 때만 쓴다.
+ */
+@custom-variant low (@media (min-width: 60rem) and (max-height: 53.75rem));
 
 /*
  * 안전 영역(노치·홈 표시줄) 여백. env()는 Tailwind 클래스로 표현할 수 없는 브라우저 전용 표기다(CLAUDE.md).
@@ -29,24 +34,39 @@
 }
 
 /*
- * 리뉴얼 영역 기본 규칙 (스타일 검토 5.3 결정, GitHub #5). CLAUDE.md "토큰만" 규칙의 예외 2가지.
+ * 기본 규칙 (스타일 검토 5.3 결정 #5, R9 #41에서 화면 전체로 넓혔다). CLAUDE.md "토큰만" 규칙의 예외.
  * - 키보드 포커스 표시: 모든 요소에 같은 표시를 빠짐없이 적용한다. 컴포넌트는 필요할 때만 유틸리티로 덮어쓴다.
- * - 스크롤바 숨김: 기존 화면과 같게 숨긴다.
- * base layer라 컴포넌트의 Tailwind 유틸리티가 항상 우선한다. 리뉴얼 영역 밖(기존 화면)에는 적용되지 않는다.
+ * - 스크롤바 숨김: 모든 요소.
+ * - html 글자 렌더링·body 크기: 기존 base.css(:root)·legacy-reset.css가 html에 주어 모든 글자에 상속되던 값을 그대로 옮겼다.
+ *   글꼴·색은 각 화면 루트(AppCanvas 등)가 정하므로 옮기지 않았다.
+ * base layer라 컴포넌트의 Tailwind 유틸리티가 항상 우선한다.
  */
 @layer base {
-  [data-ui='renewal']:focus-visible,
-  [data-ui='renewal'] :focus-visible {
+  html {
+    /* 화면을 끝까지 당겼을 때 보이는 바탕(iPad 바운스). 바탕 그라데이션 첫 색과 맞춘다 */
+    background-color: var(--color-canvas-start);
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    tab-size: 8;
+    text-size-adjust: auto;
+    -webkit-text-size-adjust: auto;
+    -webkit-tap-highlight-color: rgb(0 0 0 / 0.18);
+  }
+  :focus-visible {
     outline: 2px solid var(--color-focus);
     outline-offset: 2px;
   }
-  [data-ui='renewal'],
-  [data-ui='renewal'] * {
+  * {
     scrollbar-width: none;
   }
-  [data-ui='renewal']::-webkit-scrollbar,
-  [data-ui='renewal'] *::-webkit-scrollbar {
+  *::-webkit-scrollbar {
     display: none;
+  }
+  body {
+    min-width: 320px;
+    min-height: 100vh;
   }
 }
 
@@ -224,6 +244,8 @@
 /*
  * 글자 토큰 (검토 문서 8.3). 휴대폰 값이 기본이고 tablet(600px) 이상에서 커진다.
  * 크기·줄 높이·굵기·자간을 한 번에 지정한다.
+ * 높이가 낮은 큰 태블릿 가로(low)는 큰 글자(display·headline·title·body-lg)를 휴대폰 크기로 둔다(2026-11-12, S9 가로).
+ * label·caption·nav는 읽기 쉽게 태블릿 크기를 그대로 둔다.
  */
 @utility text-display {
   font-size: 3rem;
@@ -235,6 +257,10 @@
     font-size: 4rem;
     line-height: 4.5rem;
   }
+  @variant low {
+    font-size: 3rem;
+    line-height: 3.5rem;
+  }
 }
 @utility text-headline {
   font-size: 1.5rem;
@@ -244,6 +270,10 @@
   @variant tablet {
     font-size: 1.75rem;
     line-height: 2.25rem;
+  }
+  @variant low {
+    font-size: 1.5rem;
+    line-height: 2rem;
   }
 }
 @utility text-title {
@@ -255,6 +285,10 @@
     font-size: 1.25rem;
     line-height: 1.75rem;
   }
+  @variant low {
+    font-size: 1.125rem;
+    line-height: 1.625rem;
+  }
 }
 @utility text-body-lg {
   font-size: 1.0625rem;
@@ -263,6 +297,10 @@
   @variant tablet {
     font-size: 1.125rem;
     line-height: 1.875rem;
+  }
+  @variant low {
+    font-size: 1.0625rem;
+    line-height: 1.75rem;
   }
 }
 @utility text-body {

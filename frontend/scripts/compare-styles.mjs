@@ -1,22 +1,20 @@
 #!/usr/bin/env node
-// 기존 화면 계산 스타일 비교 (docs/renewal/스타일_전환_검토.md 4.2, 5.1)
+// 화면 계산 스타일 비교 (R9 #41에서 기존 화면용 도구를 모든 화면용으로 바꿨다)
 //
-// 기존 CSS, legacy-reset.css, src/tailwind.css를 바꿀 때 기존 화면이 그대로인지 확인한다.
+// 진입 CSS(src/tailwind.css)·공통 부품처럼 여러 화면에 걸친 것을 바꿀 때 모든 화면이 그대로인지 확인한다.
 // 1. 바꾸기 전 상태에서 수집:
-//      LEGACY_STYLE_OUT=node_modules/.cache/legacy-styles/before.json npx playwright test e2e/legacy-style-snapshot.spec.ts
+//      STYLE_OUT=node_modules/.cache/styles/before.json npx playwright test e2e/style-snapshot.spec.ts
 // 2. 바꾼 뒤 수집:
-//      LEGACY_STYLE_OUT=node_modules/.cache/legacy-styles/after.json npx playwright test e2e/legacy-style-snapshot.spec.ts
+//      STYLE_OUT=node_modules/.cache/styles/after.json npx playwright test e2e/style-snapshot.spec.ts
 // 3. 비교:
-//      node scripts/compare-legacy-styles.mjs node_modules/.cache/legacy-styles/before.json node_modules/.cache/legacy-styles/after.json
+//      node scripts/compare-styles.mjs node_modules/.cache/styles/before.json node_modules/.cache/styles/after.json
 //
-// 화면 11개 × 크기 3개(390×844·820×1180·1180×820)의 모든 요소(::before·::after 포함) 계산 스타일을 비교한다.
-// 크기는 리뉴얼 완료 기준 화면 크기와 같다(docs/renewal/README.md R-10).
-// 리뉴얼 영역(data-ui="renewal") 안의 요소는 수집하지 않는다.
+// 화면 11개 × 크기 4개(390×844·820×1180·1180×820·844×390)의 모든 요소(::before·::after 포함) 계산 스타일을 비교한다.
 import { readFileSync } from 'node:fs';
 
 const [beforePath, afterPath] = process.argv.slice(2);
 if (!beforePath || !afterPath) {
-  console.error('사용법: node scripts/compare-legacy-styles.mjs <before.json> <after.json>');
+  console.error('사용법: node scripts/compare-styles.mjs <before.json> <after.json>');
   process.exit(2);
 }
 const before = JSON.parse(readFileSync(beforePath, 'utf8'));
