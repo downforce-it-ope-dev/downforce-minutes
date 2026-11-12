@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useParams } from 'react-router';
-import { Copy, ExternalLink, RefreshCw, ScrollText } from 'lucide-react';
+import { Copy, RefreshCw, ScrollText } from 'lucide-react';
 import { getMeetingDetail, MeetingDetailApiError, type MeetingDetail } from '../meetingDetailApi';
 import type { ReviewSpeaker } from '../reviewApi';
 import { speakerColorAt } from '../review/speakerColors';
@@ -9,25 +9,24 @@ import { TranscriptList } from '../review/TranscriptList';
 import {
   AppShell,
   Button,
-  ButtonAnchor,
   ButtonLink,
   Card,
   Dialog,
-  Icon,
   IconButton,
   TABLET_QUERY,
   useMediaQuery,
   useToast,
 } from '../ui';
 import { formatMeetingAtLong } from './meetingFormat';
-import { minutesText, ownerName, safeDocumentUrl, visibleSections, type SectionKey } from './meetingView';
+import { minutesText, ownerName, visibleSections, type SectionKey } from './meetingView';
 
 /*
  * MIN-02 회의록 상세 (GitHub #33, docs/renewal/화면기획/MIN-02_회의록상세.md). 읽기 전용.
  * - 섹션 이름·순서는 검토 화면(MTG-04)과 같다: 회의 요약 / 논의 내용 / 결정 사항 / 후속 조치 / 실행 항목. 내용 없는 섹션은 숨긴다
  * - 사용자 결정(2026-11-11, 재구성): 좌우 2단 없이 위아래 한 단. 머리 아래에 섹션마다 카드를 쌓고 본문 폭을 그대로 쓴다.
  *   목차(섹션 칩·목차 탭)와 화면 안 전사 원문 패널은 두지 않는다. 전사 원문은 상단 바 버튼 → 대화상자(휴대폰 하단 시트)
- * - 상단 바: 목록으로(조건 유지), 원본 문서(URL 있을 때만, 새 탭), 복사(토스트). 휴대폰은 아이콘 버튼
+ * - 상단 바: 목록으로(조건 유지), 전사 원문, 복사(토스트). 휴대폰은 아이콘 버튼.
+ *   원본 문서(노션 등) 열기는 두지 않는다: 문서 서비스는 연결한 사람 계정이라 다른 사람은 열 수 없다(사용자 결정 2026-11-12)
  */
 
 type Load = { status: 'loading' } | { status: 'not-found' } | { status: 'error' } | { status: 'ready'; detail: MeetingDetail };
@@ -59,7 +58,6 @@ function MeetingDetailScreen({ documentId }: { documentId: string }) {
   }, [documentId, attempt]);
 
   const detail = load.status === 'ready' ? load.detail : null;
-  const documentUrl = detail ? safeDocumentUrl(detail.documentUrl) : null;
 
   return (
     <AppShell
@@ -70,7 +68,6 @@ function MeetingDetailScreen({ documentId }: { documentId: string }) {
         detail && (
           <DetailActions
             detail={detail}
-            documentUrl={documentUrl}
             compact={!tablet}
             onTranscript={() => setTranscriptOpen(true)}
           />
@@ -116,12 +113,10 @@ function MeetingDetailScreen({ documentId }: { documentId: string }) {
 
 function DetailActions({
   detail,
-  documentUrl,
   compact,
   onTranscript,
 }: {
   detail: MeetingDetail;
-  documentUrl: string | null;
   compact: boolean;
   onTranscript: () => void;
 }) {
@@ -143,17 +138,6 @@ function DetailActions({
     return (
       <>
         <IconButton icon={ScrollText} label="전사 원문" variant="surface" onClick={onTranscript} />
-        {documentUrl && (
-          <a
-            href={documentUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="원본 문서"
-            className="inline-flex size-12 items-center justify-center rounded-full border border-border bg-bg text-text shadow-card active:bg-bg-subtle"
-          >
-            <Icon icon={ExternalLink} size="lg" />
-          </a>
-        )}
         <IconButton icon={Copy} label="복사" variant="surface" onClick={copy} />
       </>
     );
@@ -163,11 +147,6 @@ function DetailActions({
       <Button variant="secondary" shape="pill" icon={ScrollText} onClick={onTranscript}>
         전사 원문
       </Button>
-      {documentUrl && (
-        <ButtonAnchor href={documentUrl} newTab variant="secondary" shape="pill" icon={ExternalLink}>
-          원본 문서
-        </ButtonAnchor>
-      )}
       <Button variant="secondary" shape="pill" icon={Copy} onClick={copy}>
         복사
       </Button>

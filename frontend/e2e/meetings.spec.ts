@@ -98,9 +98,10 @@ test('MIN-01: 위쪽 넓은 검색창 + 원형 버튼, 그 아래 전체 폭 목
   const row = list.getByRole('link').first();
   expect(Math.round((await row.boundingBox())!.height)).toBe(60);
   const title = row.getByText(LONG_TITLE);
-  const date = row.getByText('2026.10.28 10:00', { exact: true }).last();
+  const date = row.getByText('2026.10.28 10:00', { exact: true }).first();
   expect(Math.abs((await date.boundingBox())!.y - (await title.boundingBox())!.y)).toBeLessThanOrEqual(4);
-  expect((await date.boundingBox())!.x).toBeGreaterThan((await title.boundingBox())!.x);
+  // 일시가 맨 앞, 회의명이 그 다음(2026-11-12)
+  expect((await title.boundingBox())!.x).toBeGreaterThan((await date.boundingBox())!.x);
 
   // 새 회의: 화면 아래 가운데 고정(상단 바에는 없다)
   const create = (await page.getByRole('button', { name: '새 회의' }).boundingBox())!;
@@ -165,7 +166,8 @@ test('MIN-02 태블릿 가로: 위아래 한 단(섹션 카드를 쌓음), 목�
   await page.getByRole('button', { name: '전사 원문' }).click();
   await expect(page.getByRole('dialog', { name: '전사 원문' }).getByRole('listitem')).toHaveCount(20);
   await page.keyboard.press('Escape');
-  await expect(page.getByRole('link', { name: '원본 문서' })).toHaveAttribute('target', '_blank');
+  // 원본 문서(노션 등) 열기는 두지 않는다(2026-11-12)
+  await expect(page.getByRole('link', { name: '원본 문서' })).toHaveCount(0);
 });
 
 test('MIN-02 휴대폰: 전사 원문은 하단 시트', async ({ page }) => {

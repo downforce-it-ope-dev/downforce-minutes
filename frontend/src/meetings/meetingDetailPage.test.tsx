@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { MeetingDetail } from '../meetingDetailApi';
 import { withHealthyBackend } from '../testUtils/withHealthyBackend';
 import { MeetingDetailRoute } from './MeetingDetailPage';
-import { minutesText, safeDocumentUrl } from './meetingView';
+import { minutesText } from './meetingView';
 
 const DETAIL: MeetingDetail = {
   documentId: 'doc/a',
@@ -71,20 +71,12 @@ describe('회의록 상세 (MIN-02)', () => {
     expect(screen.queryByRole('textbox')).toBeNull();
   });
 
-  it('원본 문서는 새 탭으로 열고, http(s)가 아니면 숨긴다', async () => {
+  it('원본 문서(노션 등) 열기는 두지 않는다: 문서 서비스는 연결한 사람 계정이라 다른 사람은 열 수 없다', async () => {
     mockDetail(() => json({ data: DETAIL }));
-    renderDetail();
-    const link = await screen.findByRole('link', { name: '원본 문서' });
-    expect(link.getAttribute('href')).toBe('https://notion.example/page');
-    expect(link.getAttribute('target')).toBe('_blank');
-    expect(link.getAttribute('rel')).toContain('noopener');
-    cleanup();
-
-    mockDetail(() => json({ data: { ...DETAIL, documentUrl: 'javascript:alert(1)' } }));
     renderDetail();
     await screen.findByRole('heading', { level: 2, name: '주간 회의' });
     expect(screen.queryByRole('link', { name: '원본 문서' })).toBeNull();
-    expect(safeDocumentUrl(null)).toBeNull();
+    expect(screen.queryByRole('link', { name: /notion/i })).toBeNull();
   });
 
   it('전사 원문은 시간 순으로 참석자 이름과 함께 보이고 Esc로 닫는다', async () => {
