@@ -4,7 +4,7 @@ import { CalendarDays, ChevronRight, Clock, Mic, RefreshCw, Repeat, Share2, Spar
 import { AccountButton, SidebarAccount } from '../auth/AccountMenu';
 import { getSetupSnapshot, type DocumentProvider, type SetupSnapshot } from '../documentSetupApi';
 import { listProcessingFailures, type MeetingSummary } from '../meetingListApi';
-import { listMyMeetings } from '../meetings/myMeetings';
+import { listMyMeetings, peekMyMeetings } from '../meetings/myMeetings';
 import { restoreEmailSettingsOnce } from '../emailSettingsApi';
 import {
   AppShell,
@@ -201,14 +201,19 @@ function useSample() {
 /** 최근 회의 3건 (HOME-01-F02·F03). 회의록 목록과 같이 내가 참석자인 회의만 */
 function RecentMeetings() {
   const sample = useSample();
-  const [meetings, setMeetings] = useState<Load<MeetingSummary[]>>(sample ? { status: 'ready', data: SAMPLE_MEETINGS } : { status: 'loading' });
+  // 이미 받아 둔 목록이 있으면 바로 보이고 뒤에서 새로 받는다(로딩 개선 2026-11-12)
+  const [meetings, setMeetings] = useState<Load<MeetingSummary[]>>(() => {
+    if (sample) return { status: 'ready', data: SAMPLE_MEETINGS };
+    const cached = peekMyMeetings(3);
+    return cached ? { status: 'ready', data: cached } : { status: 'loading' };
+  });
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     if (sample) return;
     let live = true;
     listMyMeetings(3)
       .then((items) => live && setMeetings({ status: 'ready', data: items }))
-      .catch(() => live && setMeetings({ status: 'error' }));
+      .catch(() => live && setMeetings((current) => (current.status === 'ready' ? current : { status: 'error' })));
     return () => {
       live = false;
     };

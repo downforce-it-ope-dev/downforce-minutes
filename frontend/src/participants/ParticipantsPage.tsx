@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { FileUp, RefreshCw, Search, Trash2, UserPlus, X } from 'lucide-react';
 import { AccountButton, SidebarAccount } from '../auth/AccountMenu';
-import { listParticipants, type Participant } from '../participantsApi';
+import { listParticipants, peekParticipants, rememberParticipants, type Participant } from '../participantsApi';
 import { AppShell, BottomDock, Button, Card, IconButton, SelectField, TextField, useToast } from '../ui';
 import { CsvImportDialog } from './CsvImportDialog';
 import { DeleteParticipantDialog, ParticipantFormDialog, type ParticipantFormTarget } from './ParticipantDialogs';
@@ -44,7 +44,11 @@ export function ParticipantsPage() {
 
 function ParticipantsBody({ target, setTarget }: { target: ParticipantFormTarget | null; setTarget: (target: ParticipantFormTarget | null) => void }) {
   const toast = useToast();
-  const [load, setLoad] = useState<Load>({ status: 'loading' });
+  // 이미 받아 둔 목록이 있으면 바로 보이고 뒤에서 새로 받는다(로딩 개선 2026-11-12)
+  const [load, setLoad] = useState<Load>(() => {
+    const cached = peekParticipants();
+    return cached ? { status: 'ready', data: cached } : { status: 'loading' };
+  });
   const [attempt, setAttempt] = useState(0);
   const [query, setQuery] = useState('');
   const [team, setTeam] = useState('');
@@ -71,7 +75,10 @@ function ParticipantsBody({ target, setTarget }: { target: ParticipantFormTarget
   const teams = teamEnabled ? teamNames(roster) : [];
   const visible = sortParticipants(filterParticipants(roster, query, teamEnabled ? team : ''));
 
-  const replace = (next: Participant[]) => setLoad({ status: 'ready', data: next });
+  const replace = (next: Participant[]) => {
+    rememberParticipants(next);
+    setLoad({ status: 'ready', data: next });
+  };
 
   return (
     <div className="flex flex-col gap-4 tablet:gap-6">
