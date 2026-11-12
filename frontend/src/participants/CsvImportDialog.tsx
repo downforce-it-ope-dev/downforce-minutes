@@ -1,4 +1,4 @@
-import { useRef, useState, type ChangeEvent } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type DragEvent } from 'react';
 import { CircleAlert, CircleCheck, Download, FileUp, RotateCcw, Square, Upload } from 'lucide-react';
 import { NavigationLeaveGuard } from '../components/NavigationLeaveGuard';
 import { createParticipant, listParticipants, ParticipantApiError, updateParticipant } from '../participantsApi';
@@ -10,7 +10,7 @@ import { countByStatus, decodeCsv, parseCsv, planImport, readPeople, STATUS_LABE
  * - 팀 없이 메일계정·이름만(사용자 결정 2026-11-12). 행 수·파일 크기 제한 없음. 같은 메일계정은 이름을 갱신
  * - 등록(API-004)·이름 갱신(API-005)을 한 건씩 차례로 부른다. 등록은 행마다 멱등 키(작업 + 메일계정)를 다시 시도에도 그대로 쓴다
  * - 이후 행도 모두 실패할 오류(문서 변경 중·연결 버전 충돌)는 바로 멈춘다. 등록 중에는 닫을 수 없고 화면 이탈을 경고한다
- * - 설명 문구 없이 버튼·값만 둔다(S-13). 파일 오류는 대화상자 안에 보인다
+ * - 파일은 영역을 눌러 고르거나 끌어다 놓는다(끌어다 놓으면 영역이 선택 색). 설명 문구 없이 버튼·값만 둔다(S-13). 파일 오류는 대화상자 안에 보인다
  */
 
 type Outcome = 'done' | 'failed' | 'stopped';
@@ -59,10 +59,43 @@ export function CsvImportDialog({ open, onClose }: { open: boolean; onClose: (ch
     onClose({ created, renamed });
   };
 
-  async function pickFile(event: ChangeEvent<HTMLInputElement>) {
+  const [dragging, setDragging] = useState(false);
+
+  // 대화상자가 열려 있는 동안 영역 밖(배경)에 파일을 놓아도 브라우저가 그 파일을 열어 화면을 떠나지 않게 한다
+  useEffect(() => {
+    if (!open) return undefined;
+    const block = (event: globalThis.DragEvent) => {
+      if (event.dataTransfer?.types.includes('Files')) event.preventDefault();
+    };
+    window.addEventListener('dragover', block);
+    window.addEventListener('drop', block);
+    return () => {
+      window.removeEventListener('dragover', block);
+      window.removeEventListener('drop', block);
+    };
+  }, [open]);
+
+  function pickFile(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = '';
-    if (!file) return;
+    if (file) void readFile(file);
+  }
+
+  // 끌어다 놓기(보조 수단). 영역 밖에 놓아도 브라우저가 파일을 열지 않게 대화상자 안에서는 기본 동작을 막는다
+  function allowDrop(event: DragEvent<HTMLElement>) {
+    if (!event.dataTransfer.types.includes('Files')) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = reading ? 'none' : 'copy';
+  }
+  function drop(event: DragEvent<HTMLElement>) {
+    if (!event.dataTransfer.types.includes('Files')) return;
+    event.preventDefault();
+    setDragging(false);
+    const file = event.dataTransfer.files[0];
+    if (file && !reading) void readFile(file);
+  }
+
+  async function readFile(file: File) {
     if (!/\.csv$/i.test(file.name)) {
       setStep({ name: 'pick', error: 'CSV 파일만 올릴 수 있습니다. 엑셀 파일은 CSV로 저장해 주세요.' });
       return;
@@ -170,11 +203,19 @@ export function CsvImportDialog({ open, onClose }: { open: boolean; onClose: (ch
     <Dialog open={open} onOpenChange={(next) => !next && close()} title="CSV로 일괄 등록" size="form" dismissible={!running} footer={footer}>
       <NavigationLeaveGuard active={running} />
       {step.name === 'pick' && (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4" onDragOver={allowDrop} onDrop={drop}>
           <label
+            data-testid="csv-drop-zone"
+            onDragEnter={(event) => {
+              if (event.dataTransfer.types.includes('Files')) setDragging(true);
+            }}
+            onDragLeave={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false);
+            }}
             className={cn(
-              'flex h-40 cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-border-input bg-bg-subtle text-label text-text',
+              'flex h-40 cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed text-label text-text',
               'focus-within:outline-2 focus-within:outline-focus active:bg-selected',
+              dragging ? 'border-primary bg-selected' : 'border-border-input bg-bg-subtle',
               reading && 'cursor-wait',
             )}
           >

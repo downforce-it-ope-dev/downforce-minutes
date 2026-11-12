@@ -141,3 +141,23 @@ test('양식 파일은 UTF-8 BOM CSV(메일계정,이름)다', async ({ request 
   expect([...body.subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
   expect(body.subarray(3).toString('utf8').split(/\r?\n/)[0]).toBe('메일계정,이름');
 });
+
+test('PTC-01-P03: 파일을 끌어다 놓아도 읽는다(영역이 선택 색으로 바뀐다)', async ({ page }) => {
+  await mock(page);
+  await page.setViewportSize({ width: 1180, height: 820 });
+  await page.goto('/participants');
+  await page.getByRole('button', { name: 'CSV로 일괄 등록' }).click();
+  const zone = page.getByTestId('csv-drop-zone');
+  const transfer = await page.evaluateHandle((bytes) => {
+    const data = new DataTransfer();
+    data.items.add(new File([new Uint8Array(bytes)], 'people.csv', { type: 'text/csv' }));
+    return data;
+  }, [...CP949]);
+  await zone.dispatchEvent('dragenter', { dataTransfer: transfer });
+  await expect(zone).toHaveClass(/border-primary/);
+  await zone.dispatchEvent('dragover', { dataTransfer: transfer });
+  await zone.dispatchEvent('drop', { dataTransfer: transfer });
+  const rows = page.getByRole('dialog', { name: 'CSV로 일괄 등록' }).getByRole('list', { name: 'CSV 행' });
+  await expect(rows.getByRole('listitem')).toHaveCount(1);
+  await expect(rows).toContainText('홍길동');
+});
