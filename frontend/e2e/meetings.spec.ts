@@ -165,7 +165,8 @@ test('MIN-02 태블릿 가로: 위아래 한 단(섹션 카드를 쌓음), 목�
   await page.getByRole('button', { name: '전사 원문' }).click();
   await expect(page.getByRole('dialog', { name: '전사 원문' }).getByRole('listitem')).toHaveCount(20);
   await page.keyboard.press('Escape');
-  await expect(page.getByRole('link', { name: '원본 문서' })).toHaveAttribute('target', '_blank');
+  // 원본 문서(노션 등) 열기는 두지 않는다(2026-11-12)
+  await expect(page.getByRole('link', { name: '원본 문서' })).toHaveCount(0);
 });
 
 test('MIN-02 휴대폰: 전사 원문은 하단 시트', async ({ page }) => {

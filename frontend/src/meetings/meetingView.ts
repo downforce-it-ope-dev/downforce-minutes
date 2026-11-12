@@ -2,7 +2,7 @@ import type { MeetingDetail } from '../meetingDetailApi';
 import type { MeetingSummary } from '../meetingListApi';
 import { formatMeetingAtLong } from './meetingFormat';
 
-/** 회의록 목록·상세의 화면 밖 계산 (MIN-01 정렬, MIN-02 섹션·복사 텍스트·원본 문서 주소) */
+/** 회의록 목록·상세의 화면 밖 계산 (MIN-01 정렬, MIN-02 섹션·복사 텍스트) */
 
 export type SectionKey = 'summary' | 'discussionPoints' | 'decisions' | 'followUps' | 'actionItems';
 
@@ -18,17 +18,6 @@ export const SECTIONS: ReadonlyArray<{ key: SectionKey; title: string }> = [
 /** 내용이 있는 섹션만. 요약은 비어도 "요약이 없습니다."로 둔다 */
 export function visibleSections(detail: MeetingDetail) {
   return SECTIONS.filter(({ key }) => key === 'summary' || detail.minutes[key].length > 0);
-}
-
-/** http(s) 주소만 연다 */
-export function safeDocumentUrl(value: string | null): string | null {
-  if (!value) return null;
-  try {
-    const url = new URL(value);
-    return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : null;
-  } catch {
-    return null;
-  }
 }
 
 export function ownerName(detail: MeetingDetail, id: string | null) {
