@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { CircleAlert, CircleCheck, Info, type LucideIcon } from 'lucide-react';
 import { cn } from './cn';
 import { Icon } from './Icon';
-import { RENEWAL_ROOT_CLASS } from './renewalRoot';
+import { ROOT_TEXT_CLASS } from './rootText';
 import { ToastContext, type ToastOptions, type ToastTone } from './toastContext';
 
 /**
@@ -35,7 +35,7 @@ const PLACEMENT: Record<ToastPlacement, string> = {
 /**
  * 토스트 (CMN-01-F08). 한 번에 하나만 보이고 새 토스트가 이전 것을 바꾼다.
  * 알림 영역(aria-live)은 항상 그려 두어 화면 읽기 프로그램이 바뀐 문구를 읽게 한다.
- * body 바로 아래 Portal이므로 data-ui="renewal"과 루트 클래스를 붙인다(CLAUDE.md).
+ * body 바로 아래 Portal이므로 글자 기본값(ROOT_TEXT_CLASS)을 붙인다.
  */
 export function ToastProvider({ placement = 'base', children }: { placement?: ToastPlacement; children: ReactNode }) {
   const [toast, setToast] = useState<ToastState | null>(null);
@@ -60,9 +60,8 @@ export function ToastProvider({ placement = 'base', children }: { placement?: To
       {children}
       {createPortal(
         <div
-          data-ui="renewal"
           className={cn(
-            RENEWAL_ROOT_CLASS,
+            ROOT_TEXT_CLASS,
             'pointer-events-none fixed inset-x-0 z-50 flex justify-center px-4 pb-safe',
             PLACEMENT[placement],
           )}

@@ -3,13 +3,13 @@ import { useLocation } from 'react-router';
 import * as RadixDialog from '@radix-ui/react-dialog';
 import { RefreshCw, TriangleAlert, X } from 'lucide-react';
 import { dismissApiRecovery, getApiRecoveryState, retryApiRecovery, subscribeApiRecovery } from '../apiRecovery';
-import { Button, cn, Icon, IconButton, RENEWAL_ROOT_CLASS, ServerRecoveryIllustration } from '../ui';
+import { Button, cn, Icon, IconButton, ROOT_TEXT_CLASS, ServerRecoveryIllustration } from '../ui';
 
 const RECORDING_PATH = /^\/meetings\/[^/]+\/recording$/;
 
 /**
  * 서버 연결 복구 (CMN-02, GitHub #18). 감지·재확인 로직은 기존 apiRecovery를 그대로 쓰고 표시만 바꾼다.
- * 기존 화면 위에도 뜨므로 Portal 가장 바깥에 data-ui="renewal"과 루트 클래스를 붙인다.
+ * body 바로 아래 Portal이므로 가장 바깥에 글자 기본값(ROOT_TEXT_CLASS)을 붙인다.
  * - 화면 전체를 덮는다. 닫기·Esc·화면으로 돌아가기는 오버레이만 닫고 진행 중인 화면은 유지한다
  * - 녹음 중에는 녹음 화면을 가리지 않도록 위쪽 배너로 낮춰 보인다(녹음은 브라우저에 먼저 저장된다)
  * - 화면에는 제목·일러스트·버튼만 둔다(S-13)
@@ -31,15 +31,14 @@ function RecoveryDialog({ ready }: { ready: boolean }) {
     <RadixDialog.Root open onOpenChange={(open) => !open && dismissApiRecovery()}>
       <RadixDialog.Portal>
         {/* Overlay가 배경 스크롤을 잠근다 */}
-        <RadixDialog.Overlay data-ui="renewal" className={cn(RENEWAL_ROOT_CLASS, 'fixed inset-0 z-50 overflow-y-auto bg-bg')}>
+        <RadixDialog.Overlay className={cn(ROOT_TEXT_CLASS, 'fixed inset-0 z-50 overflow-y-auto bg-bg')}>
           <RadixDialog.Content
-            data-ui="renewal"
             aria-describedby={undefined}
             onOpenAutoFocus={(event) => {
               event.preventDefault();
               closeRef.current?.focus();
             }}
-            className={cn(RENEWAL_ROOT_CLASS, 'flex min-h-full flex-col pt-safe pb-safe outline-none')}
+            className={cn(ROOT_TEXT_CLASS, 'flex min-h-full flex-col pt-safe pb-safe outline-none')}
           >
             <div className="flex justify-end px-2 pt-2">
               <RadixDialog.Close asChild>
@@ -76,7 +75,7 @@ function RecoveryDialog({ ready }: { ready: boolean }) {
 /** 녹음 중 연결 끊김: 녹음 화면 위쪽 배너 (CMN-02 5장) */
 function RecordingBanner({ ready }: { ready: boolean }) {
   return (
-    <div data-ui="renewal" className={cn(RENEWAL_ROOT_CLASS, 'fixed inset-x-0 top-0 z-50 px-4 pt-safe')}>
+    <div className={cn(ROOT_TEXT_CLASS, 'fixed inset-x-0 top-0 z-50 px-4 pt-safe')}>
       <div
         role="status"
         className={cn(

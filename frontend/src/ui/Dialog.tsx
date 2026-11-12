@@ -3,7 +3,7 @@ import * as RadixDialog from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
 import { cn } from './cn';
 import { IconButton } from './IconButton';
-import { RENEWAL_ROOT_CLASS } from './renewalRoot';
+import { ROOT_TEXT_CLASS } from './rootText';
 
 export interface DialogProps {
   open: boolean;
@@ -30,7 +30,7 @@ export interface DialogProps {
  * - 휴대폰(600 미만): 화면 아래에 붙는 하단 시트, 폭 가득, 위 64px을 남겨 최대 높이 약 90%
  * - 태블릿(600 이상): 가운데 대화상자, 최대 폭 560(form은 640)
  * - Radix Dialog: 초점 가두기, Esc 닫기, 닫으면 연 요소로 초점 복귀, 뒤 화면 읽기 차단
- * - Portal로 body 바로 아래에 그려지므로 가장 바깥 요소에 data-ui="renewal"과 루트 클래스를 붙인다(CLAUDE.md)
+ * - Portal로 body 바로 아래에 그려지므로 가장 바깥 요소에 글자 기본값(ROOT_TEXT_CLASS)을 붙인다
  */
 export function Dialog({
   open,
@@ -55,20 +55,18 @@ export function Dialog({
     <RadixDialog.Root open={open} onOpenChange={handleOpenChange}>
       <RadixDialog.Portal>
         <RadixDialog.Overlay
-          data-ui="renewal"
           className={cn(
-            RENEWAL_ROOT_CLASS,
+            ROOT_TEXT_CLASS,
             'fixed inset-0 z-50 flex items-end justify-center bg-neutral-900/40 pt-16',
             'tablet:items-center tablet:p-6',
           )}
         >
           <RadixDialog.Content
-            data-ui="renewal"
             onEscapeKeyDown={block}
             onPointerDownOutside={block}
             onInteractOutside={block}
             className={cn(
-              RENEWAL_ROOT_CLASS,
+              ROOT_TEXT_CLASS,
               'flex max-h-full w-full flex-col bg-bg shadow-overlay',
               'rounded-t-xl tablet:rounded-xl',
               size === 'form' ? 'tablet:max-w-form' : 'tablet:max-w-dialog',

@@ -3,16 +3,15 @@
  * 근거: docs/renewal/스타일_전환_검토.md 7.4(색), 8(크기·글자·컴포넌트),
  *       docs/renewal/시안_적용_기준.md (시안 반영: 색 역할·바탕·그림자·메뉴 폭, S-09~S-12)
  *
- * layer 순서: theme → base(Tailwind 초기화) → legacy(기존 CSS) → components → utilities
- * - 기존 CSS는 legacy layer에 가두어 Tailwind 유틸리티보다 항상 낮은 우선순위를 갖는다.
+ * layer 순서: theme → base(Tailwind 초기화) → components → utilities
+ * - 기존 CSS와 legacy layer는 모든 화면을 리뉴얼한 뒤 지웠다(R9 #41).
  * - 이 파일에는 디자인 토큰(@theme), 토큰 수준 유틸리티(@utility), 사용자 조건(@custom-variant)만 둔다.
  *   화면·컴포넌트 전용 스타일은 만들지 않는다(CLAUDE.md).
  */
-@layer theme, base, legacy, components, utilities;
+@layer theme, base, components, utilities;
 
 @import 'tailwindcss';
 @import 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css';
-@import './styles/index.css' layer(legacy);
 
 /* 높이가 낮은 화면(휴대폰 가로, 화면 키보드 열림) */
 @custom-variant short (@media (max-height: 560px));
@@ -29,24 +28,39 @@
 }
 
 /*
- * 리뉴얼 영역 기본 규칙 (스타일 검토 5.3 결정, GitHub #5). CLAUDE.md "토큰만" 규칙의 예외 2가지.
+ * 기본 규칙 (스타일 검토 5.3 결정 #5, R9 #41에서 화면 전체로 넓혔다). CLAUDE.md "토큰만" 규칙의 예외.
  * - 키보드 포커스 표시: 모든 요소에 같은 표시를 빠짐없이 적용한다. 컴포넌트는 필요할 때만 유틸리티로 덮어쓴다.
- * - 스크롤바 숨김: 기존 화면과 같게 숨긴다.
- * base layer라 컴포넌트의 Tailwind 유틸리티가 항상 우선한다. 리뉴얼 영역 밖(기존 화면)에는 적용되지 않는다.
+ * - 스크롤바 숨김: 모든 요소.
+ * - html 글자 렌더링·body 크기: 기존 base.css(:root)·legacy-reset.css가 html에 주어 모든 글자에 상속되던 값을 그대로 옮겼다.
+ *   글꼴·색은 각 화면 루트(AppCanvas 등)가 정하므로 옮기지 않았다.
+ * base layer라 컴포넌트의 Tailwind 유틸리티가 항상 우선한다.
  */
 @layer base {
-  [data-ui='renewal']:focus-visible,
-  [data-ui='renewal'] :focus-visible {
+  html {
+    /* 화면을 끝까지 당겼을 때 보이는 바탕(iPad 바운스). 바탕 그라데이션 첫 색과 맞춘다 */
+    background-color: var(--color-canvas-start);
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    tab-size: 8;
+    text-size-adjust: auto;
+    -webkit-text-size-adjust: auto;
+    -webkit-tap-highlight-color: rgb(0 0 0 / 0.18);
+  }
+  :focus-visible {
     outline: 2px solid var(--color-focus);
     outline-offset: 2px;
   }
-  [data-ui='renewal'],
-  [data-ui='renewal'] * {
+  * {
     scrollbar-width: none;
   }
-  [data-ui='renewal']::-webkit-scrollbar,
-  [data-ui='renewal'] *::-webkit-scrollbar {
+  *::-webkit-scrollbar {
     display: none;
+  }
+  body {
+    min-width: 320px;
+    min-height: 100vh;
   }
 }
 
