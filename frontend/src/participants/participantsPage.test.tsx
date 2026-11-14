@@ -3,7 +3,7 @@ import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Participant } from '../participantsApi';
 import { withHealthyBackend } from '../testUtils/withHealthyBackend';
-import { filterParticipants, NO_DEPARTMENT, sortParticipants, validateParticipant } from './participantRules';
+import { filterParticipants, matchesParticipant, NO_DEPARTMENT, sortParticipants, validateParticipant } from './participantRules';
 import { ParticipantsPage } from './ParticipantsPage';
 
 vi.mock('../auth/authApi', () => ({ logout: vi.fn().mockResolvedValue(undefined) }));
@@ -186,6 +186,25 @@ describe('participantRules', () => {
     expect(validateParticipant({ name: 'a', email: 'A@MIINIT.COM' })).toEqual({});
     expect(validateParticipant({ name: 'a', email: 'a@gmail.com' }).email).toBe('회사 메일(@miinit.com)만 등록할 수 있습니다.');
     expect(validateParticipant({ name: 'a', email: 'a@gmail.com' }, { checkDomain: false })).toEqual({});
+  });
+
+  it('검색은 부분 일치: 대소문자·전각·띄어쓰기·보이지 않는 글자를 보지 않고, 띄어 쓴 낱말은 모두 맞아야 한다', () => {
+    const person = (department: string) => ({ name: '홍길동', email: 'hong@miinit.com', department });
+    for (const department of ['IT개발팀', 'ＩＴ개발팀', 'I\u200bT개발팀', '\ufeffIT 개발팀']) {
+      expect(matchesParticipant(person(department), 'it'), department).toBe(true);
+      expect(matchesParticipant(person(department), 'IT개발'), department).toBe(true);
+      expect(matchesParticipant(person(department), '개발팀'), department).toBe(true);
+    }
+    expect(matchesParticipant(person('경영 지원팀'), '경영지원')).toBe(true);
+    expect(matchesParticipant(person('IT개발팀'), 'it 홍')).toBe(true);
+    expect(matchesParticipant(person('IT개발팀'), 'it 김')).toBe(false);
+    expect(matchesParticipant(person('IT개발팀'), '  ')).toBe(true);
+    expect(matchesParticipant({ name: '홍길동', email: 'hong@miinit.com' }, 'HONG@')).toBe(true);
+    // 회사 도메인(@miinit.com)은 비교하지 않는다: "it"가 모든 메일에 맞던 문제
+    expect(matchesParticipant(person('운영팀'), 'it')).toBe(false);
+    expect(matchesParticipant(person('운영팀'), 'miinit')).toBe(false);
+    expect(matchesParticipant(person('운영팀'), '@miinit')).toBe(true);
+    expect(matchesParticipant({ name: '김', email: 'kit@miinit.com' }, 'it')).toBe(true);
   });
 
   it('부서 → 이름 정렬(부서 없음은 뒤), 이름·이메일·부서 검색', () => {

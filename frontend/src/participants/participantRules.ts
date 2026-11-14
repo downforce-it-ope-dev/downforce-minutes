@@ -57,12 +57,32 @@ export function departmentNames(roster: readonly Participant[]): string[] {
 
 export const NO_DEPARTMENT = '__none__';
 
+/** 비교용 글자: 유니코드 정규화(NFKC: 전각 영문 ＩＴ → IT, 분해된 한글 합침) + 소문자 + 공백·보이지 않는 글자(폭 없는 공백 등 \p{Cf}) 제거 */
+const compact = (value: string) => value.normalize('NFKC').toLowerCase().replace(/[\s\p{Cf}]+/gu, '');
+
+/**
+ * 참석자 검색어 일치 (부분 일치, 2026-11-14 사용자 요청). 참석자 관리와 새 회의 참석자 선택이 같이 쓴다.
+ * - 이름·이메일·부서 중 하나에 검색어가 들어 있으면 맞다. 대소문자·띄어쓰기는 보지 않는다("경영지원" → "경영 지원팀")
+ * - 이메일은 @ 앞부분만 본다. 모두 같은 회사 도메인(@miinit.com)이라 "it"를 넣으면 전원이 맞아 목록이 줄지 않았다(2026-11-14 사용자 보고).
+ *   검색어에 @가 있으면 이메일 전체와 비교한다
+ * - 검색어를 띄어 쓰면 낱말마다 어느 칸에든 들어 있어야 한다("ax 홍" → AX팀의 홍길동)
+ */
+export function matchesParticipant(person: Pick<Participant, 'name' | 'email' | 'department'>, query: string): boolean {
+  const terms = query.split(/\s+/).map(compact).filter(Boolean);
+  if (terms.length === 0) return true;
+  const name = compact(person.name);
+  const email = compact(person.email);
+  const localPart = email.split('@')[0];
+  const department = compact(person.department ?? '');
+  return terms.every(
+    (term) => name.includes(term) || department.includes(term) || (term.includes('@') ? email : localPart).includes(term),
+  );
+}
+
 /** 검색(이름·이메일·부서) + 부서 거르기('' 모든 부서, NO_DEPARTMENT 부서 없음) */
 export function filterParticipants(roster: readonly Participant[], query: string, department = ''): Participant[] {
-  const keyword = query.normalize('NFKC').trim().toLocaleLowerCase();
   return roster.filter((person) => {
     if (department === NO_DEPARTMENT ? Boolean(person.department?.trim()) : department && person.department?.trim() !== department) return false;
-    if (!keyword) return true;
-    return [person.name, person.email, person.department ?? ''].some((value) => value.normalize('NFKC').toLocaleLowerCase().includes(keyword));
+    return matchesParticipant(person, query);
   });
 }

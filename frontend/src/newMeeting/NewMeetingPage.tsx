@@ -161,7 +161,7 @@ function NewMeetingForm({
         </div>
       </Card>
 
-      <div className="flex flex-col gap-4 tablet:min-h-0 tablet:flex-1 tablet:flex-row tablet:gap-0">
+      <div className="flex flex-col gap-4 tablet:min-h-0 tablet:min-w-0 tablet:flex-1 tablet:flex-row tablet:gap-0">
         <ParticipantPicker
           participants={form.roster}
           selectedIds={form.participantIds}
