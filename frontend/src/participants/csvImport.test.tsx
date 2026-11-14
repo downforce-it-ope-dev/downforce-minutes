@@ -20,14 +20,16 @@ describe('CSV 읽기 (PTC-01-P03)', () => {
     expect(parseCsv('a,"b,c","d\n""e"""\r\nf,g\nh')).toEqual([['a', 'b,c', 'd\n"e"'], ['f', 'g'], ['h']]);
   });
 
-  it('머리글은 별칭·순서·대소문자·BOM과 관계없이 찾고, 팀 열은 무시하며 빈 행은 건너뛴다', () => {
+  it('머리글은 별칭·순서·대소문자·BOM과 관계없이 찾고(부서 열은 선택, 팀도 부서 별칭), 빈 행은 건너뛴다', () => {
     expect(readPeople(parseCsv('﻿팀,Name, EMAIL \nAX팀,홍길동,Hong@Miinit.com\n,,\n,김철수,kim@miinit.com'))).toEqual({
       ok: true,
       people: [
-        { line: 2, name: '홍길동', email: 'hong@miinit.com' },
-        { line: 4, name: '김철수', email: 'kim@miinit.com' },
+        { line: 2, name: '홍길동', email: 'hong@miinit.com', department: 'AX팀' },
+        { line: 4, name: '김철수', email: 'kim@miinit.com', department: '' },
       ],
     });
+    // 부서 열이 없는 파일은 department 자체가 없다
+    expect(readPeople(parseCsv('메일계정,이름\nhong@miinit.com,홍길동'))).toEqual({ ok: true, people: [{ line: 2, name: '홍길동', email: 'hong@miinit.com' }] });
     expect(readPeople(parseCsv('팀,성명\nA,B'))).toEqual({ ok: false, missing: ['메일계정'] });
   });
 
@@ -52,6 +54,24 @@ describe('CSV 읽기 (PTC-01-P03)', () => {
     ]);
     expect(items[2].existing?.id).toBe('b');
     expect(countByStatus(items)).toEqual({ create: 1, rename: 1, same: 1, duplicate: 1, error: 2 });
+  });
+
+  it('부서: 다르면 갱신(바뀐 값만), 빈 칸이면 기존 부서를 그대로 둔다', () => {
+    const roster: Participant[] = [
+      { id: 'a', name: '홍길동', email: 'hong@miinit.com', department: 'AX팀' },
+      { id: 'b', name: '김철수', email: 'kim@miinit.com', department: '' },
+    ];
+    const items = planImport(
+      [
+        { line: 2, name: '홍길동', email: 'hong@miinit.com', department: '' },
+        { line: 3, name: '김철수', email: 'kim@miinit.com', department: '운영팀' },
+      ],
+      roster,
+    );
+    expect(items.map(({ status, changes }) => [status, changes])).toEqual([
+      ['same', undefined],
+      ['rename', { department: '운영팀' }],
+    ]);
   });
 });
 

@@ -5,14 +5,14 @@ import { listParticipants, peekParticipants, rememberParticipants, type Particip
 import { AppShell, BottomDock, Button, Card, IconButton, SelectField, TextField, useToast } from '../ui';
 import { CsvImportDialog } from './CsvImportDialog';
 import { DeleteParticipantDialog, ParticipantFormDialog, type ParticipantFormTarget } from './ParticipantDialogs';
-import { filterParticipants, hasTeamField, NO_TEAM, sortParticipants, teamNames } from './participantRules';
+import { filterParticipants, hasDepartmentField, NO_DEPARTMENT, sortParticipants, departmentNames } from './participantRules';
 
 /*
  * PTC-01 참석자 관리 (GitHub #36, docs/renewal/화면기획/PTC-01_참석자관리.md). 경로 /participants, /settings/participants.
- * - 회의록 목록과 같은 틀: 위쪽 넓은 검색창(이름·이메일·팀) + 팀 거르기, 그 아래 전체 폭 목록, 하단 가운데 "참석자 추가"
- * - 목록 행: 아바타(이름 첫 글자) + 이름(+ 팀 배지) / 이메일. 태블릿 이상은 한 줄 가로 배치. 행을 누르면 수정, 행 끝 삭제
+ * - 회의록 목록과 같은 틀: 위쪽 넓은 검색창(이름·이메일·부서) + 부서 거르기, 그 아래 전체 폭 목록, 하단 가운데 "참석자 추가"
+ * - 목록 행: 아바타(이름 첫 글자) + 이름(+ 부서 배지) / 이메일. 태블릿 이상은 한 줄 가로 배치. 행을 누르면 수정, 행 끝 삭제
  * - 추가·수정(P01)과 삭제 확인(P02)은 대화상자(휴대폰 하단 시트). 편집 패널(2단)은 두지 않는다
- * - 팀(배지·거르기·입력)은 응답에 team이 있을 때만(Backend 팀 확장 #35 뒤) 보인다
+ * - 부서(배지·거르기·입력)는 응답에 department가 있을 때만(Backend 9611cbc 뒤) 보인다
  * - CSV 일괄 등록(P03, #37)은 검색창 옆 원형 버튼 → 대화상자
  * - 결과·오류는 토스트(S-13)
  */
@@ -51,7 +51,7 @@ function ParticipantsBody({ target, setTarget }: { target: ParticipantFormTarget
   });
   const [attempt, setAttempt] = useState(0);
   const [query, setQuery] = useState('');
-  const [team, setTeam] = useState('');
+  const [department, setDepartment] = useState('');
   const [toDelete, setToDelete] = useState<Participant | null>(null);
   const [csvOpen, setCsvOpen] = useState(false);
   const reload = useCallback(() => setAttempt((value) => value + 1), []);
@@ -71,9 +71,9 @@ function ParticipantsBody({ target, setTarget }: { target: ParticipantFormTarget
   }, [attempt, toast]);
 
   const roster = load.status === 'ready' ? load.data : [];
-  const teamEnabled = hasTeamField(roster);
-  const teams = teamEnabled ? teamNames(roster) : [];
-  const visible = sortParticipants(filterParticipants(roster, query, teamEnabled ? team : ''));
+  const departmentEnabled = hasDepartmentField(roster);
+  const departments = departmentEnabled ? departmentNames(roster) : [];
+  const visible = sortParticipants(filterParticipants(roster, query, departmentEnabled ? department : ''));
 
   const replace = (next: Participant[]) => {
     rememberParticipants(next);
@@ -89,7 +89,7 @@ function ParticipantsBody({ target, setTarget }: { target: ParticipantFormTarget
           type="search"
           shape="pill"
           icon={Search}
-          placeholder={teamEnabled ? '이름·이메일·팀' : '이름·이메일'}
+          placeholder={departmentEnabled ? '이름·이메일·부서' : '이름·이메일'}
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           className="min-w-0 flex-1"
@@ -105,15 +105,15 @@ function ParticipantsBody({ target, setTarget }: { target: ParticipantFormTarget
             />
           }
         />
-        {teamEnabled && (
-          <SelectField label="팀" hideLabel value={team} onChange={(event) => setTeam(event.target.value)} className="tablet:w-56">
-            <option value="">모든 팀</option>
-            {teams.map((item) => (
+        {departmentEnabled && (
+          <SelectField label="부서" hideLabel value={department} onChange={(event) => setDepartment(event.target.value)} className="tablet:w-56">
+            <option value="">모든 부서</option>
+            {departments.map((item) => (
               <option key={item} value={item}>
                 {item}
               </option>
             ))}
-            <option value={NO_TEAM}>팀 없음</option>
+            <option value={NO_DEPARTMENT}>부서 없음</option>
           </SelectField>
         )}
         {/* CSV 일괄 등록 (P03, #37) */}
@@ -147,14 +147,14 @@ function ParticipantsBody({ target, setTarget }: { target: ParticipantFormTarget
                   shape="pill"
                   onClick={() => {
                     setQuery('');
-                    setTeam('');
+                    setDepartment('');
                   }}
                 >
                   검색어 지우기
                 </Button>
               </Card>
             ) : (
-              <Rows people={visible} teamEnabled={teamEnabled} onEdit={(participant) => setTarget({ mode: 'edit', participant })} onDelete={setToDelete} />
+              <Rows people={visible} departmentEnabled={departmentEnabled} onEdit={(participant) => setTarget({ mode: 'edit', participant })} onDelete={setToDelete} />
             )}
           </>
         )}
@@ -162,8 +162,8 @@ function ParticipantsBody({ target, setTarget }: { target: ParticipantFormTarget
 
       <ParticipantFormDialog
         target={target}
-        teamEnabled={teamEnabled}
-        teams={teams}
+        departmentEnabled={departmentEnabled}
+        departments={departments}
         onClose={() => setTarget(null)}
         onReload={reload}
         onDelete={(participant) => {
@@ -185,7 +185,7 @@ function ParticipantsBody({ target, setTarget }: { target: ParticipantFormTarget
           const changed = new Map([...created, ...renamed].map((person) => [person.id, person]));
           replace([...roster.map((person) => changed.get(person.id) ?? person), ...created.filter((person) => !roster.some(({ id }) => id === person.id))]);
           toast({
-            message: renamed.length ? `참석자 ${created.length}명을 등록하고 ${renamed.length}명의 이름을 갱신했습니다` : `참석자 ${created.length}명을 등록했습니다`,
+            message: renamed.length ? `참석자 ${created.length}명을 등록하고 ${renamed.length}명의 정보를 갱신했습니다` : `참석자 ${created.length}명을 등록했습니다`,
             tone: 'success',
           });
         }}
@@ -208,17 +208,17 @@ function ParticipantsBody({ target, setTarget }: { target: ParticipantFormTarget
 }
 
 /**
- * 참석자 행. 휴대폰: 2줄 72(이름 + 팀 / 이메일). 태블릿 이상: 한 줄 60(이름 + 팀 | 이메일).
+ * 참석자 행. 휴대폰: 2줄 72(이름 + 부서 / 이메일). 태블릿 이상: 한 줄 60(이름 + 부서 | 이메일).
  * 행(이름 부분)을 누르면 수정, 끝의 휴지통은 삭제 확인. 두 동작 모두 항상 보인다(hover 없음)
  */
 function Rows({
   people,
-  teamEnabled,
+  departmentEnabled,
   onEdit,
   onDelete,
 }: {
   people: readonly Participant[];
-  teamEnabled: boolean;
+  departmentEnabled: boolean;
   onEdit: (participant: Participant) => void;
   onDelete: (participant: Participant) => void;
 }) {
@@ -239,8 +239,8 @@ function Rows({
               <span className="flex min-w-0 flex-1 flex-col gap-1 tablet:flex-row tablet:items-center tablet:gap-4">
                 <span className="flex min-w-0 items-center gap-2 tablet:flex-1">
                   <span className="truncate text-label text-text">{person.name}</span>
-                  {teamEnabled && person.team?.trim() && (
-                    <span className="shrink-0 rounded-sm bg-accent-soft px-2 py-0.5 text-caption text-accent-soft-text">{person.team.trim()}</span>
+                  {departmentEnabled && person.department?.trim() && (
+                    <span className="shrink-0 rounded-sm bg-accent-soft px-2 py-0.5 text-caption text-accent-soft-text">{person.department.trim()}</span>
                   )}
                 </span>
                 <span className="truncate text-caption text-text-muted tablet:w-72 tablet:shrink-0 tablet:text-body">{person.email}</span>

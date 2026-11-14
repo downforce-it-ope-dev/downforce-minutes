@@ -23,22 +23,22 @@ export type ParticipantFormTarget = { mode: 'create' } | { mode: 'edit'; partici
 
 /**
  * PTC-01-P01 참석자 추가·수정 (태블릿 가운데 대화상자, 휴대폰 하단 시트).
- * - 이름 · (팀: Backend 팀 확장 뒤) · 이메일. 입력 오류는 입력란 아래 문구(대화상자 안 예외, S-13)
+ * - 이름 · (부서: 응답에 department가 있을 때) · 이메일. 입력 오류는 입력란 아래 문구(대화상자 안 예외, S-13)
  * - 추가: 같은 입력의 재시도는 같은 멱등 키. 수정: 바뀐 값만 보내고, 바뀐 것이 없으면 그냥 닫는다. 이메일을 바꿀 때만 도메인을 본다
  * - 저장 중에는 닫을 수 없다. 결과·서버 오류는 토스트(목록이 어긋난 오류는 "새로고침")
  */
 export function ParticipantFormDialog({
   target,
-  teamEnabled,
-  teams,
+  departmentEnabled,
+  departments,
   onClose,
   onSaved,
   onDelete,
   onReload,
 }: {
   target: ParticipantFormTarget | null;
-  teamEnabled: boolean;
-  teams: readonly string[];
+  departmentEnabled: boolean;
+  departments: readonly string[];
   onClose: () => void;
   onSaved: (participant: Participant, mode: 'create' | 'edit') => void;
   onDelete: (participant: Participant) => void;
@@ -57,8 +57,8 @@ export function ParticipantFormDialog({
         <ParticipantForm
           key={target.mode === 'edit' ? target.participant.id : 'create'}
           target={target}
-          teamEnabled={teamEnabled}
-          teams={teams}
+          departmentEnabled={departmentEnabled}
+          departments={departments}
           onClose={onClose}
           onSaved={onSaved}
           onDelete={onDelete}
@@ -72,8 +72,8 @@ export function ParticipantFormDialog({
 
 function ParticipantForm({
   target,
-  teamEnabled,
-  teams,
+  departmentEnabled,
+  departments,
   onClose,
   onSaved,
   onDelete,
@@ -81,8 +81,8 @@ function ParticipantForm({
   onBusy,
 }: {
   target: ParticipantFormTarget;
-  teamEnabled: boolean;
-  teams: readonly string[];
+  departmentEnabled: boolean;
+  departments: readonly string[];
   onClose: () => void;
   onSaved: (participant: Participant, mode: 'create' | 'edit') => void;
   onDelete: (participant: Participant) => void;
@@ -94,7 +94,7 @@ function ParticipantForm({
   const original = target.mode === 'edit' ? target.participant : null;
   const [name, setName] = useState(original?.name ?? '');
   const [email, setEmail] = useState(original?.email ?? '');
-  const [team, setTeam] = useState(original?.team ?? '');
+  const [department, setDepartment] = useState(original?.department ?? '');
   const [errors, setErrors] = useState<ParticipantErrors>({});
   const [busy, setBusyState] = useState(false);
   const setBusy = (value: boolean) => {
@@ -103,10 +103,10 @@ function ParticipantForm({
   };
   const attempt = useRef<{ signature: string; key: string } | null>(null);
 
-  const edit = (field: 'name' | 'email' | 'team', value: string) => {
+  const edit = (field: 'name' | 'email' | 'department', value: string) => {
     if (field === 'name') setName(value);
     else if (field === 'email') setEmail(value);
-    else setTeam(value);
+    else setDepartment(value);
     setErrors((current) => ({ ...current, [field]: undefined }));
   };
 
@@ -114,7 +114,7 @@ function ParticipantForm({
     event.preventDefault();
     if (busy) return;
     const payload: ParticipantInput = { name: name.trim(), email: email.trim() };
-    if (teamEnabled) payload.team = team.trim() || null;
+    if (departmentEnabled && department.trim()) payload.department = department.trim();
     const emailChanged = !original || payload.email.toLowerCase() !== original.email.trim().toLowerCase();
     const found = validateParticipant(payload, { checkDomain: emailChanged });
     setErrors(found);
@@ -125,7 +125,7 @@ function ParticipantForm({
       patch = {};
       if (payload.name !== original.name) patch.name = payload.name;
       if (payload.email !== original.email) patch.email = payload.email;
-      if (teamEnabled && (payload.team ?? null) !== (original.team?.trim() || null)) patch.team = payload.team ?? null;
+      if (departmentEnabled && (payload.department ?? '') !== (original.department?.trim() ?? '')) patch.department = payload.department ?? '';
       if (Object.keys(patch).length === 0) {
         onClose();
         return;
@@ -147,7 +147,7 @@ function ParticipantForm({
     } catch (error) {
       if (error instanceof ParticipantApiError) {
         const fromServer: ParticipantErrors = {};
-        for (const [field, code] of Object.entries(error.fieldErrors) as Array<['name' | 'email' | 'team', string]>) fromServer[field] = serverFieldMessage(field, code);
+        for (const [field, code] of Object.entries(error.fieldErrors) as Array<['name' | 'email' | 'department', string]>) fromServer[field] = serverFieldMessage(field, code);
         setErrors(fromServer);
         toast({
           message: error.message,
@@ -165,21 +165,21 @@ function ParticipantForm({
   return (
     <form noValidate aria-label={original ? '참석자 수정' : '참석자 추가'} onSubmit={(event) => void submit(event)} className="flex flex-col gap-5">
       <TextField label="이름" autoComplete="off" autoFocus value={name} onChange={(event) => edit('name', event.target.value)} error={errors.name} disabled={busy} />
-      {teamEnabled && (
+      {departmentEnabled && (
         <>
           <TextField
-            label="팀"
+            label="부서"
             autoComplete="off"
             list={listId}
             maxLength={50}
-            value={team}
-            onChange={(event) => edit('team', event.target.value)}
-            error={errors.team}
+            value={department}
+            onChange={(event) => edit('department', event.target.value)}
+            error={errors.department}
             disabled={busy}
           />
-          {/* 기존 팀 이름을 제안해 같은 팀을 다른 표기로 만들지 않게 한다 */}
+          {/* 기존 부서 이름을 제안해 같은 부서를 다른 표기로 만들지 않게 한다 */}
           <datalist id={listId}>
-            {teams.map((item) => (
+            {departments.map((item) => (
               <option key={item} value={item} />
             ))}
           </datalist>

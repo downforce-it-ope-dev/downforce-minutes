@@ -3,7 +3,7 @@ import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Participant } from '../participantsApi';
 import { withHealthyBackend } from '../testUtils/withHealthyBackend';
-import { filterParticipants, NO_TEAM, sortParticipants, validateParticipant } from './participantRules';
+import { filterParticipants, NO_DEPARTMENT, sortParticipants, validateParticipant } from './participantRules';
 import { ParticipantsPage } from './ParticipantsPage';
 
 vi.mock('../auth/authApi', () => ({ logout: vi.fn().mockResolvedValue(undefined) }));
@@ -58,8 +58,8 @@ describe('참석자 관리 (PTC-01)', () => {
     expect(screen.getByRole('heading', { level: 1, name: '참석자' })).toBeTruthy();
     expect(rows().map((row) => row.textContent)).toEqual(['김김철수kim@miinit.com', '외외부인guest@example.com', '홍홍길동hong@miinit.com']);
     expect(screen.getByText('참석자 3명')).toBeTruthy();
-    // 팀 기능은 응답에 team이 없으면 숨긴다
-    expect(screen.queryByRole('combobox', { name: '팀' })).toBeNull();
+    // 부서 기능은 응답에 department가 없으면 숨긴다
+    expect(screen.queryByRole('combobox', { name: '부서' })).toBeNull();
     fireEvent.change(screen.getByRole('searchbox', { name: '참석자 검색' }), { target: { value: 'HONG' } });
     expect(rows()).toHaveLength(1);
     fireEvent.change(screen.getByRole('searchbox', { name: '참석자 검색' }), { target: { value: '없음' } });
@@ -149,25 +149,25 @@ describe('참석자 관리 (PTC-01)', () => {
     expect(await screen.findByRole('dialog', { name: '삭제하시겠습니까?' })).toBeTruthy();
   });
 
-  it('팀(응답에 team이 있을 때): 팀 → 이름 순, 팀 배지, 팀 거르기, 폼의 팀 입력', async () => {
+  it('부서(응답에 department가 있을 때): 부서 → 이름 순, 부서 배지, 부서 거르기, 폼의 부서 입력', async () => {
     const roster: Participant[] = [
-      { id: 'a', name: '홍길동', email: 'hong@miinit.com', team: 'AX팀' },
-      { id: 'b', name: '김철수', email: 'kim@miinit.com', team: null },
-      { id: 'c', name: '박서준', email: 'park@miinit.com', team: 'AX팀' },
+      { id: 'a', name: '홍길동', email: 'hong@miinit.com', department: 'AX팀' },
+      { id: 'b', name: '김철수', email: 'kim@miinit.com', department: '' },
+      { id: 'c', name: '박서준', email: 'park@miinit.com', department: 'AX팀' },
     ];
     const fetchMock = mockApi(roster, (method, path, init) =>
       method === 'PATCH' && path === '/api/v1/participants/b' ? json({ data: { ...roster[1], ...JSON.parse(String(init.body)) } }) : null);
     renderPage();
     await screen.findByRole('list', { name: '참석자 목록' });
     expect(rows().map((row) => row.textContent)).toEqual(['박박서준AX팀park@miinit.com', '홍홍길동AX팀hong@miinit.com', '김김철수kim@miinit.com']);
-    fireEvent.change(screen.getByRole('combobox', { name: '팀' }), { target: { value: NO_TEAM } });
+    fireEvent.change(screen.getByRole('combobox', { name: '부서' }), { target: { value: NO_DEPARTMENT } });
     expect(rows()).toHaveLength(1);
     fireEvent.click(screen.getByRole('button', { name: '김철수 수정' }));
     const dialog = await screen.findByRole('dialog', { name: '참석자 수정' });
-    fireEvent.change(within(dialog).getByRole('combobox', { name: '팀' }), { target: { value: ' AX팀 ' } });
+    fireEvent.change(within(dialog).getByRole('combobox', { name: '부서' }), { target: { value: ' AX팀 ' } });
     fireEvent.click(within(dialog).getByRole('button', { name: '저장' }));
     expect(await screen.findByText('참석자를 수정했습니다')).toBeTruthy();
-    expect(JSON.parse(String(calls(fetchMock, 'PATCH')[0][1]?.body))).toEqual({ team: 'AX팀' });
+    expect(JSON.parse(String(calls(fetchMock, 'PATCH')[0][1]?.body))).toEqual({ department: 'AX팀' });
   });
 
   it('목록을 불러오지 못하면 다시 시도한다', async () => {
@@ -188,12 +188,12 @@ describe('participantRules', () => {
     expect(validateParticipant({ name: 'a', email: 'a@gmail.com' }, { checkDomain: false })).toEqual({});
   });
 
-  it('팀 → 이름 정렬(팀 없음은 뒤), 이름·이메일·팀 검색', () => {
+  it('부서 → 이름 정렬(부서 없음은 뒤), 이름·이메일·부서 검색', () => {
     const roster: Participant[] = [
-      { id: '1', name: '나', email: 'n@miinit.com', team: null },
-      { id: '2', name: '다', email: 'd@miinit.com', team: 'B팀' },
-      { id: '3', name: '가', email: 'g@miinit.com', team: 'B팀' },
-      { id: '4', name: '라', email: 'r@miinit.com', team: 'A팀' },
+      { id: '1', name: '나', email: 'n@miinit.com', department: '' },
+      { id: '2', name: '다', email: 'd@miinit.com', department: 'B팀' },
+      { id: '3', name: '가', email: 'g@miinit.com', department: 'B팀' },
+      { id: '4', name: '라', email: 'r@miinit.com', department: 'A팀' },
     ];
     expect(sortParticipants(roster).map(({ name }) => name)).toEqual(['라', '가', '다', '나']);
     expect(filterParticipants(roster, 'b팀').map(({ id }) => id)).toEqual(['2', '3']);

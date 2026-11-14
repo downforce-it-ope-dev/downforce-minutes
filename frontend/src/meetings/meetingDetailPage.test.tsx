@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { MeetingDetail } from '../meetingDetailApi';
 import { withHealthyBackend } from '../testUtils/withHealthyBackend';
@@ -29,10 +29,10 @@ function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 }
 
-function mockDetail(respond: () => Response) {
-  const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+function mockDetail(respond: (init?: RequestInit) => Response) {
+  const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     void input;
-    return respond();
+    return respond(init);
   });
   vi.stubGlobal('fetch', withHealthyBackend(fetchMock));
   return fetchMock;
@@ -43,10 +43,15 @@ function renderDetail() {
     <MemoryRouter initialEntries={['/meetings/doc%2Fa']}>
       <Routes>
         <Route path="/meetings/:documentId" element={<MeetingDetailRoute />} />
-        <Route path="/meetings" element={<p>목록</p>} />
+        <Route path="/meetings" element={<ListStub />} />
       </Routes>
     </MemoryRouter>,
   );
+}
+
+function ListStub() {
+  const state = useLocation().state as { deletedTitle?: string } | null;
+  return <p>목록{state?.deletedTitle ? ` 삭제됨:${state.deletedTitle}` : ''}</p>;
 }
 
 afterEach(() => {
@@ -120,5 +125,41 @@ describe('회의록 상세 (MIN-02)', () => {
     renderDetail();
     fireEvent.click(await screen.findByRole('button', { name: '다시 시도' }));
     expect(await screen.findByRole('heading', { level: 2, name: '주간 회의' })).toBeTruthy();
+  });
+
+  it('삭제: 확인 대화상자(취소 / 삭제) → DELETE → 목록으로 돌아가며 알린다. 실패하면 대화상자에 남고 토스트', async () => {
+    let deletes = 0;
+    const fetchMock = mockDetail((init) => {
+      if (init?.method !== 'DELETE') return json({ data: DETAIL });
+      deletes += 1;
+      return deletes === 1 ? json({ error: { code: 'DOCUMENT_FAILED' } }, 502) : new Response(null, { status: 204 });
+    });
+    renderDetail();
+    fireEvent.click(await screen.findByRole('button', { name: '삭제' }));
+    let dialog = await screen.findByRole('dialog', { name: '삭제하시겠습니까?' });
+    expect(within(dialog).getByText('주간 회의')).toBeTruthy();
+    fireEvent.click(within(dialog).getByRole('button', { name: '취소' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(deletes).toBe(0);
+
+    fireEvent.click(screen.getByRole('button', { name: '삭제' }));
+    dialog = await screen.findByRole('dialog', { name: '삭제하시겠습니까?' });
+    fireEvent.click(within(dialog).getByRole('button', { name: '삭제' }));
+    expect(await screen.findByText('회의록을 삭제하지 못했습니다')).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: '삭제하시겠습니까?' })).toBeTruthy();
+
+    fireEvent.click(within(screen.getByRole('dialog', { name: '삭제하시겠습니까?' })).getByRole('button', { name: '삭제' }));
+    expect(await screen.findByText('목록 삭제됨:주간 회의')).toBeTruthy();
+    const deleteCall = fetchMock.mock.calls.filter(([, init]) => init?.method === 'DELETE');
+    expect(deleteCall.map(([url]) => String(url).replace(/^.*\/api/, '/api'))).toEqual(['/api/v1/meetings/doc%2Fa', '/api/v1/meetings/doc%2Fa']);
+  });
+
+  it('삭제: 이미 지워진 회의(MEETING_NOT_FOUND)는 지운 것으로 보고 목록으로 간다', async () => {
+    mockDetail((init) => (init?.method === 'DELETE' ? json({ error: { code: 'MEETING_NOT_FOUND' } }, 404) : json({ data: DETAIL })));
+    renderDetail();
+    fireEvent.click(await screen.findByRole('button', { name: '삭제' }));
+    const dialog = await screen.findByRole('dialog', { name: '삭제하시겠습니까?' });
+    fireEvent.click(within(dialog).getByRole('button', { name: '삭제' }));
+    expect(await screen.findByText('목록 삭제됨:주간 회의')).toBeTruthy();
   });
 });

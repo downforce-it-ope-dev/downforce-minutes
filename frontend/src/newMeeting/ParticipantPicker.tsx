@@ -27,7 +27,7 @@ const collator = new Intl.Collator('ko');
  * 참석자 선택 영역 (MTG-01-F04, 기획 3.1 표).
  * 머리(제목·선택 수·검색·보기 필터)는 고정하고 태블릿에서는 목록만 따로 스크롤한다. 휴대폰은 페이지 스크롤.
  * 검색어를 바꿔도 선택은 유지한다. 선택한 참석자를 앞쪽에 두고, 선택한 사람끼리·안 한 사람끼리는 이름 가나다순이다(사용자 결정 2026-11-12).
- * 새 참석자 등록은 화면(NewMeetingPage)이 오른쪽 패널·대화상자로 붙인다. 팀 배지·팀 거르기·CSV 일괄 등록은 Backend 팀 확장(#35)과 #37 뒤에 붙인다.
+ * 새 참석자 등록은 화면(NewMeetingPage)이 오른쪽 패널·대화상자로 붙인다. 부서가 있으면 이름 옆에 보이고 검색에도 쓴다(Backend 9611cbc).
  */
 export function ParticipantPicker({
   participants,
@@ -52,7 +52,7 @@ export function ParticipantPicker({
   const visible = sorted.filter(
     (item) =>
       (view === 'all' || selectedIds.includes(item.id)) &&
-      (!keyword || item.name.toLowerCase().includes(keyword) || item.email.toLowerCase().includes(keyword)),
+      (!keyword || [item.name, item.email, item.department ?? ''].some((value) => value.toLowerCase().includes(keyword))),
   );
   const visibleIds = visible.map(({ id }) => id);
   const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
@@ -83,7 +83,7 @@ export function ParticipantPicker({
             hideLabel
             type="search"
             icon={Search}
-            placeholder="이름·이메일"
+            placeholder={participants.some(({ department }) => department?.trim()) ? '이름·이메일·부서' : '이름·이메일'}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             disabled={status !== 'ready'}
@@ -143,6 +143,7 @@ export function ParticipantPicker({
             {visible.map((item) => {
               const checked = selectedIds.includes(item.id);
               const self = item.id === selfId;
+              const department = item.department?.trim();
               return (
                 <li key={item.id} className="tablet-lg:mb-1 tablet-lg:break-inside-avoid">
                   <label
@@ -153,7 +154,7 @@ export function ParticipantPicker({
                     )}
                   >
                     <Checkbox
-                      aria-label={`${item.name}${self ? ' (나)' : ''} ${item.email}`}
+                      aria-label={`${item.name}${self ? ' (나)' : ''}${department ? ` ${department}` : ''} ${item.email}`}
                       checked={checked}
                       disabled={self || status !== 'ready'}
                       onChange={() => onToggle(item.id)}
@@ -162,6 +163,7 @@ export function ParticipantPicker({
                       <span className="flex items-center gap-2 text-body font-semibold text-text">
                         {item.name}
                         {self && <span className="rounded-full bg-brand-soft px-2 text-caption text-brand-soft-text">나</span>}
+                        {department && <span className="rounded-sm bg-accent-soft px-2 text-caption font-normal text-accent-soft-text">{department}</span>}
                       </span>
                       <span className="truncate text-caption text-text-muted">{item.email}</span>
                     </span>

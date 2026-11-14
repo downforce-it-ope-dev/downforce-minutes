@@ -73,6 +73,15 @@ for (const size of SIZES) {
     await expect(page.getByRole('heading', { level: 2, name: LONG_TITLE })).toBeVisible();
     await expectAccessible(page);
   });
+
+  test(`MIN-02 삭제 확인 · ${size.label}: axe 심각 위반 0건`, async ({ page }) => {
+    await mock(page);
+    await page.setViewportSize(size);
+    await page.goto('/meetings/doc-0');
+    await page.getByRole('button', { name: '삭제' }).click();
+    await expect(page.getByRole('dialog', { name: '삭제하시겠습니까?' })).toBeVisible();
+    await expectAccessible(page);
+  });
 }
 
 test('MIN-01: 위쪽 넓은 검색창 + 원형 버튼, 그 아래 전체 폭 목록(태블릿은 한 줄 가로 배치)', async ({ page }) => {

@@ -30,39 +30,39 @@ export function serverFieldMessage(field: ParticipantField, code: string): strin
   if (field === 'name' && (code === 'NotBlank' || code === 'NotEmpty')) return '이름을 입력해 주세요.';
   if (field === 'email' && (code === 'NotBlank' || code === 'NotEmpty')) return '이메일을 입력해 주세요.';
   if (field === 'email' && code === 'Email') return '올바른 이메일 주소를 입력해 주세요.';
-  return field === 'name' ? '이름을 확인해 주세요.' : field === 'email' ? '이메일을 확인해 주세요.' : '팀을 확인해 주세요.';
+  return field === 'name' ? '이름을 확인해 주세요.' : field === 'email' ? '이메일을 확인해 주세요.' : '부서를 확인해 주세요.';
 }
 
-/** 응답에 팀 필드가 있으면(Backend 팀 확장 뒤) 팀 기능을 켠다 */
-export function hasTeamField(roster: readonly Participant[]): boolean {
-  return roster.some((person) => 'team' in person);
+/** 응답에 부서 필드가 있으면(Backend 9611cbc 뒤) 부서 기능을 켠다 */
+export function hasDepartmentField(roster: readonly Participant[]): boolean {
+  return roster.some((person) => 'department' in person);
 }
 
 const collator = new Intl.Collator('ko-KR');
 
-/** 팀이 있으면 팀 → 이름, 없으면 이름 가나다순. 팀 없음은 뒤로 */
+/** 부서가 있으면 부서 → 이름, 없으면 이름 가나다순. 부서 없음은 뒤로 */
 export function sortParticipants(roster: readonly Participant[]): Participant[] {
   return [...roster].sort((left, right) => {
-    const a = left.team?.trim() ?? '';
-    const b = right.team?.trim() ?? '';
+    const a = left.department?.trim() ?? '';
+    const b = right.department?.trim() ?? '';
     if (a !== b) return !a ? 1 : !b ? -1 : collator.compare(a, b);
     return collator.compare(left.name, right.name);
   });
 }
 
-/** 팀 이름 목록(가나다순, 중복 없음) */
-export function teamNames(roster: readonly Participant[]): string[] {
-  return [...new Set(roster.map((person) => person.team?.trim()).filter((team): team is string => Boolean(team)))].sort(collator.compare);
+/** 부서 이름 목록(가나다순, 중복 없음) */
+export function departmentNames(roster: readonly Participant[]): string[] {
+  return [...new Set(roster.map((person) => person.department?.trim()).filter((department): department is string => Boolean(department)))].sort(collator.compare);
 }
 
-export const NO_TEAM = '__none__';
+export const NO_DEPARTMENT = '__none__';
 
-/** 검색(이름·이메일·팀) + 팀 거르기('' 모든 팀, NO_TEAM 팀 없음) */
-export function filterParticipants(roster: readonly Participant[], query: string, team = ''): Participant[] {
+/** 검색(이름·이메일·부서) + 부서 거르기('' 모든 부서, NO_DEPARTMENT 부서 없음) */
+export function filterParticipants(roster: readonly Participant[], query: string, department = ''): Participant[] {
   const keyword = query.normalize('NFKC').trim().toLocaleLowerCase();
   return roster.filter((person) => {
-    if (team === NO_TEAM ? Boolean(person.team?.trim()) : team && person.team?.trim() !== team) return false;
+    if (department === NO_DEPARTMENT ? Boolean(person.department?.trim()) : department && person.department?.trim() !== department) return false;
     if (!keyword) return true;
-    return [person.name, person.email, person.team ?? ''].some((value) => value.normalize('NFKC').toLocaleLowerCase().includes(keyword));
+    return [person.name, person.email, person.department ?? ''].some((value) => value.normalize('NFKC').toLocaleLowerCase().includes(keyword));
   });
 }

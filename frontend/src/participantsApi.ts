@@ -1,10 +1,10 @@
 import { getApiBaseUrl } from './apiBase';
 import { apiFetch } from './apiFetch';
-/** team은 Backend 팀 확장(#35) 뒤에만 응답에 온다. 없으면(undefined) 팀 기능을 숨긴다. null은 팀 없음 */
-export type Participant = { id: string; name: string; email: string; team?: string | null };
-export type ParticipantInput = { name: string; email: string; team?: string | null };
+/** department는 Backend 부서 추가(9611cbc) 뒤의 응답에 온다(빈 문자열은 부서 없음). 필드가 없으면(이전 Backend) 부서 기능을 숨긴다 */
+export type Participant = { id: string; name: string; email: string; department?: string };
+export type ParticipantInput = { name: string; email: string; department?: string };
 export type ParticipantPatch = Partial<ParticipantInput>;
-export type ParticipantField = 'name' | 'email' | 'team';
+export type ParticipantField = 'name' | 'email' | 'department';
 
 type ApiErrorBody = {
   error?: {
@@ -60,7 +60,7 @@ async function request<T>(path: string, init?: RequestInit, timeoutMs?: number):
     const code = error?.error?.code || 'REQUEST_FAILED';
     const fieldErrors: Partial<Record<ParticipantField, string>> = {};
     for (const fieldError of error?.error?.details?.fieldErrors ?? []) {
-      if (fieldError.field === 'name' || fieldError.field === 'email' || fieldError.field === 'team') {
+      if (fieldError.field === 'name' || fieldError.field === 'email' || fieldError.field === 'department') {
         fieldErrors[fieldError.field] = fieldError.code || 'INVALID';
       }
     }

@@ -7,8 +7,8 @@ import { countByStatus, decodeCsv, parseCsv, planImport, readPeople, STATUS_LABE
 
 /*
  * PTC-01-P03 CSV 일괄 등록 (GitHub #37, PTC-01 3.6). 한 대화상자 안에서 파일 선택 → 확인 → 등록 → 결과.
- * - 팀 없이 메일계정·이름만(사용자 결정 2026-11-12). 행 수·파일 크기 제한 없음. 같은 메일계정은 이름을 갱신
- * - 등록(API-004)·이름 갱신(API-005)을 한 건씩 차례로 부른다. 등록은 행마다 멱등 키(작업 + 메일계정)를 다시 시도에도 그대로 쓴다
+ * - 메일계정·이름 + 선택 열 부서(사용자 결정 2026-11-12, 부서는 Backend 9611cbc 뒤). 행 수·파일 크기 제한 없음. 같은 메일계정은 이름·부서를 갱신
+ * - 등록(API-004)·갱신(API-005)을 한 건씩 차례로 부른다. 등록은 행마다 멱등 키(작업 + 메일계정)를 다시 시도에도 그대로 쓴다
  * - 이후 행도 모두 실패할 오류(문서 변경 중·연결 버전 충돌)는 바로 멈춘다. 등록 중에는 닫을 수 없고 화면 이탈을 경고한다
  * - 파일은 영역을 눌러 고르거나 끌어다 놓는다(끌어다 놓으면 영역이 선택 색). 설명 문구 없이 버튼·값만 둔다(S-13). 파일 오류는 대화상자 안에 보인다
  */
@@ -154,9 +154,12 @@ export function CsvImportDialog({ open, onClose }: { open: boolean; onClose: (re
       try {
         const saved =
           item.status === 'create'
-            ? await createParticipant({ name: item.name, email: item.email }, `${job.current}:${item.email}`)
-            : item.existing
-              ? await updateParticipant(item.existing.id, { name: item.name })
+            ? await createParticipant(
+                { name: item.name, email: item.email, ...(item.department ? { department: item.department } : {}) },
+                `${job.current}:${item.email}`,
+              )
+            : item.existing && item.changes
+              ? await updateParticipant(item.existing.id, item.changes)
               : undefined;
         update(item.line, { outcome: 'done', failure: undefined, saved });
       } catch (error) {
@@ -290,15 +293,16 @@ function StatusBadge({ item }: { item: ImportItem }) {
   );
 }
 
-/** 확인 목록. 태블릿: 행 | 이름 | 메일계정 | 상태 한 줄, 휴대폰: 2줄 */
+/** 확인 목록. 태블릿: 행 | 이름 부서 | 메일계정 | 상태 한 줄, 휴대폰: 2줄 */
 function PreviewList({ items }: { items: readonly ImportItem[] }) {
   return (
     <ul aria-label="CSV 행" className="flex flex-col rounded-lg border border-border">
       {items.map((item) => (
         <li key={item.line} className="flex min-h-15 flex-col justify-center gap-1 border-b border-border px-3 py-2 last:border-b-0 tablet:flex-row tablet:items-center tablet:gap-3">
-          <span className="flex min-w-0 items-center gap-2 tablet:w-48 tablet:shrink-0">
+          <span className="flex min-w-0 items-center gap-2 tablet:w-64 tablet:shrink-0">
             <span className="w-8 shrink-0 text-caption text-text-muted tabular-nums">{item.line}</span>
             <span className="truncate text-label text-text">{item.name || '(이름 없음)'}</span>
+            {item.department && <span className="shrink-0 truncate text-caption text-text-muted">{item.department}</span>}
           </span>
           <span className="flex min-w-0 flex-1 items-center justify-between gap-2 pl-10 tablet:pl-0">
             <span className="truncate text-caption text-text-muted tablet:text-body">{item.email || '(메일계정 없음)'}</span>
@@ -323,7 +327,7 @@ function ResultSummary({ items, failed }: { items: readonly RunItem[]; failed: r
       <dl className="grid grid-cols-2 gap-3 tablet:grid-cols-4">
         {[
           ['등록', created],
-          ['이름 갱신', renamed],
+          ['갱신', renamed],
           ['건너뜀', skipped],
           ['실패', failed.length],
         ].map(([label, value]) => (

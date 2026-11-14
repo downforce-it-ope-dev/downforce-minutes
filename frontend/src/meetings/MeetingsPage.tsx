@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router';
+import { useEffect, useRef, useState } from 'react';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router';
 import { ArrowDownWideNarrow, ArrowUpNarrowWide, CalendarDays, ChevronRight, Mic, RefreshCw, RotateCcw, Search, X, type LucideIcon } from 'lucide-react';
 import { AccountButton, SidebarAccount } from '../auth/AccountMenu';
 import { filterMeetings, hasInvalidDateRange } from '../meetingFilters';
@@ -43,6 +43,16 @@ export interface MeetingListFilters {
   sort: 'new' | 'old';
 }
 
+/** 조건 → 주소 검색어(?q·from·to·sort). 주소 갱신과 상세로 넘기는 "목록으로" 조건이 같이 쓴다 */
+function filtersToSearch(filters: MeetingListFilters): string {
+  const search = new URLSearchParams();
+  if (filters.query) search.set('q', filters.query);
+  if (filters.from) search.set('from', filters.from);
+  if (filters.to) search.set('to', filters.to);
+  if (filters.sort === 'old') search.set('sort', 'old');
+  return search.toString();
+}
+
 function useListFilters() {
   const [params, setParams] = useSearchParams();
   const filters: MeetingListFilters = {
@@ -52,15 +62,9 @@ function useListFilters() {
     sort: params.get('sort') === 'old' ? 'old' : 'new',
   };
   const update = (patch: Partial<MeetingListFilters>) => {
-    const next = { ...filters, ...patch };
-    const search = new URLSearchParams();
-    if (next.query) search.set('q', next.query);
-    if (next.from) search.set('from', next.from);
-    if (next.to) search.set('to', next.to);
-    if (next.sort === 'old') search.set('sort', 'old');
-    setParams(search, { replace: true });
+    setParams(filtersToSearch({ ...filters, ...patch }), { replace: true });
   };
-  return { filters, update, search: params.toString() };
+  return { filters, update };
 }
 
 export function MeetingsPage() {
@@ -89,10 +93,23 @@ export function MeetingsPage() {
 
 function MeetingsBody() {
   const toast = useToast();
-  const { filters: urlFilters, update: updateUrl, search } = useListFilters();
+  const location = useLocation();
+  const navigate = useNavigate();
+  // 상세에서 회의록을 지우고 돌아왔으면 한 번 알린다(state를 비워 새로고침·뒤로 가기에 다시 뜨지 않게 한다)
+  const deletedTitle = (location.state as { deletedTitle?: string } | null)?.deletedTitle;
+  const deletedNotified = useRef(false);
+  useEffect(() => {
+    if (!deletedTitle || deletedNotified.current) return;
+    deletedNotified.current = true;
+    toast({ message: '회의록을 삭제했습니다', tone: 'success' });
+    navigate({ pathname: location.pathname, search: location.search }, { replace: true, state: null });
+  }, [deletedTitle, location.pathname, location.search, navigate, toast]);
+  const { filters: urlFilters, update: updateUrl } = useListFilters();
   // 검색어 입력란은 화면 안 값으로 둔다. 주소 값을 입력란에 바로 묶으면 한글 조합 중 값이 늦게 되돌아와 조합이 깨진다(2026-11-12)
   const [queryText, setQueryText] = useState(urlFilters.query);
   const filters = { ...urlFilters, query: queryText };
+  // 상세의 "회의록 목록"이 돌아올 조건. 주소가 아니라 화면 값으로 만든다(입력 직후 바로 행을 누르면 주소 갱신이 아직 반영되지 않았을 수 있다)
+  const search = filtersToSearch(filters);
   const update = (patch: Partial<MeetingListFilters>) => {
     if (patch.query !== undefined) setQueryText(patch.query);
     updateUrl(patch);

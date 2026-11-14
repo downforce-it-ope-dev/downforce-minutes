@@ -66,6 +66,13 @@ export function peekMeetings(limit?: number): MeetingSummary[] | undefined {
   return lastMeetingLists.get(fetch)?.get(meetingListUrl(limit));
 }
 
+/** 삭제한 회의를 기억한 목록에서 뺀다. 목록 화면이 먼저 그릴 때 지운 회의가 다시 보이지 않게 한다 */
+export function forgetMeeting(documentId: string): void {
+  const last = lastMeetingLists.get(fetch);
+  if (!last) return;
+  for (const [url, items] of last) last.set(url, items.filter((item) => item.documentId !== documentId));
+}
+
 export function listMeetings(limit?: number): Promise<MeetingSummary[]> {
   const url = meetingListUrl(limit);
   const fetchImpl = fetch;
