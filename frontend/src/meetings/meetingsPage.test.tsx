@@ -43,7 +43,7 @@ function Where() {
   return <p data-testid="where">{location.pathname + location.search}</p>;
 }
 
-function renderList(entry = '/meetings') {
+function renderList(entry: string | { pathname: string; search?: string; state?: unknown } = '/meetings') {
   render(
     <MemoryRouter initialEntries={[entry]}>
       <Routes>
@@ -175,6 +175,13 @@ describe('회의록 목록 (MIN-01)', () => {
     fireEvent.click(await screen.findByRole('button', { name: '회의록 목록' }));
     await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/meetings?q=%EC%A0%9C%ED%92%88'));
     expect(screen.getByRole('searchbox', { name: '회의 검색' })).toHaveProperty('value', '제품');
+  });
+
+  it('상세에서 회의록을 지우고 돌아오면 토스트로 한 번 알리고 검색 조건은 그대로다', async () => {
+    mockApi();
+    renderList({ pathname: '/meetings', search: '?q=%EC%A3%BC%EA%B0%84', state: { deletedTitle: '주간 회의' } });
+    expect(await screen.findByText('회의록을 삭제했습니다')).toBeTruthy();
+    expect(screen.getByTestId('where').textContent).toBe('/meetings?q=%EC%A3%BC%EA%B0%84');
   });
 
   it('로그인 이메일이 참석자 명단에 없으면 아무 회의도 보이지 않는다', async () => {

@@ -137,6 +137,17 @@ describe('새 회의 (MTG-01)', () => {
     ]);
   });
 
+  it('부서가 있으면 이름 옆에 보이고 부서로도 검색한다', async () => {
+    mockApi({ participants: [{ ...participants[0], department: 'AX팀' }, { ...participants[1], department: '' }, participants[2]] });
+    renderPage();
+    await screen.findByRole('list', { name: '참석자 목록' });
+    const search = screen.getByRole('searchbox', { name: '참석자 검색' });
+    expect(search.getAttribute('placeholder')).toBe('이름·이메일·부서');
+    expect(list().getByText('AX팀')).toBeTruthy();
+    fireEvent.change(search, { target: { value: 'ax' } });
+    expect(list().getAllByRole('checkbox').map((item) => item.getAttribute('aria-label'))).toEqual(['홍길동 AX팀 hong@miinit.com']);
+  });
+
   it('전체 선택은 검색어가 있을 때만 보이고 검색 결과만 고른다', async () => {
     mockApi();
     renderPage();

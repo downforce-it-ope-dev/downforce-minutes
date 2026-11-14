@@ -11,7 +11,9 @@ const SIZES = [
   { label: '낮은 화면', width: 844, height: 390 },
 ];
 const NAMES = ['홍길동', '김철수', '이영희', '박서준', '정하은', '최민수', '강지원', '윤서연', '장도윤', '임하준', '한지민', '오세훈', '서지우', '신예린'];
-const ROSTER = NAMES.map((name, index) => ({ id: `p${index}`, name, email: `user${index}@miinit.com` }));
+const DEPARTMENTS = ['AX팀', '운영팀', '', '경영지원팀'];
+// Backend는 department를 늘 돌려준다(없으면 빈 문자열, 9611cbc)
+const ROSTER = NAMES.map((name, index) => ({ id: `p${index}`, name, email: `user${index}@miinit.com`, department: DEPARTMENTS[index % DEPARTMENTS.length] }));
 const ready = { version: 1, status: 'READY', active: { provider: 'NOTION', connectionVersion: 2, rootUrl: 'https://notion.example' }, draft: null, operation: null, canCreateMeeting: true };
 
 async function mock(page: Page, roster: unknown[] = ROSTER) {
@@ -65,7 +67,7 @@ test('PTC-01 태블릿: 위쪽 검색창, 전체 폭 한 줄 행(이름 | 이메
   const listBox = (await list.boundingBox())!;
   expect(listBox.y).toBeGreaterThan(search.y + search.height);
   expect(listBox.width).toBeGreaterThan(800);
-  const row = list.getByRole('listitem').first();
+  const row = list.getByRole('listitem').filter({ hasText: '강지원' });
   expect(Math.round((await row.getByRole('button', { name: /수정$/ }).boundingBox())!.height)).toBe(60);
   const name = (await row.getByText('강지원').boundingBox())!;
   const email = (await row.getByText('user6@miinit.com').boundingBox())!;
@@ -136,12 +138,12 @@ for (const size of [SIZES[0], SIZES[1]]) {
   });
 }
 
-test('양식 파일은 UTF-8 BOM CSV(메일계정,이름)다', async ({ request }) => {
+test('양식 파일은 UTF-8 BOM CSV(메일계정,이름,부서)다', async ({ request }) => {
   const response = await request.get('/participants-template.csv');
   expect(response.ok()).toBe(true);
   const body = await response.body();
   expect([...body.subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
-  expect(body.subarray(3).toString('utf8').split(/\r?\n/)[0]).toBe('메일계정,이름');
+  expect(body.subarray(3).toString('utf8').split(/\r?\n/)[0]).toBe('메일계정,이름,부서');
 });
 
 test('PTC-01-P03: 파일을 끌어다 놓아도 읽는다(영역이 선택 색으로 바뀐다)', async ({ page }) => {

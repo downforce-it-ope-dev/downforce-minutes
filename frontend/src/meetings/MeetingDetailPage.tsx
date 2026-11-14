@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useLocation, useParams } from 'react-router';
-import { Copy, RefreshCw, ScrollText } from 'lucide-react';
-import { getMeetingDetail, MeetingDetailApiError, type MeetingDetail } from '../meetingDetailApi';
+import { useLocation, useNavigate, useParams } from 'react-router';
+import { Copy, RefreshCw, ScrollText, Trash2 } from 'lucide-react';
+import { deleteMeeting, getMeetingDetail, MeetingDetailApiError, type MeetingDetail } from '../meetingDetailApi';
+import { forgetMeeting } from '../meetingListApi';
 import type { ReviewSpeaker } from '../reviewApi';
 import { speakerColorAt } from '../review/speakerColors';
 import { speakerDisplayLabel } from '../review/speakerPreview';
@@ -27,6 +28,7 @@ import { minutesText, ownerName, visibleSections, type SectionKey } from './meet
  *   목차(섹션 칩·목차 탭)와 화면 안 전사 원문 패널은 두지 않는다. 전사 원문은 상단 바 버튼 → 대화상자(휴대폰 하단 시트)
  * - 상단 바: 목록으로(조건 유지), 전사 원문, 복사(토스트). 휴대폰은 아이콘 버튼.
  *   원본 문서(노션 등) 열기는 두지 않는다: 문서 서비스는 연결한 사람 계정이라 다른 사람은 열 수 없다(사용자 결정 2026-11-12)
+ * - 삭제(Backend 9611cbc): 상단 바 맨 끝 → 확인 대화상자(취소 / 삭제). 지우면 목록으로 돌아가 토스트로 알린다(목록 화면의 state.deletedTitle)
  */
 
 type Load = { status: 'loading' } | { status: 'not-found' } | { status: 'error' } | { status: 'ready'; detail: MeetingDetail };
@@ -42,7 +44,10 @@ function MeetingDetailScreen({ documentId }: { documentId: string }) {
   const [load, setLoad] = useState<Load>({ status: 'loading' });
   const [attempt, setAttempt] = useState(0);
   const [transcriptOpen, setTranscriptOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const tablet = useMediaQuery(TABLET_QUERY);
+  const navigate = useNavigate();
+  const listPath = `/meetings${listSearch ? `?${listSearch}` : ''}`;
 
   useEffect(() => {
     let live = true;
@@ -63,13 +68,14 @@ function MeetingDetailScreen({ documentId }: { documentId: string }) {
     <AppShell
       title="회의록"
       hideTitle
-      back={{ to: `/meetings${listSearch ? `?${listSearch}` : ''}`, label: '회의록 목록' }}
+      back={{ to: listPath, label: '회의록 목록' }}
       actions={
         detail && (
           <DetailActions
             detail={detail}
             compact={!tablet}
             onTranscript={() => setTranscriptOpen(true)}
+            onDelete={() => setDeleteOpen(true)}
           />
         )
       }
@@ -105,6 +111,12 @@ function MeetingDetailScreen({ documentId }: { documentId: string }) {
           <Dialog open={transcriptOpen} onOpenChange={setTranscriptOpen} title="전사 원문" size="form">
             <Transcript detail={detail} />
           </Dialog>
+          <DeleteMeetingDialog
+            detail={detail}
+            open={deleteOpen}
+            onClose={() => setDeleteOpen(false)}
+            onDeleted={() => navigate(listPath, { replace: true, state: { deletedTitle: detail.title } })}
+          />
         </>
       )}
     </AppShell>
@@ -115,10 +127,12 @@ function DetailActions({
   detail,
   compact,
   onTranscript,
+  onDelete,
 }: {
   detail: MeetingDetail;
   compact: boolean;
   onTranscript: () => void;
+  onDelete: () => void;
 }) {
   const toast = useToast();
   const copy = () => {
@@ -139,6 +153,7 @@ function DetailActions({
       <>
         <IconButton icon={ScrollText} label="전사 원문" variant="surface" onClick={onTranscript} />
         <IconButton icon={Copy} label="복사" variant="surface" onClick={copy} />
+        <IconButton icon={Trash2} label="삭제" variant="danger" aria-haspopup="dialog" onClick={onDelete} />
       </>
     );
   }
@@ -150,7 +165,66 @@ function DetailActions({
       <Button variant="secondary" shape="pill" icon={Copy} onClick={copy}>
         복사
       </Button>
+      <Button variant="danger-secondary" shape="pill" icon={Trash2} aria-haspopup="dialog" onClick={onDelete}>
+        삭제
+      </Button>
     </>
+  );
+}
+
+/** 삭제 확인. 버튼은 "취소 / 삭제". 삭제 중에는 닫을 수 없다. 실패는 토스트, 이미 지워진 회의면 지운 것으로 보고 목록으로 */
+function DeleteMeetingDialog({
+  detail,
+  open,
+  onClose,
+  onDeleted,
+}: {
+  detail: MeetingDetail;
+  open: boolean;
+  onClose: () => void;
+  onDeleted: () => void;
+}) {
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+
+  async function remove() {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await deleteMeeting(detail.documentId);
+    } catch (error) {
+      if (!(error instanceof MeetingDetailApiError && error.code === 'MEETING_NOT_FOUND')) {
+        setBusy(false);
+        toast({ message: '회의록을 삭제하지 못했습니다', tone: 'danger' });
+        return;
+      }
+    }
+    forgetMeeting(detail.documentId);
+    onDeleted();
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => !next && !busy && onClose()}
+      title="삭제하시겠습니까?"
+      dismissible={!busy}
+      footer={
+        <>
+          <Button variant="secondary" shape="pill" disabled={busy} onClick={onClose}>
+            취소
+          </Button>
+          <Button variant="danger" shape="pill" icon={Trash2} loading={busy} onClick={() => void remove()}>
+            삭제
+          </Button>
+        </>
+      }
+    >
+      <p className="flex flex-col gap-1">
+        <span className="text-body-lg text-text">{detail.title}</span>
+        <span className="text-body text-text-muted tabular-nums">{formatMeetingAtLong(detail.meetingAt)}</span>
+      </p>
+    </Dialog>
   );
 }
 

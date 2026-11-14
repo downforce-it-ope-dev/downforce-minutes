@@ -92,13 +92,14 @@
   - R6·R7에서 추가한 부품: `BottomDock`(하단 가운데 고정 큰 주 동작, `toastPlacement="top"`과 함께), `TextField`의 `inside`(입력란 안 오른쪽, 예: 검색어 지우기), `SelectField`의 `hideLabel`, `IconButton variant="danger"`(목록 행 삭제), `Button variant="danger-secondary"`(위험 동작의 보조 버튼).
 - **참석자 (R7)**
   - 참석자 관리(`/participants`, `/settings/participants`)는 리뉴얼 라우트다(`src/participants/`). 입력 규칙(회사 메일 @miinit.com만, 수정은 이메일을 바꿀 때만)은 `participantRules.ts`이고 새 회의의 새 참석자 폼도 같이 쓴다.
-  - 팀은 응답에 `team`이 있을 때만(Backend #35 뒤) 보인다(`hasTeamField`).
-  - CSV 일괄 등록(`CsvImportDialog.tsx`, 읽기·판정은 `csvImport.ts`)은 지금 메일계정·이름만 받는다. 팀은 #35 뒤에 넣는다. 양식은 `frontend/public/participants-template.csv`.
+  - 부서(Backend `department`, 9611cbc)는 응답에 필드가 있을 때만 보인다(`hasDepartmentField`). 빈 문자열은 부서 없음이다. 목록은 부서 → 이름 순이고 새 회의 참석자 선택에도 부서가 보이고 검색된다.
+  - CSV 일괄 등록(`CsvImportDialog.tsx`, 읽기·판정은 `csvImport.ts`)은 메일계정·이름(필수)과 부서(선택 열)를 받는다. 부서 칸이 비면 기존 부서를 그대로 둔다. 양식은 `frontend/public/participants-template.csv`.
 - **설정 (R8)**
   - 설정(`/settings`)은 `src/settings/`. 카드 두 개(문서 연결, 이메일)이고 Slack 설정·코드는 없다(D-11).
   - 메일 설정 브라우저 복구(D-09)는 설정 화면을 열 때와 홈에 처음 들어올 때 한 번(`restoreEmailSettingsOnce`) 한다.
 - **회의록 (R6)**
   - 회의록 목록(`/meetings`)·상세(`/meetings/:documentId`)는 리뉴얼 라우트다(`src/meetings/`). 목록의 검색·기간·정렬 조건은 주소(`?q·from·to·sort`)에 두고, 상세의 "회의록 목록"은 그 조건으로 돌아간다(목록 행 링크의 `state.listSearch`).
+  - 상세의 삭제(Backend 9611cbc, `DELETE /api/v1/meetings/{documentId}`, Notion만)는 확인 대화상자 뒤 목록으로 돌아가 토스트로 알린다(`state.deletedTitle`).
   - 회의록 목록과 홈 최근 회의록은 내가 참석자인 회의만 보인다(`src/meetings/myMeetings.ts`의 `listMyMeetings`, 로그인 이메일과 같은 참석자). 회의 목록 API를 직접 쓰지 않는다.
   - 전사 원문 목록과 화자 색은 검토 화면과 같은 `review/TranscriptList.tsx`·`review/speakerColors.ts`를 쓴다.
 - **회의 진행 흐름 (R5)**

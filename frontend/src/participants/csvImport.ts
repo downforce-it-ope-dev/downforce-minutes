@@ -4,14 +4,15 @@ import { validateParticipant } from './participantRules';
 /*
  * PTC-01-P03 CSV 일괄 등록의 파일 읽기·판정 (GitHub #37, PTC-01 3.6).
  * 사용자 결정(2026-11-12):
- * - 팀은 아직 넣지 않는다(Backend #35 전). 메일계정·이름만 읽고 팀 열은 있어도 무시한다
+ * - 메일계정·이름은 필수, 부서는 선택 열이다(Backend 9611cbc 부서 추가 뒤). 부서 칸이 비어 있으면 기존 부서를 그대로 둔다
  * - 행 수·파일 크기는 제한하지 않는다
- * - 이미 등록된 메일계정이면 이메일 기준으로 갱신한다(이름이 다르면 이름을 고친다)
+ * - 이미 등록된 메일계정이면 이메일 기준으로 갱신한다(이름·부서 중 다른 것만 고친다)
  * 파일은 브라우저 안에서만 읽고 서버로 보내지 않는다. 외부 라이브러리 없음.
  */
 
 const EMAIL_HEADERS = ['메일계정', '메일', '이메일', 'email', 'e-mail', 'mail'];
 const NAME_HEADERS = ['이름', '성명', 'name'];
+const DEPARTMENT_HEADERS = ['부서', '부서명', '팀', 'department', 'dept', 'team'];
 
 /** BOM이 있으면 UTF-8, 없으면 UTF-8로 엄격하게 읽고 실패하면 CP949(한국어 Excel 기본 CSV) */
 export function decodeCsv(bytes: ArrayBuffer): string {
@@ -65,6 +66,8 @@ export interface CsvPerson {
   line: number;
   name: string;
   email: string;
+  /** 부서 칸 값(빈 칸이면 ''). 부서 열이 없는 파일이면 없음 */
+  department?: string;
 }
 
 export type CsvReadResult = { ok: true; people: CsvPerson[] } | { ok: false; missing: string[] };
@@ -76,12 +79,15 @@ export function readPeople(rows: readonly string[][]): CsvReadResult {
   const header = (rows[0] ?? []).map(normalizeHeader);
   const emailColumn = header.findIndex((cell) => EMAIL_HEADERS.includes(cell));
   const nameColumn = header.findIndex((cell) => NAME_HEADERS.includes(cell));
+  const departmentColumn = header.findIndex((cell) => DEPARTMENT_HEADERS.includes(cell));
   const missing = [emailColumn < 0 && '메일계정', nameColumn < 0 && '이름'].filter((value): value is string => Boolean(value));
   if (missing.length) return { ok: false, missing };
   const people: CsvPerson[] = [];
   rows.slice(1).forEach((cells, index) => {
     if (cells.every((cell) => !cell.trim())) return;
-    people.push({ line: index + 2, name: (cells[nameColumn] ?? '').trim(), email: (cells[emailColumn] ?? '').trim().toLowerCase() });
+    const person: CsvPerson = { line: index + 2, name: (cells[nameColumn] ?? '').trim(), email: (cells[emailColumn] ?? '').trim().toLowerCase() };
+    if (departmentColumn >= 0) person.department = (cells[departmentColumn] ?? '').trim();
+    people.push(person);
   });
   return { ok: true, people };
 }
@@ -92,13 +98,14 @@ export interface ImportItem extends CsvPerson {
   status: ImportStatus;
   /** 오류 사유 (status가 error일 때) */
   reason?: string;
-  /** 이름을 고칠 기존 참석자 (status가 rename일 때) */
+  /** 고칠 기존 참석자와 바꿀 값 (status가 rename일 때) */
   existing?: Participant;
+  changes?: { name?: string; department?: string };
 }
 
 export const STATUS_LABEL: Record<ImportStatus, string> = {
   create: '등록',
-  rename: '이름 갱신',
+  rename: '갱신',
   same: '이미 등록됨',
   duplicate: '파일 안 중복',
   error: '오류',
@@ -106,7 +113,7 @@ export const STATUS_LABEL: Record<ImportStatus, string> = {
 
 /**
  * 행마다 처리 방법을 정한다.
- * 등록: 새 메일계정 / 이름 갱신: 같은 메일계정의 기존 참석자와 이름이 다름 / 이미 등록됨: 이름도 같음 /
+ * 등록: 새 메일계정 / 갱신: 같은 메일계정의 기존 참석자와 이름 또는 부서(칸이 비지 않았을 때)가 다름 / 이미 등록됨: 모두 같음 /
  * 파일 안 중복: 앞 행에 같은 메일계정(첫 행만 처리) / 오류: 이름·메일계정 없음, 형식, 회사 메일 아님
  */
 export function planImport(people: readonly CsvPerson[], roster: readonly Participant[]): ImportItem[] {
@@ -120,7 +127,10 @@ export function planImport(people: readonly CsvPerson[], roster: readonly Partic
     seen.add(person.email);
     const existing = byEmail.get(person.email);
     if (!existing) return { ...person, status: 'create' };
-    return existing.name.trim() === person.name ? { ...person, status: 'same' } : { ...person, status: 'rename', existing };
+    const changes: { name?: string; department?: string } = {};
+    if (existing.name.trim() !== person.name) changes.name = person.name;
+    if (person.department && person.department !== (existing.department?.trim() ?? '')) changes.department = person.department;
+    return Object.keys(changes).length === 0 ? { ...person, status: 'same' } : { ...person, status: 'rename', existing, changes };
   });
 }
 

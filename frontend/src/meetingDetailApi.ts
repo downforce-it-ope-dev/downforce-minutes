@@ -21,7 +21,7 @@ export type MeetingDetail = {
 export class MeetingDetailApiError extends Error {
   readonly code: string;
 
-  constructor(code: 'MEETING_NOT_FOUND' | 'MEETING_DETAIL_FAILED', readonly safe: SafeApiError = normalizeApiError({ error: { code } }, code === 'MEETING_NOT_FOUND' ? 404 : undefined)) {
+  constructor(code: 'MEETING_NOT_FOUND' | 'MEETING_DETAIL_FAILED' | 'MEETING_DELETE_FAILED', readonly safe: SafeApiError = normalizeApiError({ error: { code } }, code === 'MEETING_NOT_FOUND' ? 404 : undefined)) {
     super(safe.message);
     this.code = code;
     this.name = 'MeetingDetailApiError';
@@ -63,4 +63,22 @@ export async function getMeetingDetail(documentId: string): Promise<MeetingDetai
     if (error instanceof MeetingDetailApiError) throw error;
     throw new MeetingDetailApiError('MEETING_DETAIL_FAILED');
   }
+}
+
+/**
+ * 회의 삭제 (Backend 9611cbc, DELETE /api/v1/meetings/{documentId} → 204).
+ * 문서 서비스의 회의록 페이지·원본 데이터 페이지·회의 목록 행을 지운다(Notion만). 이미 없는 회의면 MEETING_NOT_FOUND
+ */
+export async function deleteMeeting(documentId: string): Promise<void> {
+  let response: Response;
+  try {
+    response = await apiFetch(`${baseUrl()}/api/v1/meetings/${encodeURIComponent(documentId)}`, { method: 'DELETE', headers: { Accept: 'application/json' } });
+  } catch {
+    throw new MeetingDetailApiError('MEETING_DELETE_FAILED');
+  }
+  if (response.ok) return;
+  const body: unknown = await response.json().catch(() => null);
+  const code = body && typeof body === 'object' && 'error' in body ? (body.error as { code?: unknown } | null)?.code : null;
+  if (response.status === 404 && code === 'MEETING_NOT_FOUND') throw new MeetingDetailApiError('MEETING_NOT_FOUND', normalizeApiError(body, response.status));
+  throw new MeetingDetailApiError('MEETING_DELETE_FAILED', normalizeApiError(body, response.status));
 }

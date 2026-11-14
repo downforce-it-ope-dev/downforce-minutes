@@ -17,7 +17,8 @@ const config = {
   setup: { status: 'READY', required: false, canCreateMeeting: true, operationId: null },
 };
 const NAMES = ['강민수', '김지현', '박서준', '이도윤', '정하은', '최유진', '한지민', '오세훈', '윤아름', '임채원', '송민재', '조수아'];
-const participants = NAMES.map((name, index) => ({ id: `p${index}`, name, email: `user${index}@miinit.com` }));
+const DEPARTMENTS = ['AX팀', '운영팀', '', '경영지원팀'];
+const participants = NAMES.map((name, index) => ({ id: `p${index}`, name, email: `user${index}@miinit.com`, department: DEPARTMENTS[index % DEPARTMENTS.length] }));
 const ME = 'user3@miinit.com';
 
 async function mock(page: Page) {
