@@ -1,6 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { Search, X } from 'lucide-react';
 import type { Participant } from '../participantsApi';
+import { matchesParticipant } from '../participants/participantRules';
 import { Button, Card, Checkbox, cn, FilterChips, IconButton, TextField } from '../ui';
 
 type View = 'all' | 'selected';
@@ -48,12 +49,10 @@ export function ParticipantPicker({
     const chosen = new Set(selectedIds);
     return [...participants].sort((a, b) => Number(chosen.has(b.id)) - Number(chosen.has(a.id)) || collator.compare(a.name, b.name));
   }, [participants, selectedIds]);
-  const keyword = query.trim().toLowerCase();
-  const visible = sorted.filter(
-    (item) =>
-      (view === 'all' || selectedIds.includes(item.id)) &&
-      (!keyword || [item.name, item.email, item.department ?? ''].some((value) => value.toLowerCase().includes(keyword))),
-  );
+  // 부서가 있는 사람이 한 명이라도 있으면 태블릿에서 부서 칸 자리를 둬 메일 시작 위치를 맞춘다
+  const hasDepartments = participants.some(({ department }) => department?.trim());
+  const keyword = query.trim();
+  const visible = sorted.filter((item) => (view === 'all' || selectedIds.includes(item.id)) && matchesParticipant(item, query));
   const visibleIds = visible.map(({ id }) => id);
   const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
   const selectedCount = selectedIds.length;
@@ -63,7 +62,7 @@ export function ParticipantPicker({
       as="section"
       padding="none"
       aria-labelledby="participant-picker-title"
-      className={cn('flex flex-col overflow-hidden', invalid && 'outline-2 outline-danger', className)}
+      className={cn('flex min-w-0 flex-col overflow-hidden', invalid && 'outline-2 outline-danger', className)}
     >
       <div className="flex flex-col gap-3 px-4 pt-4 tablet:px-5">
         <div className="flex items-center justify-between gap-3">
@@ -83,7 +82,7 @@ export function ParticipantPicker({
             hideLabel
             type="search"
             icon={Search}
-            placeholder={participants.some(({ department }) => department?.trim()) ? '이름·이메일·부서' : '이름·이메일'}
+            placeholder={hasDepartments ? '이름·이메일·부서' : '이름·이메일'}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             disabled={status !== 'ready'}
@@ -159,13 +158,23 @@ export function ParticipantPicker({
                       disabled={self || status !== 'ready'}
                       onChange={() => onToggle(item.id)}
                     />
+                    {/* 태블릿: 이름·부서는 고정 폭(줄 맞춤), 남는 폭은 메일이 쓰고 넘치면 말줄임. 큰 태블릿 두 단은 폭이 좁아 메일을 숨긴다
+                        (검색·레이블에는 남음, 사용자 결정 2026-11-14). 휴대폰: 이름·부서 / 메일 2줄 */}
                     <span className="flex min-w-0 flex-1 flex-col tablet:flex-row tablet:items-center tablet:gap-3">
-                      <span className="flex items-center gap-2 text-body font-semibold text-text">
-                        {item.name}
-                        {self && <span className="rounded-full bg-brand-soft px-2 text-caption text-brand-soft-text">나</span>}
-                        {department && <span className="rounded-sm bg-accent-soft px-2 text-caption font-normal text-accent-soft-text">{department}</span>}
+                      <span className="flex min-w-0 items-center gap-2 tablet:shrink-0 tablet:gap-3">
+                        <span className="flex min-w-0 items-center gap-2 tablet:w-24">
+                          <span className="truncate text-body font-semibold text-text">{item.name}</span>
+                          {self && <span className="shrink-0 rounded-full bg-brand-soft px-2 text-caption text-brand-soft-text">나</span>}
+                        </span>
+                        {(department || hasDepartments) && (
+                          <span className={cn('min-w-0 tablet:w-24 tablet:shrink-0', !department && 'hidden tablet:block')}>
+                            {department && (
+                              <span className="block max-w-full truncate rounded-sm bg-accent-soft px-2 text-caption text-accent-soft-text tablet:w-fit">{department}</span>
+                            )}
+                          </span>
+                        )}
                       </span>
-                      <span className="truncate text-caption text-text-muted">{item.email}</span>
+                      <span className={cn('min-w-0 truncate text-caption text-text-muted', !singleColumn && 'tablet-lg:hidden')}>{item.email}</span>
                     </span>
                   </label>
                 </li>

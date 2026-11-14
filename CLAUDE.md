@@ -93,6 +93,7 @@
 - **참석자 (R7)**
   - 참석자 관리(`/participants`, `/settings/participants`)는 리뉴얼 라우트다(`src/participants/`). 입력 규칙(회사 메일 @miinit.com만, 수정은 이메일을 바꿀 때만)은 `participantRules.ts`이고 새 회의의 새 참석자 폼도 같이 쓴다.
   - 부서(Backend `department`, 9611cbc)는 응답에 필드가 있을 때만 보인다(`hasDepartmentField`). 빈 문자열은 부서 없음이다. 목록은 부서 → 이름 순이고 새 회의 참석자 선택에도 부서가 보이고 검색된다.
+  - 참석자 검색은 두 화면 모두 `matchesParticipant`(부분 일치, 대소문자·띄어쓰기 무시, 띄어 쓴 낱말은 모두 맞아야 함)를 쓴다. 이메일은 `@` 앞부분만 비교하고, 검색어에 `@`가 있을 때만 전체와 비교한다(회사 도메인에 "it"가 들어 있어 전원이 맞던 문제).
   - CSV 일괄 등록(`CsvImportDialog.tsx`, 읽기·판정은 `csvImport.ts`)은 메일계정·이름(필수)과 부서(선택 열)를 받는다. 부서 칸이 비면 기존 부서를 그대로 둔다. 양식은 `frontend/public/participants-template.csv`.
 - **설정 (R8)**
   - 설정(`/settings`)은 `src/settings/`. 카드 두 개(문서 연결, 이메일)이고 Slack 설정·코드는 없다(D-11).

@@ -146,6 +146,13 @@ describe('새 회의 (MTG-01)', () => {
     expect(list().getByText('AX팀')).toBeTruthy();
     fireEvent.change(search, { target: { value: 'ax' } });
     expect(list().getAllByRole('checkbox').map((item) => item.getAttribute('aria-label'))).toEqual(['홍길동 AX팀 hong@miinit.com']);
+    // "it"는 회사 도메인(@miinit.com)이 아니라 부서로만 맞는다. 보이지 않는 글자·전각 영문이 섞인 부서도 찾는다(2026-11-14)
+    cleanup();
+    mockApi({ participants: [{ ...participants[0], department: 'I\u200bT개발팀' }, { ...participants[1], department: 'ＩＴ지원팀' }, participants[2]] });
+    renderPage();
+    await screen.findByRole('list', { name: '참석자 목록' });
+    fireEvent.change(screen.getByRole('searchbox', { name: '참석자 검색' }), { target: { value: 'it' } });
+    expect(list().getAllByRole('checkbox')).toHaveLength(2);
   });
 
   it('전체 선택은 검색어가 있을 때만 보이고 검색 결과만 고른다', async () => {
@@ -153,7 +160,7 @@ describe('새 회의 (MTG-01)', () => {
     renderPage();
     await screen.findByRole('list', { name: '참석자 목록' });
     expect(screen.queryByRole('button', { name: '전체 선택' })).toBeNull();
-    fireEvent.change(screen.getByRole('searchbox', { name: '참석자 검색' }), { target: { value: 'miinit' } });
+    fireEvent.change(screen.getByRole('searchbox', { name: '참석자 검색' }), { target: { value: '@miinit' } });
     fireEvent.click(screen.getByRole('button', { name: '전체 선택' }));
     expect(screen.getByText('3명 선택됨')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '선택 해제' }));
